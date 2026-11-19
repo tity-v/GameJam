@@ -29,8 +29,4 @@ func _has_valid_plates() -> bool:
 func _physics_process(delta: float) -> void:
 	if Engine.is_editor_hint() or not _has_valid_plates():
 		return
-	if opened and not latch_open and safety_player != null:
-		var area := global_transform * Rect2(Vector2.ZERO, block_size)
-		if area.intersects(ActorBounds.rect(safety_player)):
-			return
 	super._physics_process(delta)

@@ -1,0 +1,38 @@
+[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://graybox/base_level.tscn" id="base"]
+[ext_resource type="PackedScene" path="res://scenes/blocks/solid_ground.tscn" id="terrain"]
+[ext_resource type="PackedScene" path="res://graybox/pressure_plate.tscn" id="plate"]
+[ext_resource type="PackedScene" path="res://graybox/door.tscn" id="door"]
+[ext_resource type="PackedScene" path="res://graybox/exit.tscn" id="exit"]
+
+[node name="Chapter01Room1" instance=ExtResource("base")]
+
+[node name="Ground" parent="Terrain" index="0"]
+position = Vector2(0, 640)
+block_size = Vector2(1280, 64)
+
+[node name="PlateA" parent="Mechanisms" instance=ExtResource("plate")]
+position = Vector2(352, 632)
+block_size = Vector2(64, 8)
+
+[node name="Door" parent="Mechanisms" node_paths=PackedStringArray("safety_player") instance=ExtResource("door")]
+position = Vector2(608, 512)
+block_size = Vector2(64, 128)
+latch_open = false
+safety_player = NodePath("../../Player")
+plate_paths = Array[NodePath]([NodePath("../PlateA")])
+
+[node name="Ledge2" parent="Terrain" instance=ExtResource("terrain")]
+position = Vector2(608, 0)
+block_size = Vector2(64, 504)
+
+[node name="Exit" parent="Mechanisms" instance=ExtResource("exit")]
+position = Vector2(1200, 544)
+block_size = Vector2(64, 96)
+door_path = NodePath("../Door")
+
+[node name="RespawnPoint" parent="." index="3"]
+position = Vector2(56, 596)
+
+[node name="Player" parent="." index="4"]
+position = Vector2(56, 596)

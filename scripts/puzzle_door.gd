@@ -2,7 +2,7 @@
 extends "res://scripts/block.gd"
 
 @export var plate_paths: Array[NodePath] = []
-@export var latch_open := true
+@export var latch_open := false
 var opened := false
 
 func _ready() -> void:
@@ -12,7 +12,7 @@ func _ready() -> void:
 		add_to_group("mechanism")
 
 func _physics_process(_delta: float) -> void:
-	if Engine.is_editor_hint() or (opened and latch_open):
+	if Engine.is_editor_hint():
 		return
 	var satisfied := not plate_paths.is_empty()
 	for path in plate_paths:
