@@ -3,12 +3,11 @@ extends SceneTree
 ##
 ## 结论先写在这：
 ##   机关（压力板）→ 认虚影**完整身体矩形**，踩上去就响应
+##   墙 / 关着的门 → **挡得住**，撞上停在接触点（每帧 cast_motion，不隧穿）
 ##   出口 / 尖刺   → 只认玩家，虚影不触发、不会被杀
-##   墙 / 关着的门 → **挡不住虚影**（重放坐标，不做物理模拟）
 ##
-## 最后一条不是 bug，是这套"录坐标重放"的必然代价。写进测试是为了让改这部分的人
-## 知道自己在改什么，而不是某天发现"虚影穿门"就顺手给 echo 加 mask —— 那会让
-## 重放位置和录下的位置对不上，整关错位。
+## 挡住这件事是"截短位移"实现的，不是给 echo 加 collision_mask ——
+## 加 mask 会让引擎自己去推它，和喂进来的坐标打架。
 
 const ECHO := preload("res://scenes/echo/echo.tscn")
 
@@ -102,15 +101,31 @@ func run() -> void:
 	await frames(6)
 	check(not room.won, "echo standing on exit does not win")
 
-	# --- 8. 关着的门挡不住虚影（重放坐标，不做物理） ---
+	# --- 8. 关着的门挡住虚影：撞在门上停住，不会隧穿 ---
 	var door := room.get_node("Door") as Node2D
 	check(not door.opened, "door starts closed")
-	var inside := door.global_position + Vector2(30, 40)
-	stand.global_position = inside
-	await frames(6)
-	check(stand.global_position.is_equal_approx(inside), "closed door does not push echo out (no world physics)")
+	var path := PackedVector2Array()
+	for f in 100:
+		path.append(Vector2(790.0 + f * 5.0, 538.0))  # 790 → 1285，横穿 x=850..914 的门
+	var crosser := ECHO.instantiate()
+	room.add_child(crosser)
+	crosser.setup(path)
+	for i in 20:
+		crosser.advance(1.0 / 60.0)
+	await frames(2)
+	check(crosser.global_position.x > 800.0, "echo moves normally before the door")
+	check(crosser.global_position.x < 850.0, "closed door blocks echo (no pass-through)")
+	check(crosser.global_position.x < 830.0, "echo stops at the door surface, not inside it")
 
-	# --- 9. 播完进入 1.3s 淡出的"尸体"仍然压得住板；彻底消失后释放 ---
+	# --- 9. 门开了就能穿过去（碰撞关掉，等价于双板满足后的状态） ---
+	door.get_node("Collision").set_deferred("disabled", true)
+	door.set("opened", true)
+	await frames(4)
+	for i in 60:
+		crosser.advance(1.0 / 60.0)
+	await frames(2)
+	check(crosser.global_position.x > 914.0, "open door lets echo through")
+	# --- 10. 播完进入 1.3s 淡出的"尸体"仍然压得住板；彻底消失后释放 ---
 	var corpse := place_echo(Vector2(area.position.x + 10.0, foot_y - 38.0))
 	corpse.setup(PackedVector2Array([
 		corpse.global_position,

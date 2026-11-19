@@ -15,6 +15,13 @@ extends StaticBody2D
 ##   从下往上跳 → 穿过去
 ##   从上方落下 → 踩住，可以站着，也可以借它跳
 ## 和原版「虚影只有当平台用、不当墙用」的设计一致。
+##
+## 但虚影**自己**会被世界挡住（地形、关着的门）：
+## 位置虽然是喂进来的，每帧仍做一次形状扫描（`_clip_motion`），
+## 撞上就停在接触点，下一帧继续试。所以录的时候门开着、重放时门关着，
+## 虚影会撞在门上停住，而不是穿过去。
+## 硬编码用坐标瞬移（`global_position = frames[next]`）会隧穿过薄墙，
+## 这就是必须走扫描的原因。
 
 ## 轨迹播完后的「死亡」时长。刻意等于主角的 death_duration（1.3s）：
 ## 虚影和玩家走的是同一条时间轴 —— 玩家活 T 秒再死 1.3 秒，
@@ -36,6 +43,15 @@ var frame_index := 0
 ## 本帧位移，站在它头上的玩家靠这个被带着走
 var last_delta := Vector2.ZERO
 
+## 世界层：地形、门都在这层。虚影只被这层挡，不会被别的虚影或玩家挡。
+const WORLD_LAYER := 1
+## 扫描用的形状和内缩量。形状比身体小 1px（26x36 塞在 28x38 里），
+## 否则「脚正好贴地」这种静止接触会被判成碰撞，虚影一出生就卡死。
+const PROBE_INSET := 1.0
+
+var _probe: RectangleShape2D
+var _probe_offset := Vector2(14, 19)
+
 var _fading := false
 var _fade_time := 0.0
 var _gone := false
@@ -44,6 +60,7 @@ var _gone := false
 func _ready() -> void:
 	# 头顶薄片由场景里的 CollisionShape2D 提供（one_way_collision）
 	visible = false
+	_build_probe()
 
 
 func setup(trail: PackedVector2Array) -> void:
@@ -85,10 +102,14 @@ func advance(delta: float) -> void:
 		return
 
 	var next := mini(frame_index + 1, frames.size() - 1)
-	last_delta = frames[next] - frames[frame_index]
-	global_position = frames[next]
 	if next != frame_index:
+		# 增量推进，而不是直接赋值成记录坐标：一旦被墙截住，若还继续用绝对坐标，
+		# 记录轨迹跨过那面墙时虚影会直接"隧穿"过去。
+		last_delta = _clip_motion(frames[next] - frames[frame_index])
+		global_position += last_delta
 		frame_index = next
+	else:
+		last_delta = Vector2.ZERO
 
 	# 播到最后一帧就"死亡"：淡出 + 叉号，之后不再提供碰撞
 	if frame_index >= frames.size() - 1:
@@ -99,6 +120,38 @@ func advance(delta: float) -> void:
 
 func is_gone() -> bool:
 	return _gone
+
+
+## 扫描形状 = 身体矩形内缩 1px。内缩是为了避开「脚正好贴地」这种静止接触被判成碰撞。
+func _build_probe() -> void:
+	var size := Vector2(28, 38)
+	if _body != null and _body.texture != null:
+		size = _body.texture.get_size()
+	_probe = RectangleShape2D.new()
+	_probe.size = (size - Vector2(PROBE_INSET, PROBE_INSET) * 2.0).max(Vector2(2, 2))
+	_probe_offset = size * 0.5
+
+
+## 把这一帧的位移按世界碰撞截短：撞上就只走到接触点。
+## 用 cast_motion（形状扫描）而不是"目标点是否重叠"，因为后者会漏掉隧穿。
+func _clip_motion(motion: Vector2) -> Vector2:
+	if motion == Vector2.ZERO:
+		return Vector2.ZERO
+	if _probe == null:
+		_build_probe()
+	var space := get_world_2d().direct_space_state
+	if space == null:
+		return motion
+	var params := PhysicsShapeQueryParameters2D.new()
+	params.shape = _probe
+	params.transform = Transform2D(0.0, global_position + _probe_offset)
+	params.motion = motion
+	params.collision_mask = WORLD_LAYER
+	params.exclude = [get_rid()]
+	var hit := space.cast_motion(params)
+	if hit.size() < 2:
+		return motion
+	return motion * clampf(hit[0], 0.0, 1.0)
 
 
 ## 本帧位移：站在它头上的玩家靠这个被带着走

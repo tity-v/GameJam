@@ -24,7 +24,7 @@
 | 渲染 | `gl_compatibility`（兼容模式，老显卡/笔记本也能跑） |
 | 视口 | 1280 × 720，`canvas_items` 拉伸 |
 | 主场景 | `res://scenes/levels/complete_room.tscn`（`level_01.tscn` 保留为历史场景） |
-| 代码规模 | 16 个脚本，共约 1045 行 GDScript；16 个回归测试 |
+| 代码规模 | 16 个脚本，共约 1098 行 GDScript；16 个回归测试 |
 
 打开方式：Godot 项目管理器 → 导入 → 选仓库根目录（`project.godot` 在根）。
 
@@ -62,7 +62,7 @@
 | **压力板 → 开门**（双板锁存） | 完成 | `scripts/pressure_plate.gd`、`scripts/puzzle_door.gd` |
 | **出口结算 / 通关** | 完成 | `scripts/level_exit.gd`、`scenes/levels/complete_room.tscn` |
 | **尖刺伤害判定** | 完成 | `scripts/spike_hazard.gd` |
-| **虚影对环境有体积**（压力板认、尖刺不杀、出口不认） | 完成 | `scripts/actor_bounds.gd`、`pressure_plate.gd`；断言见 `test_echo_environment.gd` |
+| **虚影对环境有体积**（压力板认、墙和关着的门挡得住、尖刺不杀、出口不认） | 完成 | `scripts/actor_bounds.gd`、`echo.gd` 的 `_clip_motion()`；断言见 `test_echo_environment.gd` |
 | **房间整体重置（通关面板 Replay → 重载场景）** | 完成 | `scripts/room_controller.gd` |
 | 角色脚下/身体边缘判定 | 完成 | `scripts/actor_bounds.gd`（供压力板/出口/尖刺共用） |
 | 可通关房间搭建 | 完成 | `scenes/levels/complete_room.tscn`（说明见 `docs/完整房间使用说明.md`） |
@@ -105,7 +105,7 @@ Level01 (Node2D)
 |---|---|---|---|
 | `player.gd` | 307 | 移动/跳跃手感、死亡淡出、重生、被虚影带着走 | `player.tscn` |
 | `echo_manager.gd` | 163 | 录轨迹、生成虚影、FIFO 上限、R 重置（清虚影 + 回出生点） | 关卡内节点 |
-| `echo.gd` | 115 | 逐帧重放轨迹、单向碰撞、尸体淡出 | `echo.tscn` |
+| `echo.gd` | 168 | 逐帧重放轨迹、世界阻挡（`cast_motion`）、单向碰撞、尸体淡出 | `echo.tscn` |
 | `hitbox_debug.gd` | 95 | 碰撞框可视化（纯 `_draw`，不参与物理；`@tool` + F1 开关） | 玩家/虚影的 `HitboxDebug` 子节点 |
 | `hud.gd` | 57 | 刷新「回声 n/5」、闪现提示淡出 | autoload `Hud` |
 | `camera_follow.gd` | 48 | 水平跟随 + 边界夹取 + 瞬移归位 | 关卡内 `Camera2D` |
@@ -120,7 +120,7 @@ Level01 (Node2D)
 | `keycap.gd` | 18 | 单个键帽 | `keycap.tscn` |
 | `spike_hazard.gd` | 13 | 碰到尖刺 → 致死 | `spike_tile.tscn` |
 
-合计 16 个脚本、1045 行（`wc -l` 口径）。
+合计 16 个脚本、1098 行（`wc -l` 口径）。
 
 ### 3.3 信号流
 
@@ -300,7 +300,7 @@ texture = (56, 76)   scale = (1, 1)   实际绘制 = (56, 76)   碰撞体 = (28,
 | 改了角色尺寸后，脚陷进地里 / 贴图与碰撞错位 | 只改了 `Collision.shape.size`，没改 `Collision.position`（它是相对左上角原点的中心偏移） | `position = shape.size / 2`；按 `F1` 看一眼框是否贴在方块上，框偏左上就是漏了这步（§3.5） |
 | 调完尺寸觉得「明明对齐了还是踩空」 | 看的是贴图边缘，不是碰撞（贴图可以比 shape 画大一圈） | 判定永远以橙色线/黄框为准，别拿美术图的像素边缘当碰撞边界 |
 | 角色看着比碰撞框大一圈 / 隔空停住 / 脚陷进地里 | 贴图不是 28×38（引擎 1:1 绘制，**不会**把大图缩回去），或四周留了透明边 | 跑 `python _reference/tools/check_art_size.py`；画布必须正好 28×38（§3.6） |
-| 虚影穿过关着的门 / 穿墙 / 悬在半空 | **不是 bug**：虚影重放的是坐标，`collision_mask = 0`，本来就没有世界物理 | 别给 echo 加 mask（会和喂进去的坐标打架）。要挡就改关卡路线（详见 README §6.1） |
+| 虚影被门挡住，没走到压力板上 | **不是 bug**：虚影每帧做 `cast_motion`，撞上就停在接触点，而帧号继续走。录的时候门开着、重放时门关着就会这样 | 关卡设计上避免「关键路线依赖一扇之后会关的门」；要放开就查 `echo.gd` 的 `_clip_motion`（README §6.1） |
 | 虚影压板时灵时不灵，或换皮后范围变大 | 压力板取的是 `Body` **贴图矩形**当体积，贴图尺寸变了判定就变 | `echo_body.png` 保持 28×38；`test_echo_environment.gd` 第 1 条就是这个断言 |
 
 ---
