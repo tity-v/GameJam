@@ -150,10 +150,10 @@ position = Vector2(790, 390)
 position = Vector2(1370, 495)
 
 [node name="RespawnPoint" type="Marker2D" parent="." groups=["respawn_point"]]
-position = Vector2(90, 522)
+position = Vector2(90, 516)
 
 [node name="Player" parent="." instance=ExtResource("6_player")]
-position = Vector2(90, 522)
+position = Vector2(90, 516)
 
 [node name="EchoManager" type="Node2D" parent="." groups=["echo_manager"]]
 script = ExtResource("8_echo")

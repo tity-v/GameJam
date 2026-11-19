@@ -36,10 +36,10 @@ tile_set = ExtResource("2_udwqk")
 collision_enabled = false
 
 [node name="RespawnPoint" type="Marker2D" parent="." unique_id=1068275604 groups=["respawn_point"]]
-position = Vector2(128, 538)
+position = Vector2(128, 532)
 
 [node name="Player" type="CharacterBody2D" parent="." unique_id=1041150017 groups=["player"] instance=ExtResource("3_apcpp")]
-position = Vector2(128, 538)
+position = Vector2(128, 532)
 collision_layer = 2
 collision_mask = 5
 script = ExtResource("4_r6hbt")

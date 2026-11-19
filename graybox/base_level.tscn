@@ -27,10 +27,10 @@ block_size = Vector2(1280, 128)
 [node name="Mechanisms" type="Node2D" parent="."]
 
 [node name="RespawnPoint" parent="." instance=ExtResource("3_spawn")]
-position = Vector2(128, 538)
+position = Vector2(128, 532)
 
 [node name="Player" parent="." instance=ExtResource("4_player")]
-position = Vector2(128, 538)
+position = Vector2(128, 532)
 
 [node name="EchoManager" type="Node2D" parent="." groups=["echo_manager"]]
 script = ExtResource("5_echo")

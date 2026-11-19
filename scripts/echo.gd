@@ -45,7 +45,7 @@ extends StaticBody2D
 ## 虚影的**判定体积**：压力板取这个矩形、撞墙扫描也用这个尺寸。
 ## 和贴图无关——美术换图只会被缩放到这个尺寸，不会改变谜题里能踩到哪。
 ## 改体积改这里；改外观改 png。两者不要互相牵连。
-@export var body_size := Vector2(28, 38):
+@export var body_size := Vector2(32, 44):
 	set(value):
 		body_size = value
 		# 运行时/检查器改尺寸：外观、扫描形状、可踩薄片一起跟上
@@ -145,6 +145,9 @@ func body_rect() -> Rect2:
 func fit_visuals() -> void:
 	for s: Sprite2D in [_body, _cross]:
 		if s == null or s.texture == null:
+			continue
+		if s.has_method("fit_to_body"):
+			s.call("fit_to_body", body_size)
 			continue
 		var ts: Vector2 = s.texture.get_size()
 		if ts.x <= 0.0 or ts.y <= 0.0:
