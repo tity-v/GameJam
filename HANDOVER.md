@@ -11,7 +11,7 @@
 
 把 2D 平台解谜游戏《过去的你》的第一关搬进 Godot 4.7，并实现它的核心机制：**死后留下一个重放你上一轮动作的虚影，用虚影替你踩机关、当垫脚**。
 
-当前状态：**机制闭环已跑通，且有一个能从头打到尾的房间** `complete_room`（压力板→双板锁存开门→出口结算，含尖刺致死与 `R` 重载）。
+当前状态：**机制闭环已跑通，且有一个能从头打到尾的房间** `complete_room`（压力板→双板锁存开门→出口结算，含尖刺致死与 `R` 回到初始状态）。
 历史场景 `level_01` 仍是「过不去」的状态（门是实体墙、压力板不响应），保留作为对照，不是 bug。
 
 ---
@@ -24,11 +24,11 @@
 | 渲染 | `gl_compatibility`（兼容模式，老显卡/笔记本也能跑） |
 | 视口 | 1280 × 720，`canvas_items` 拉伸 |
 | 主场景 | `res://scenes/levels/complete_room.tscn`（`level_01.tscn` 保留为历史场景） |
-| 代码规模 | 16 个脚本，共约 1108 行 GDScript；17 个回归测试 |
+| 代码规模 | 16 个脚本，共约 1154 行 GDScript；17 个回归测试 |
 
 打开方式：Godot 项目管理器 → 导入 → 选仓库根目录（`project.godot` 在根）。
 
-**按键**：`A/D` 移动（方向键也行）· `Space` 跳跃（长按更高）· `E` 自杀 · `R` 清空全部虚影并回到出生点 · `Esc` 暂停。
+**按键**：`A/D` 移动（方向键也行）· `Space` 跳跃（长按更高）· `E` 自杀 · `R` 回到本关初始状态（清虚影 + 机关复位 + 回出生点）· `Esc` 暂停。
 
 **每局必做的验证动作**（30 秒判断环境是否正常，以下数字对应主场景 `complete_room`）：
 
@@ -38,6 +38,8 @@
 3. 按 `E`，方块淡出带红叉，1.3 秒后回出生点，同时留下一个蓝色虚影
 4. 虚影重放完再活 1.3 秒后消失
 5. 按 `F1`：角色身上出现黄色碰撞框、脚下出现橙色粗线，且橙线正好压在地面顶面（576）
+6. 把门解开（回声踩 A、自己踩 B）后按 `R`：人回出生点、虚影清空、**门重新关上且能挡住人**，
+   板恢复未踩状态，但场景没有重载（`R` = 回到初始状态，见 §3.2 的接入契约）
 
 > 换成 `level_01.tscn` 时这些数字都不同（那关地面顶面 560、门在 x=790），别拿一套数去对另一关。
 
@@ -56,7 +58,7 @@
 | 虚影上限 5 条，满员顶掉最早 | 完成 | `echo_manager.gd` 的 `_add_echo()` |
 | 录制上限（`max_frames`，超出丢最旧一半） | 完成 | `echo_manager.gd` 的滚动窗口；断言见 `test_echo_recording_cap.gd` |
 | 虚影尸体多存活 1.3 秒（可踩） | 完成 | `echo.gd` 的 `fade_duration` |
-| `R` 重置：清空全部虚影 + 玩家回出生点 | 完成 | `echo_manager.gd` 的 `reset_all()` → `player.reset_to_spawn()` |
+| `R` 回到初始状态：清虚影 + 玩家回出生点 + **机关复位**（门关上、板松开、出口熄灭） | 完成 | `echo_manager.gd` 的 `reset_all()` → `player.reset_to_spawn()` + `room_controller.reset_mechanisms()` |
 | `Esc` 暂停 + 点击继续 | 完成 | `scenes/ui/pause_menu.tscn`（autoload） |
 | 底部操作提示栏 + 虚影计数 | 完成 | `scenes/ui/hud.tscn`（autoload） |
 | 碰撞框可视化（脚底线 / 可踩线，`F1` 开关） | 完成 | `scripts/hitbox_debug.gd` |
@@ -105,23 +107,33 @@ Level01 (Node2D)
 | 脚本 | 行数 | 职责 | 挂在哪 |
 |---|---|---|---|
 | `player.gd` | 307 | 移动/跳跃手感、死亡淡出、重生、被虚影带着走 | `player.tscn` |
-| `echo_manager.gd` | 173 | 录轨迹（滚动窗口上限）、生成虚影、FIFO 上限、R 重置（清虚影 + 回出生点） | 关卡内节点 |
+| `echo_manager.gd` | 179 | 录轨迹（滚动窗口上限）、生成虚影、FIFO 上限、R 重置（人回起点 → 机关复位 → 清虚影） | 关卡内节点 |
 | `echo.gd` | 168 | 逐帧重放轨迹、世界阻挡（`cast_motion`）、单向碰撞、尸体淡出 | `echo.tscn` |
 | `hitbox_debug.gd` | 95 | 碰撞框可视化（纯 `_draw`，不参与物理；`@tool` + F1 开关） | 玩家/虚影的 `HitboxDebug` 子节点 |
 | `hud.gd` | 57 | 刷新「回声 n/5」、闪现提示淡出 | autoload `Hud` |
 | `camera_follow.gd` | 48 | 水平跟随 + 边界夹取 + 瞬移归位 | 关卡内 `Camera2D` |
 | `pause_menu.gd` | 41 | `Esc` 切换 `SceneTree.paused` | autoload `PauseMenu` |
 | `block.gd` | 38 | `block_size` 同步贴图与碰撞（`@tool`） | 所有物块场景根 |
-| `pressure_plate.gd` | 34 | 判断「谁站在板上」（玩家/虚影，可分别开关） | `plate_off.tscn` |
+| `pressure_plate.gd` | 49 | 判断「谁站在板上」（玩家/虚影，可分别开关）、`reset_mechanism()` | `plate_off.tscn` |
 | `level_exit.gd` | 25 | 门开后站上出口 → 结算 | `exit.tscn` |
-| `puzzle_door.gd` | 23 | 多块压力板全满足才开门，带锁存 | `door.tscn` |
-| `room_controller.gd` | 25 | 房间状态（`won` / `resetting`）、通关面板 Replay 的整关重来 | `complete_room.tscn` 根 |
+| `puzzle_door.gd` | 37 | 多块压力板全满足才开门，带锁存；`reset_mechanism()` 会**连锁存一起忘掉** | `door.tscn` |
+| `room_controller.gd` | 36 | 房间状态（`won` / `resetting`）、`reset_mechanisms()`（按 `mechanism` 组收口）、通关面板 Replay 的整关重来 | `complete_room.tscn` 根 |
 | `actor_bounds.gd` | 22 | 共用「脚底/身体范围」判定工具（静态函数） | 被上面几个脚本 `preload` |
 | `key_hint.gd` | 21 | 一组「键帽 + 说明」 | `key_hint.tscn` |
 | `keycap.gd` | 18 | 单个键帽 | `keycap.tscn` |
 | `spike_hazard.gd` | 13 | 碰到尖刺 → 致死 | `spike_tile.tscn` |
 
-合计 16 个脚本、1108 行（`wc -l` 口径）。
+合计 16 个脚本、1154 行（`wc -l` 口径）。
+
+**新增机关的接入契约（两条，缺一条就会「按 R 不复位」）**
+
+1. 在 `_ready()` 里 `add_to_group("mechanism")`——`room_controller.reset_mechanisms()` 只遍历这个组，
+   不按节点名找，所以加机关不用回来改控制器；
+2. 实现 `reset_mechanism()`，自己把「初始状态」写完（贴图、碰撞、内部锁存标志一起）。
+
+典型陷阱：`puzzle_door.gd` 的锁存早退是 `if opened and latch_open: return`，
+复位时如果只把碰撞开回来、忘了先 `opened = false`，下一帧会直接 return，
+门看起来关了却能穿——`test_complete_room.gd` 的 `R re-enables door collision` + `closed door blocks player again after R` 就是拦这个的。
 
 ### 3.3 信号流
 
@@ -349,6 +361,9 @@ global_position += last_delta      # 增量，不是赋值成记录坐标
 | 调完尺寸觉得「明明对齐了还是踩空」 | 看的是贴图边缘，不是碰撞（贴图可以比 shape 画大一圈） | 判定永远以橙色线/黄框为准，别拿美术图的像素边缘当碰撞边界 |
 | 角色看着比碰撞框大一圈 / 隔空停住 / 脚陷进地里 | 贴图不是 28×38（引擎 1:1 绘制，**不会**把大图缩回去），或四周留了透明边 | 跑 `python _reference/tools/check_art_size.py`；画布必须正好 28×38（§3.6） |
 | 虚影被门挡住，没走到压力板上 | **不是 bug**：虚影每帧做 `cast_motion`，撞上就停在接触点，而帧号继续走。录的时候门开着、重放时门关着就会这样 | 关卡设计上避免「关键路线依赖一扇之后会关的门」；要放开就查 `echo.gd` 的 `_clip_motion`（README §6.1） |
+| 按 `R` 之后门又关上了，以为「开门白解了」 | **设计如此**：R 是「回到本关初始状态」，虚影与机关一起复位 | 想保留开门进度就别按 R；整关重来（含节点重建）仍是通关面板的 Replay |
+| 按 `R` 之后门看着关了，人却能穿过去 | `puzzle_door.reset_mechanism()` 里只开了碰撞、没先把 `opened` 置 false，`latch_open` 的早退分支下一帧就 return | 顺序必须是 `opened = false` → `$Collision.set_deferred("disabled", false)`；断言见 `test_complete_room` |
+| 新加的机关按 `R` 不复位，其它机关正常 | 忘了登记 `mechanism` 组，或没写 `reset_mechanism()` | 照 §3.2「新增机关的接入契约」两条做 |
 | 虚影压板时灵时不灵，或换皮后范围变大 | 压力板取的是 `Body` **贴图矩形**当体积，贴图尺寸变了判定就变 | `echo_body.png` 保持 28×38；`test_echo_environment.gd` 第 1 条就是这个断言 |
 
 ---
@@ -664,7 +679,7 @@ python _reference/tools/make_art_templates.py
 | 虚影的**起始帧**如果和碰撞体重叠，会直接穿出去 | `cast_motion` 只判扫掠碰撞，不管"一开始就重叠" | 门在虚影身上关闭、或关卡中途改了地形才会遇到。实测：从门内 x=870 起步，40 帧后走到 1065，整扇门穿过去了 | 触发条件窄，**暂时接受**。真要做，在 `setup()` 里先用 `intersect_shape` 把起点推到空位 |
 | 虚影贴墙时"粘"住，不沿墙滑 | `_clip_motion` 只截短位移，不做滑动求解 | 录的是"贴着墙滑下去"的路径时，虚影的水平分量被吃掉（垂直方向仍然正常） | 要滑就得对 `cast_motion` 结果做投影，会引入和录制路径的偏差，**不建议现在做** |
 | 尖刺不杀虚影 | `spike_hazard.gd` 只遍历 `player` 组；尖刺块本身也没有碰撞体 | 原版「让回声掉进尖刺」不成立，得改成玩家自己死在尖刺上（§4.4） | 设计选择。要改就命中虚影时让它进入淡出，同时补断言 |
-| 没有"整关重开"入口 | `R` 只清虚影 + 回出生点（见 `echo_manager.reset_all` 的注释），整关重载只有通关面板的 Replay | 中途想从头来只能退出重进 | 暂停菜单加一个 Replay 按钮最省事，直接调 `room_controller.reset_room()` |
+| `R` 不是"重载场景" | `R` 走 `reset_all()`：人回起点、机关复位、虚影清空，但**节点不重建**（相机、HUD、录制对象都还在） | 效果上等价于回到初始状态；只有极少数依赖 `_ready()` 重新初始化的状态才需要 Replay | 若哪天加了"只在本局内累计"的状态（如计时器、收集数），记得在 `reset_mechanisms()` 或 `reset_all()` 里一起清 |
 | 三个关卡是复制粘贴 | `level_01` / `complete_room` / `office_build` 各存一份 Player + EchoManager + Camera | 改一个机制要改三处，最容易漏的是新加的那关 | 抽 `LevelBase.tscn`（§3 结尾也提过） |
 | `kill_y = 750` 写在玩家节点上 | 沿用原版常量 | 做比 750 更高的关卡要逐实例改 | 改成关卡级参数，或跟相机视野算 |
 | 机关每帧都 `get_nodes_in_group` | `actor_bounds.actors()` 每次调用都新建数组 | 5 条虚影的规模下无所谓（每帧 3 次小分配） | 别提前优化，机关数量上百再说 |

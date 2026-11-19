@@ -63,18 +63,22 @@ func _unhandled_input(event: InputEvent) -> void:
 	reset_all()
 
 
-## R：清掉所有虚影，并把玩家送回出生点。**不动关卡状态**——
-## 门开没开、板踩没踩、通没通关，全部保持当下。
+## R：把这一关恢复到初始状态——清掉所有虚影、玩家回出生点、机关复位
+## （压力板松开、门关上、出口熄灭）。**不重载场景**，所以相机、HUD、节点都不重建。
 ##
 ## 为什么不再像以前那样调 `level.reset_room()` 重载场景：
-## 那样按 R 等于"重开一关"，门被关上、机关复位，和"重置虚影"的预期不符；
-## 而且重载会丢掉玩家已经解出来的进度。
+## 重载会有一帧黑屏/重建，而且任何运行时状态（比如本局的录制、HUD 计数）都从零开始，
+## 手感上像「切换了一关」。现在只复位该复位的，其余原样保留。
+##
+## 顺序不能换：先放人 → 再复位机关 → 最后清录制。
+##   - 人没回出生点就复位机关：下一物理帧压力板会重新检测到人还踩在上面，门立刻又开
+##   - 复位机关前清录制：不影响正确性，但先放人可以让 HUD 的「虚影已重置」后置，读起来顺
 func reset_all() -> void:
-	# 顺序不能换：先把人放回出生点，再清录制。
-	# 反过来的话 _trail 里会留下一条"从原地瞬移到出生点"的假轨迹，
-	# 下一次死亡留下的虚影会先闪一下再走路。
 	if _player != null and _player.has_method("reset_to_spawn"):
 		_player.reset_to_spawn()
+	var level := get_tree().current_scene
+	if level != null and level.has_method("reset_mechanisms"):
+		level.reset_mechanisms()
 	clear_all()
 
 
@@ -96,7 +100,9 @@ func clear_all() -> void:
 
 
 func _notify_hud(removed: int) -> void:
-	_flash_hud("虚影已重置" if removed > 0 else "暂无虚影")
+	# 文案不再只说「虚影已重置」：R 现在连机关一起复位，
+	# 说清是「回到初始状态」，否则玩家会以为门是他自己关上的。
+	_flash_hud("已回到初始状态" if removed > 0 else "机关与虚影已复位")
 
 
 func _flash_hud(text: String) -> void:

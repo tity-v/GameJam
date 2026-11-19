@@ -10,6 +10,10 @@ var active := false
 func _ready() -> void:
 	super._ready()
 	process_physics_priority = 10
+	# 登记给 room_controller.reset_mechanisms() 统一复位（R 键）。
+	# 编辑器里不登记：@tool 脚本的 _ready 在编辑器也会跑，避免把组写进场景。
+	if not Engine.is_editor_hint():
+		add_to_group("mechanism")
 
 func _physics_process(_delta: float) -> void:
 	if Engine.is_editor_hint():
@@ -32,3 +36,14 @@ func _physics_process(_delta: float) -> void:
 		active = pressed
 		$Patch.texture = load("res://assets/mechanisms/pressure_on.png" if active else "res://assets/mechanisms/pressure_off.png")
 		activation_changed.emit(active)
+
+
+## R 用：回到「从未被踩下」的初始状态。
+## 下一物理帧仍会按场上角色重新判定，但 R 已经把玩家送回出生点、虚影也清空了，
+## 所以不会刚复位又亮起来。
+func reset_mechanism() -> void:
+	if not active:
+		return
+	active = false
+	$Patch.texture = load("res://assets/mechanisms/pressure_off.png")
+	activation_changed.emit(false)
