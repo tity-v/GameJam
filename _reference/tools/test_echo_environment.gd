@@ -37,6 +37,7 @@ func place_echo(pos: Vector2) -> Node2D:
 	var echo := ECHO.instantiate()
 	room.add_child(echo)
 	echo.setup(PackedVector2Array([pos, pos]))
+	echo.reset()  # 测试里直接摆一个「已登场」的虚影
 	echo.global_position = pos
 	return echo
 
@@ -55,7 +56,7 @@ func run() -> void:
 	var probe := place_echo(Vector2(120, 538))
 	await frames(2)
 	var rect: Rect2 = preload("res://scripts/actor_bounds.gd").rect(probe)
-	check(rect.size.is_equal_approx(Vector2(28, 38)), "echo body rect is 28x38 (art swap would change it)")
+	check(rect.size.is_equal_approx(Vector2(28, 38)), "echo body rect is 28x38 (from body_size, not art)")
 
 	# --- 1. 空场：板不亮 ---
 	probe.queue_free()
@@ -110,6 +111,7 @@ func run() -> void:
 	var crosser := ECHO.instantiate()
 	room.add_child(crosser)
 	crosser.setup(path)
+	crosser.reset()
 	for i in 20:
 		crosser.advance(1.0 / 60.0)
 	await frames(2)
@@ -142,6 +144,7 @@ func run() -> void:
 	var into_wall := ECHO.instantiate()
 	room.add_child(into_wall)
 	into_wall.setup(wall_path)
+	into_wall.reset()
 	for i in 60:
 		into_wall.advance(1.0 / 60.0)
 	await frames(2)
@@ -155,6 +158,7 @@ func run() -> void:
 		corpse.global_position + Vector2(1, 0),
 		corpse.global_position + Vector2(2, 0),
 	]))
+	corpse.reset()
 	await frames(4)
 	check(plate.active, "corpse still presses plate before replay ends")
 	corpse.advance(0.02)

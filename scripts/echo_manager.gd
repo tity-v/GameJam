@@ -144,8 +144,10 @@ func _add_echo(trail: PackedVector2Array) -> void:
 	# 必须 duplicate：PackedVector2Array 会跟 _trail 共用一个缓冲，
 	# 不复制的话虚影播放的是"当前这轮正在录"的轨迹
 	echo.setup(trail.duplicate())
-	# 玩家还在死亡淡出中，新虚影等复活那一刻再一起登场
-	echo.visible = false
+	# setup() 自带"未激活"状态：不显示、无碰撞、不推进、机关不认。
+	# 等玩家复活时 _on_player_respawned() 里的 reset() 才让它登场——
+	# 显示、碰撞、机关判定三件事共用同一个 _active，不会再出现
+	# "看不见的虚影已经能挡住人/压住板"这种状态不一致。
 	_echoes.append(echo)
 
 	# 满员替换要让玩家知道，否则会以为"新死的这次没留下虚影"

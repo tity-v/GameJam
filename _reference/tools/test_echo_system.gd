@@ -84,7 +84,7 @@ func _run() -> void:
 	for i in 200:
 		trail.append(Vector2(300 + i * 2.0, 480))
 	manager.call("_add_echo", trail)
-	manager.get_child(manager.get_child_count() - 1).visible = true
+	manager.get_child(manager.get_child_count() - 1).reset()
 	player.global_position = Vector2(300, 442)
 	player.velocity = Vector2.ZERO
 	await _wait(40)
@@ -112,6 +112,7 @@ func _add_static_echo(pos: Vector2) -> Node2D:
 	var e := ECHO.instantiate()
 	lvl.add_child(e)
 	e.setup(PackedVector2Array([pos, pos]))
+	e.reset()  # setup 只是载入，reset 才是「登场」
 	return e
 
 

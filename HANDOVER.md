@@ -24,7 +24,7 @@
 | 渲染 | `gl_compatibility`（兼容模式，老显卡/笔记本也能跑） |
 | 视口 | 1280 × 720，`canvas_items` 拉伸 |
 | 主场景 | `res://scenes/levels/complete_room.tscn`（`level_01.tscn` 保留为历史场景） |
-| 代码规模 | 16 个脚本，共约 1154 行 GDScript；17 个回归测试 |
+| 代码规模 | 16 个脚本，共约 1244 行 GDScript；18 个回归测试 |
 
 打开方式：Godot 项目管理器 → 导入 → 选仓库根目录（`project.godot` 在根）。
 
@@ -66,6 +66,8 @@
 | **出口结算 / 通关** | 完成 | `scripts/level_exit.gd`、`scenes/levels/complete_room.tscn` |
 | **尖刺伤害判定** | 完成（**只杀玩家**，虚影无感；尖刺块本身无碰撞体） | `scripts/spike_hazard.gd` |
 | **虚影对环境有体积**（压力板认、墙和关着的门挡得住、尖刺不杀、出口不认） | 完成 | `scripts/actor_bounds.gd`、`echo.gd` 的 `_clip_motion()`；断言见 `test_echo_environment.gd` |
+| **虚影判定体积与贴图解耦**（`body_size`，换皮不改谜题） | 完成 | `echo.gd` 的 `body_rect()` / `fit_visuals()`；断言见 `test_echo_contract.gd` |
+| **虚影单一激活状态**（回放 / 碰撞 / 机关同源，不会“看不见却挡人”） | 完成 | `echo.gd` 的 `_active`、`setup()` / `reset()`；断言见 `test_echo_contract.gd` |
 | **房间整体重置（通关面板 Replay → 重载场景）** | 完成 | `scripts/room_controller.gd` |
 | 角色脚下/身体边缘判定 | 完成 | `scripts/actor_bounds.gd`（供压力板/出口/尖刺共用） |
 | 可通关房间搭建 | 完成 | `scenes/levels/complete_room.tscn`（说明见 `docs/完整房间使用说明.md`） |
@@ -108,7 +110,7 @@ Level01 (Node2D)
 |---|---|---|---|
 | `player.gd` | 307 | 移动/跳跃手感、死亡淡出、重生、被虚影带着走 | `player.tscn` |
 | `echo_manager.gd` | 179 | 录轨迹（滚动窗口上限）、生成虚影、FIFO 上限、R 重置（人回起点 → 机关复位 → 清虚影） | 关卡内节点 |
-| `echo.gd` | 168 | 逐帧重放轨迹、世界阻挡（`cast_motion`）、单向碰撞、尸体淡出 | `echo.tscn` |
+| `echo.gd` | 244 | 逐帧重放轨迹、世界阻挡（`cast_motion`）、单向碰撞、尸体淡出；`body_size`（判定体积）、`_active`（唯一激活状态） | `echo.tscn` |
 | `hitbox_debug.gd` | 95 | 碰撞框可视化（纯 `_draw`，不参与物理；`@tool` + F1 开关） | 玩家/虚影的 `HitboxDebug` 子节点 |
 | `hud.gd` | 57 | 刷新「回声 n/5」、闪现提示淡出 | autoload `Hud` |
 | `camera_follow.gd` | 48 | 水平跟随 + 边界夹取 + 瞬移归位 | 关卡内 `Camera2D` |
@@ -118,12 +120,12 @@ Level01 (Node2D)
 | `level_exit.gd` | 25 | 门开后站上出口 → 结算 | `exit.tscn` |
 | `puzzle_door.gd` | 37 | 多块压力板全满足才开门，带锁存；`reset_mechanism()` 会**连锁存一起忘掉** | `door.tscn` |
 | `room_controller.gd` | 36 | 房间状态（`won` / `resetting`）、`reset_mechanisms()`（按 `mechanism` 组收口）、通关面板 Replay 的整关重来 | `complete_room.tscn` 根 |
-| `actor_bounds.gd` | 22 | 共用「脚底/身体范围」判定工具（静态函数） | 被上面几个脚本 `preload` |
+| `actor_bounds.gd` | 34 | 共用「脚底/身体范围」判定工具（静态函数；虚影只读 `body_size` 与 `is_active()`） | 被上面几个脚本 `preload` |
 | `key_hint.gd` | 21 | 一组「键帽 + 说明」 | `key_hint.tscn` |
 | `keycap.gd` | 18 | 单个键帽 | `keycap.tscn` |
 | `spike_hazard.gd` | 13 | 碰到尖刺 → 致死 | `spike_tile.tscn` |
 
-合计 16 个脚本、1154 行（`wc -l` 口径）。
+合计 16 个脚本、1244 行（`wc -l` 口径）。
 
 **新增机关的接入契约（两条，缺一条就会「按 R 不复位」）**
 
@@ -203,7 +205,8 @@ player.respawn() ─emit─> player.respawned ─> echo_manager._on_player_respa
 > 给美术看的版本是 `README.md` §3.4（那边是「怎么画」）。这里写「为什么必须这样」，
 > 接手程序改角色尺寸前先读完这一节，否则很容易把美术的图改坏。
 
-**一句话：可画范围就是碰撞框，28×38，画布多一点少一点都不行。**
+**一句话：主角的可画范围就是碰撞框，28×38，画布多一点少一点都不行；虚影反过来——判定框是
+`body_size`（28×38），贴图会被缩放到它，换图不影响判定。**
 
 引擎的真实行为（`player.gd` 的 `_fit_visuals()`）：
 
@@ -227,7 +230,7 @@ texture = (56, 76)   scale = (1, 1)   实际绘制 = (56, 76)   碰撞体 = (28,
 |---|---|
 | 主角画布 | 正好 28×38（`design_size` 的值） |
 | 死亡叉号 | 同样 28×38（和 `Sprite` 共用同一套缩放） |
-| 虚影两张图 | 同样 28×38，但只有顶部 28×8 薄片有碰撞，头顶轮廓要平 |
+| 虚影两张图 | **任意尺寸**（会被 `fit_visuals()` 缩放到 `body_size` 28×38，判定不受影响）；但比例最好保持 14:19，否则会被拉歪 |
 | 想画 4 倍大图 | **只能同时把 `design_size` 改成 112×152**，还要同步叉号与虚影，不推荐；直接画 28×38 最省事 |
 | 物块 | 九宫格源图，尺寸必须和 §4.5 的表一致（改了要同步 tscn 里的 patch margins） |
 
@@ -343,6 +346,48 @@ global_position += last_delta      # 增量，不是赋值成记录坐标
 
 ---
 
+### 4.7 虚影的两个「单一真相」：`body_size` 与 `_active`
+
+这一节是给以后改虚影的人看的。两条规则各自只允许有一个来源，破了就会出现
+「美术换张图把谜题改了」和「看不见的虚影把板压住了」这类极难定位的问题。
+
+**① 判定体积 = `body_size`，不是贴图**
+
+| 用途 | 取什么 |
+|---|---|
+| 机关判定（压力板） | `echo.body_rect()` → `Rect2(global_position, body_size)` |
+| 撞墙扫描（`_clip_motion`） | probe = `body_size` 内缩 1px（26×36） |
+| 头顶可踩薄片 | 宽度 = `body_size.x`，高度固定 8 |
+| 外观（Body / Cross） | `scale = body_size / texture.size`，**图跟着判定走** |
+
+改之前是反过来的：`Body` 贴图矩形直接当判定，贴图多留 2px 透明边，
+「刚好碰不到」的压力板就变成「踩得到」。现在美术给 56×76 或留透明边，
+只会被缩放到 28×38，谜题不变。对应断言在 `test_echo_contract.gd`（换 56×76 的图后
+`body_rect()` 仍是 28×38、4px 重叠仍算踩住、完全离开仍不算）。
+
+⚠️ `Top` 的 shape 是场景里的 `sub_resource`，多实例共享。`fit_visuals()` 里先
+`duplicate()` 再改尺寸，否则改一个虚影的身体尺寸会把全场虚影的薄片一起改掉。
+
+**② 激活状态 = `_active`，不是 `visible`**
+
+`_active` 同时决定四件事：显示、碰撞层 bit 3（值 4）、`advance()` 是否推进、机关是否认它。
+
+| 时刻 | `_active` | 说明 |
+|---|---|---|
+| `setup(trail)` 刚生成（玩家还在死亡淡出） | `false` | 不显示、无碰撞、帧号停在 0，压力板不认 |
+| 玩家复活 → `reset()` | `true` | 三件事同时生效，从第 0 帧开始重放 |
+| 播完进入 1.3s 淡出 | `true` | 尸体仍能踩、仍压得住板 |
+| `_complete()` 淡出结束 | `false` | 显示与碰撞一起撤掉，机关随即释放 |
+
+改之前是分裂的：`setup()` 里直接把碰撞层打开，`echo_manager` 再 `visible = false`，
+而 `advance()` 照常推进——于是同一具虚影「物理上存在、机关上不存在」，
+玩家死亡那 1 秒多里可能被一个看不见的平台托住。
+
+**所以：以后让虚影出现，只调 `reset()`，不要手改 `visible`。**
+同理，机关判断虚影在不在场，只调 `is_active()` / `actor_bounds.available()`，不要看 `visible`。
+
+---
+
 ## 5. 已知坑（都踩过，别再踩）
 
 | 现象 | 原因 | 解法 |
@@ -364,7 +409,8 @@ global_position += last_delta      # 增量，不是赋值成记录坐标
 | 按 `R` 之后门又关上了，以为「开门白解了」 | **设计如此**：R 是「回到本关初始状态」，虚影与机关一起复位 | 想保留开门进度就别按 R；整关重来（含节点重建）仍是通关面板的 Replay |
 | 按 `R` 之后门看着关了，人却能穿过去 | `puzzle_door.reset_mechanism()` 里只开了碰撞、没先把 `opened` 置 false，`latch_open` 的早退分支下一帧就 return | 顺序必须是 `opened = false` → `$Collision.set_deferred("disabled", false)`；断言见 `test_complete_room` |
 | 新加的机关按 `R` 不复位，其它机关正常 | 忘了登记 `mechanism` 组，或没写 `reset_mechanism()` | 照 §3.2「新增机关的接入契约」两条做 |
-| 虚影压板时灵时不灵，或换皮后范围变大 | 压力板取的是 `Body` **贴图矩形**当体积，贴图尺寸变了判定就变 | `echo_body.png` 保持 28×38；`test_echo_environment.gd` 第 1 条就是这个断言 |
+| 换皮后虚影压板范围变了 | 判定被改回读 `Body` 贴图矩形了（贴图多留几像素透明边，`rect` 就变大） | 判定只准读 `body_size`（§4.7）；`test_echo_contract.gd` 会用 56×76 的图验一遍 |
+| 虚影还没出现就能挡人 / 压住板，或画面出现了板却不亮 | 显示、碰撞层、机关判定各判各的（`visible` / 层 bit / `is_gone`） | 全部统一走 `_active`：让虚影登场只调 `reset()`，**不要再手改 `visible`**（§4.7） |
 
 ---
 
@@ -478,8 +524,8 @@ done
 
 ### 9.2 哪些进仓库，哪些不进
 
-一共 160 个文件会入库：`scripts/` 32（16 个 `.gd` + 16 个 `.uid`）、`assets/` 45、
-`scenes/` 15、`docs/` 10、`_reference/` 53、根目录 5。
+一共 161 个文件会入库：`scripts/` 32（16 个 `.gd` + 16 个 `.uid`）、`assets/` 45、
+`scenes/` 15、`docs/` 10、`_reference/` 54、根目录 5。
 （数字会随开发变，以 `git ls-files | wc -l` 为准；结构稳定的是「哪些该进、哪些不该进」。）
 
 | 内容 | 进仓库 | 说明 |
@@ -571,7 +617,7 @@ git push -u origin main
 **第 4 步：验证别人能跑**
 
 自己另找一台机器（或删掉 `.godot/` 后再打开）克隆一份，用 Godot 导入根目录，
-确认：能进 `complete_room`、按 `F1` 有碰撞框、17 个测试脚本能跑。
+确认：能进 `complete_room`、按 `F1` 有碰撞框、18 个测试脚本能跑。
 `.godot/` 不在仓库里是**正常**的，第一次打开会重建（约十几秒）。
 
 **这一步已经实测过**：把仓库克隆到干净目录（无 `.godot/`）后
