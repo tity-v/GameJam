@@ -24,7 +24,7 @@
 | 渲染 | `gl_compatibility`（兼容模式，老显卡/笔记本也能跑） |
 | 视口 | 1280 × 720，`canvas_items` 拉伸 |
 | 主场景 | `res://scenes/levels/complete_room.tscn`（`level_01.tscn` 保留为历史场景） |
-| 代码规模 | 16 个脚本，共约 1098 行 GDScript；16 个回归测试 |
+| 代码规模 | 16 个脚本，共约 1108 行 GDScript；17 个回归测试 |
 
 打开方式：Godot 项目管理器 → 导入 → 选仓库根目录（`project.godot` 在根）。
 
@@ -54,6 +54,7 @@
 | 虚影：录制轨迹、死亡生成、复活同步重放 | 完成 | `scripts/echo_manager.gd`、`echo.gd` |
 | 虚影单向碰撞（侧面穿、头顶站） | 完成 | `echo.tscn` 的 `Top` 薄片 |
 | 虚影上限 5 条，满员顶掉最早 | 完成 | `echo_manager.gd` 的 `_add_echo()` |
+| 录制上限（`max_frames`，超出丢最旧一半） | 完成 | `echo_manager.gd` 的滚动窗口；断言见 `test_echo_recording_cap.gd` |
 | 虚影尸体多存活 1.3 秒（可踩） | 完成 | `echo.gd` 的 `fade_duration` |
 | `R` 重置：清空全部虚影 + 玩家回出生点 | 完成 | `echo_manager.gd` 的 `reset_all()` → `player.reset_to_spawn()` |
 | `Esc` 暂停 + 点击继续 | 完成 | `scenes/ui/pause_menu.tscn`（autoload） |
@@ -61,7 +62,7 @@
 | 碰撞框可视化（脚底线 / 可踩线，`F1` 开关） | 完成 | `scripts/hitbox_debug.gd` |
 | **压力板 → 开门**（双板锁存） | 完成 | `scripts/pressure_plate.gd`、`scripts/puzzle_door.gd` |
 | **出口结算 / 通关** | 完成 | `scripts/level_exit.gd`、`scenes/levels/complete_room.tscn` |
-| **尖刺伤害判定** | 完成 | `scripts/spike_hazard.gd` |
+| **尖刺伤害判定** | 完成（**只杀玩家**，虚影无感；尖刺块本身无碰撞体） | `scripts/spike_hazard.gd` |
 | **虚影对环境有体积**（压力板认、墙和关着的门挡得住、尖刺不杀、出口不认） | 完成 | `scripts/actor_bounds.gd`、`echo.gd` 的 `_clip_motion()`；断言见 `test_echo_environment.gd` |
 | **房间整体重置（通关面板 Replay → 重载场景）** | 完成 | `scripts/room_controller.gd` |
 | 角色脚下/身体边缘判定 | 完成 | `scripts/actor_bounds.gd`（供压力板/出口/尖刺共用） |
@@ -104,7 +105,7 @@ Level01 (Node2D)
 | 脚本 | 行数 | 职责 | 挂在哪 |
 |---|---|---|---|
 | `player.gd` | 307 | 移动/跳跃手感、死亡淡出、重生、被虚影带着走 | `player.tscn` |
-| `echo_manager.gd` | 163 | 录轨迹、生成虚影、FIFO 上限、R 重置（清虚影 + 回出生点） | 关卡内节点 |
+| `echo_manager.gd` | 173 | 录轨迹（滚动窗口上限）、生成虚影、FIFO 上限、R 重置（清虚影 + 回出生点） | 关卡内节点 |
 | `echo.gd` | 168 | 逐帧重放轨迹、世界阻挡（`cast_motion`）、单向碰撞、尸体淡出 | `echo.tscn` |
 | `hitbox_debug.gd` | 95 | 碰撞框可视化（纯 `_draw`，不参与物理；`@tool` + F1 开关） | 玩家/虚影的 `HitboxDebug` 子节点 |
 | `hud.gd` | 57 | 刷新「回声 n/5」、闪现提示淡出 | autoload `Hud` |
@@ -120,7 +121,7 @@ Level01 (Node2D)
 | `keycap.gd` | 18 | 单个键帽 | `keycap.tscn` |
 | `spike_hazard.gd` | 13 | 碰到尖刺 → 致死 | `spike_tile.tscn` |
 
-合计 16 个脚本、1098 行（`wc -l` 口径）。
+合计 16 个脚本、1108 行（`wc -l` 口径）。
 
 ### 3.3 信号流
 
@@ -298,7 +299,17 @@ global_position += last_delta      # 增量，不是赋值成记录坐标
 
 玩家的时间轴是「活 T 秒 → 死 1.3 秒」；虚影是「重放 T 秒 → 死 1.3 秒」。所以它**天然比玩家晚 1.3 秒消失**，不是额外加了个计时器。
 
-这 1.3 秒里**碰撞仍然开着**。目的是后面做尖刺关：原版第 5 关的解法就是「让回声掉进尖刺，趁它消失前跳上身体，跨过尖刺」。
+这 1.3 秒里**碰撞仍然开着**，这是后面做尖刺关的支点：踩在尸体头上跨过尖刺。
+
+⚠️ **但别照原版的做法理解**。本作的尖刺**不杀虚影**（`spike_hazard.gd` 只遍历 `player` 组），
+尖刺块本身也**没有碰撞体**（`spike_tile.tscn` 里只有 `Patch`，没有 `Collision`）。
+所以原版第 5 关那种「让回声掉进尖刺、它自己死在上面」在这里**不成立**——
+虚影会直接穿过尖刺，继续走完轨迹。
+
+现在的替代解法是「**玩家自己死在尖刺上**」：死亡位置就是虚影轨迹的终点，
+重放结束时尸体正好落在尖刺处，再趁这 1.3 秒踩上去。代价是时机要算准
+（尸体出现 = 复活后再过"虚影时长"那么久）。想做回原版那种，得让 `spike_hazard`
+也判定虚影、命中就提前进入淡出——那是设计选择，见 §13。
 
 相关数值：`echo.gd` 的 `fade_duration = 1.3`（对齐 `player.gd` 的 `death_duration`）、`death_min_alpha = 0.18`（尸体不会彻底看不见，踩上去脚下始终有东西）。
 
@@ -452,8 +463,8 @@ done
 
 ### 9.2 哪些进仓库，哪些不进
 
-一共 159 个文件会入库：`scripts/` 32（16 个 `.gd` + 16 个 `.uid`）、`assets/` 45、
-`scenes/` 15、`docs/` 10、`_reference/` 52、根目录 5。
+一共 160 个文件会入库：`scripts/` 32（16 个 `.gd` + 16 个 `.uid`）、`assets/` 45、
+`scenes/` 15、`docs/` 10、`_reference/` 53、根目录 5。
 （数字会随开发变，以 `git ls-files | wc -l` 为准；结构稳定的是「哪些该进、哪些不该进」。）
 
 | 内容 | 进仓库 | 说明 |
@@ -526,7 +537,7 @@ your-past-self/            ← GitHub 仓库
 
 ```bash
 git add -A
-git status --short          # 159 行左右；不该出现 .godot/ 和 source_from_game/
+git status --short          # 160 行左右；不该出现 .godot/ 和 source_from_game/
 git commit -m "第一关复刻：地形、角色、死亡重生、虚影系统、暂停与 HUD"
 ```
 
@@ -545,7 +556,7 @@ git push -u origin main
 **第 4 步：验证别人能跑**
 
 自己另找一台机器（或删掉 `.godot/` 后再打开）克隆一份，用 Godot 导入根目录，
-确认：能进 `complete_room`、按 `F1` 有碰撞框、16 个测试脚本能跑。
+确认：能进 `complete_room`、按 `F1` 有碰撞框、17 个测试脚本能跑。
 `.godot/` 不在仓库里是**正常**的，第一次打开会重建（约十几秒）。
 
 **这一步已经实测过**：把仓库克隆到干净目录（无 `.godot/`）后
@@ -640,3 +651,24 @@ python _reference/tools/make_art_templates.py
 画图脚本在 `_reference/tools/charts/`（Python + Pillow，字体路径写死 Windows）。
 
 副作用：满速跳距从 154px 涨到约 213px；跳高 115px，低于 115px 的天花板会撞头。关卡沟距若按旧速度摆的，需要复核。
+
+---
+
+## 13. 系统审计：已知限制（确认存在、但没改）
+
+2026-11-19 把虚影 / 机关 / 死亡链路逐行过了一遍。下面是**确认存在但刻意没动**的东西，
+按优先级排；改之前先看「影响」，有些是真的不用修。
+
+| 现象 | 真正的原因 | 影响 | 建议 |
+|---|---|---|---|
+| 虚影的**起始帧**如果和碰撞体重叠，会直接穿出去 | `cast_motion` 只判扫掠碰撞，不管"一开始就重叠" | 门在虚影身上关闭、或关卡中途改了地形才会遇到。实测：从门内 x=870 起步，40 帧后走到 1065，整扇门穿过去了 | 触发条件窄，**暂时接受**。真要做，在 `setup()` 里先用 `intersect_shape` 把起点推到空位 |
+| 虚影贴墙时"粘"住，不沿墙滑 | `_clip_motion` 只截短位移，不做滑动求解 | 录的是"贴着墙滑下去"的路径时，虚影的水平分量被吃掉（垂直方向仍然正常） | 要滑就得对 `cast_motion` 结果做投影，会引入和录制路径的偏差，**不建议现在做** |
+| 尖刺不杀虚影 | `spike_hazard.gd` 只遍历 `player` 组；尖刺块本身也没有碰撞体 | 原版「让回声掉进尖刺」不成立，得改成玩家自己死在尖刺上（§4.4） | 设计选择。要改就命中虚影时让它进入淡出，同时补断言 |
+| 没有"整关重开"入口 | `R` 只清虚影 + 回出生点（见 `echo_manager.reset_all` 的注释），整关重载只有通关面板的 Replay | 中途想从头来只能退出重进 | 暂停菜单加一个 Replay 按钮最省事，直接调 `room_controller.reset_room()` |
+| 三个关卡是复制粘贴 | `level_01` / `complete_room` / `office_build` 各存一份 Player + EchoManager + Camera | 改一个机制要改三处，最容易漏的是新加的那关 | 抽 `LevelBase.tscn`（§3 结尾也提过） |
+| `kill_y = 750` 写在玩家节点上 | 沿用原版常量 | 做比 750 更高的关卡要逐实例改 | 改成关卡级参数，或跟相机视野算 |
+| 机关每帧都 `get_nodes_in_group` | `actor_bounds.actors()` 每次调用都新建数组 | 5 条虚影的规模下无所谓（每帧 3 次小分配） | 别提前优化，机关数量上百再说 |
+
+**本轮已修掉的**：录制上限满 100 秒后只是"停止追加"，虚影重放的是这一生**最初**的 100 秒，
+尸体落在几百像素之前（实测调成 1 秒上限时差 320px）。现在改成滚动窗口丢最旧一半，
+保留最近一段，尸体落点回到死亡处，断言在 `test_echo_recording_cap.gd`。

@@ -125,6 +125,29 @@ func run() -> void:
 		crosser.advance(1.0 / 60.0)
 	await frames(2)
 	check(crosser.global_position.x > 914.0, "open door lets echo through")
+
+	# --- 9. 实心墙走的是同一条判定（不是只有门才挡） ---
+	# 门和墙都是 layer 1 的 StaticBody2D，理论上一致；这里实测一次，防止以后
+	# 有人给门加特殊处理却漏掉普通墙。
+	var wall: Node2D = load("res://scenes/blocks/solid_wall.tscn").instantiate()
+	wall.set("block_size", Vector2(40, 120))
+	wall.position = Vector2(500, 456)  # 500..540，坐在地面 576 上
+	room.add_child(wall)
+	await frames(3)
+	check(is_instance_valid(wall.get_node_or_null("Collision")) or wall.has_node("Collision"),
+		"solid wall has a collision shape")
+	var wall_path := PackedVector2Array()
+	for f in 60:
+		wall_path.append(Vector2(380.0 + f * 5.0, 538.0))
+	var into_wall := ECHO.instantiate()
+	room.add_child(into_wall)
+	into_wall.setup(wall_path)
+	for i in 60:
+		into_wall.advance(1.0 / 60.0)
+	await frames(2)
+	check(into_wall.global_position.x < 500.0, "solid wall blocks echo (no pass-through)")
+	check(into_wall.global_position.x > 455.0, "echo stops at the wall surface, not far away")
+
 	# --- 10. 播完进入 1.3s 淡出的"尸体"仍然压得住板；彻底消失后释放 ---
 	var corpse := place_echo(Vector2(area.position.x + 10.0, foot_y - 38.0))
 	corpse.setup(PackedVector2Array([

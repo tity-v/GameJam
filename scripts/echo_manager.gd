@@ -7,8 +7,10 @@ extends Node2D
 const ECHO_SCENE := preload("res://scenes/echo/echo.tscn")
 ## 上限：场上最多 5 条虚影。满了之后新死的一条顶掉最旧的一条（先进先出）。
 const MAX_ECHOES := 5
-## 单条轨迹最长帧数（60fps 下 100 秒），防止一直不死把内存吃满
-const MAX_FRAMES := 6000
+## 单条轨迹最长帧数（60fps 下 100 秒），防止一直不死把内存吃满。
+## 做成导出而不是 const：测试要把它调小才能验证（`test_echo_recording_cap.gd`），
+## 特殊关卡也可以按需调大。
+@export var max_frames: int = 6000
 
 @export var player_path: NodePath
 
@@ -37,7 +39,15 @@ func _physics_process(_delta: float) -> void:
 			e.advance(_delta)
 
 	if _recording and _player != null:
-		if _trail.size() < MAX_FRAMES:
+		if _trail.size() < max_frames:
+			_trail.append(_player.global_position)
+		else:
+			# 满了就丢掉最旧的一半，保留**最近**这一段（滚动窗口）。
+			# 不能只是停止追加：那样虚影重放的是"这一生最初的 100 秒"，
+			# 尸体落在 100 秒前的位置，和真正的死亡点差出几百像素
+			# （实测把上限调成 1 秒时，虚影末帧比死亡点落后 320px）。
+			# 折半而不是每帧 pop_front：后者是 O(n) 内存搬移，5000 帧时每秒要搬几 MB。
+			_trail = _trail.slice(_trail.size() / 2)
 			_trail.append(_player.global_position)
 
 
