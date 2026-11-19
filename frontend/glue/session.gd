@@ -1,5 +1,6 @@
 extends CanvasLayer
 
+const Portal = preload("res://scripts/level_exit.gd")
 const Flow = preload("res://frontend/systems/flow.gd")
 const Store = preload("res://frontend/glue/store.gd")
 const DEFAULT_CATALOG = preload("res://frontend/db/catalog.tres")
@@ -27,6 +28,8 @@ var pending: Array[Dictionary] = []
 var target_index := -1
 var target_page := ""
 var switching := false
+var outgoing_frame: Texture2D
+var slide_direction := Vector2.RIGHT
 var legacy_pause: Node
 var legacy_hud: CanvasLayer
 var legacy_pause_mode: ProcessMode
@@ -93,9 +96,15 @@ func _process(_delta: float) -> void:
 		save_progress()
 		var following := flow.current + 1
 		if flow.playable(following) and flow.chapter_of(following) == flow.chapter_of(flow.current):
+			if DisplayServer.get_name() != "headless":
+				slide_direction = exit_direction(room)
+				var frame := get_viewport().get_texture().get_image()
+				if frame != null and not frame.is_empty():
+					outgoing_frame = ImageTexture.create_from_image(frame)
 			launch(following)
 			if switching:
 				return
+			outgoing_frame = null
 		redraw()
 	var commands := pending.duplicate()
 	pending.clear()
@@ -233,6 +242,12 @@ func scene_arrived() -> void:
 	notice = ""
 	if target_index >= 0:
 		flow.begin(target_index)
+		var room := get_tree().current_scene
+		var panel := room.get_node_or_null(catalog.legacy_result_panel) as CanvasItem
+		if panel != null:
+			panel.modulate.a = 0.0
+		if outgoing_frame != null:
+			slide_into_room()
 		target_index = -1
 		save_progress()
 	else:
@@ -240,6 +255,45 @@ func scene_arrived() -> void:
 		flow.page = target_page
 		target_page = ""
 	redraw()
+
+func exit_direction(room: Node) -> Vector2:
+	var player := get_tree().get_first_node_in_group("player") as Node2D
+	if player == null:
+		return Vector2.RIGHT
+	var player_position := player.get_global_transform_with_canvas().origin
+	var exit_position := player_position
+	var nearest := INF
+	for node in room.find_children("*", "Node2D", true, false):
+		if node is Portal and node.active:
+			var center: Vector2 = node.get_global_transform_with_canvas() * (node.block_size * 0.5)
+			var distance := player_position.distance_squared_to(center)
+			if distance < nearest:
+				nearest = distance
+				exit_position = center
+	# 按视口宽高归一化，宽屏房间也能正确识别上下出口。
+	var viewport_rect := get_viewport().get_visible_rect()
+	var offset := (exit_position - viewport_rect.get_center()) / viewport_rect.size
+	if absf(offset.y) > absf(offset.x):
+		return Vector2.DOWN if offset.y > 0 else Vector2.UP
+	return Vector2.LEFT if offset.x < 0 else Vector2.RIGHT
+
+func slide_into_room() -> void:
+	var previous := TextureRect.new()
+	previous.texture = outgoing_frame
+	outgoing_frame = null
+	previous.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	previous.size = get_viewport().get_visible_rect().size
+	previous.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(previous)
+	var camera := get_viewport().get_camera_2d()
+	var slide := create_tween().set_parallel(true).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	var travel := previous.size * slide_direction
+	slide.tween_property(previous, "position", -travel, 0.20)
+	if camera != null:
+		var resting_offset := camera.offset
+		camera.offset -= travel / camera.zoom
+		slide.tween_property(camera, "offset", resting_offset, 0.20)
+	slide.chain().tween_callback(previous.queue_free)
 
 func tr_copy(key: String) -> String:
 	return str(copy.get(key, key))
