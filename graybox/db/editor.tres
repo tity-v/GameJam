@@ -1,0 +1,16 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://graybox/db/editor_config.gd" id="1_config"]
+
+[resource]
+script = ExtResource("1_config")
+plate_feet_margin = Vector2(8, 4)
+plate_outline_color = Color(1, 0.8, 0.25, 1)
+exit_outline_color = Color(0.35, 0.94, 0.64, 1)
+exit_outline_padding = 1.0
+outline_width = 2.0
+spawn_warning = "请在 Spawn Point 里选择属于 respawn_point 组的出生点。"
+player_warning = "请在 Player 中选择当前房间的玩家。"
+plate_warning = "请在 Plate Paths 中选择至少一块压力板，并修正空项或无效关联。"
+safety_player_warning = "持续型门的 Safety Player 需要关联当前玩家，以便玩家离开门身后再关闭。"
+exit_warning = "请在 Door Path 中选择一扇门。"
