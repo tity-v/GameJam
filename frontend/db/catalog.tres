@@ -11,19 +11,19 @@ levels = Array[Dictionary]([{
 }, {
 "id": "level_02",
 "title": "第 1 章 · 房间 2/5",
-"scene": ""
+"scene": "res://scenes/levels/chapter_01_room_02.tscn"
 }, {
 "id": "level_03",
 "title": "第 1 章 · 房间 3/5",
-"scene": ""
+"scene": "res://scenes/levels/chapter_01_room_03.tscn"
 }, {
 "id": "level_04",
 "title": "第 1 章 · 房间 4/5",
-"scene": ""
+"scene": "res://scenes/levels/chapter_01_room_04.tscn"
 }, {
 "id": "level_05",
 "title": "第 1 章 · 房间 5/5",
-"scene": ""
+"scene": "res://scenes/levels/chapter_01_room_05.tscn"
 }, {
 "id": "level_06",
 "title": "第 2 章 · 房间 1/5",
