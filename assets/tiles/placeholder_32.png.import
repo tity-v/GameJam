@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dshklcssj2hke"
-path="res://.godot/imported/office_atlas_16.png-541603f224e1beca1052c86c2da73da3.ctex"
+uid="uid://c6yivnabmkrty"
+path="res://.godot/imported/placeholder_32.png-6e776ab2efa697b2e144af8c7a355d8a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/office_white/office_atlas_16.png"
-dest_files=["res://.godot/imported/office_atlas_16.png-541603f224e1beca1052c86c2da73da3.ctex"]
+source_file="res://assets/tiles/placeholder_32.png"
+dest_files=["res://.godot/imported/placeholder_32.png-6e776ab2efa697b2e144af8c7a355d8a.ctex"]
 
 [params]
 

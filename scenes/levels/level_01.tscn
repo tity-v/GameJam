@@ -14,7 +14,7 @@ metadata/_note = "直接在编辑器里编辑本关卡。不要运行 _reference
 
 [node name="Background" type="ColorRect" parent="."]
 offset_right = 1600.0
-offset_bottom = 720.0
+offset_bottom = 704.0
 color = Color(0.062745, 0.090196, 0.12549, 1)
 
 [node name="Grid" type="Node2D" parent="."]
@@ -160,11 +160,11 @@ script = ExtResource("8_echo")
 player_path = NodePath("../Player")
 
 [node name="Camera2D" type="Camera2D" parent="."]
-position = Vector2(640, 360)
+position = Vector2(640, 352)
 limit_left = 0
 limit_right = 1600
 limit_top = 0
-limit_bottom = 720
+limit_bottom = 704
 position_smoothing_enabled = true
 position_smoothing_speed = 8.0
 script = ExtResource("7_cam")

@@ -105,9 +105,12 @@ func run() -> void:
 	# --- 8. 关着的门挡住虚影：撞在门上停住，不会隧穿 ---
 	var door := room.get_node("Door") as Node2D
 	check(not door.opened, "door starts closed")
+	# 门的左右边从节点读，别写死像素——门挪到格线上（26~27 列）后这里才不会假过
+	var door_left: float = door.global_position.x
+	var door_right: float = door_left + door.block_size.x
 	var path := PackedVector2Array()
 	for f in 100:
-		path.append(Vector2(790.0 + f * 5.0, 538.0))  # 790 → 1285，横穿 x=850..914 的门
+		path.append(Vector2(790.0 + f * 5.0, 538.0))  # 790 → 1285，横穿整道门
 	var crosser := ECHO.instantiate()
 	room.add_child(crosser)
 	crosser.setup(path)
@@ -116,8 +119,8 @@ func run() -> void:
 		crosser.advance(1.0 / 60.0)
 	await frames(2)
 	check(crosser.global_position.x > 800.0, "echo moves normally before the door")
-	check(crosser.global_position.x < 850.0, "closed door blocks echo (no pass-through)")
-	check(crosser.global_position.x < 830.0, "echo stops at the door surface, not inside it")
+	check(crosser.global_position.x < door_left, "closed door blocks echo (no pass-through)")
+	check(crosser.global_position.x < door_left - 10.0, "echo stops at the door surface, not inside it")
 
 	# --- 9. 门开了就能穿过去（碰撞关掉，等价于双板满足后的状态） ---
 	door.get_node("Collision").set_deferred("disabled", true)
@@ -126,7 +129,7 @@ func run() -> void:
 	for i in 60:
 		crosser.advance(1.0 / 60.0)
 	await frames(2)
-	check(crosser.global_position.x > 914.0, "open door lets echo through")
+	check(crosser.global_position.x > door_right, "open door lets echo through")
 
 	# --- 9. 实心墙走的是同一条判定（不是只有门才挡） ---
 	# 门和墙都是 layer 1 的 StaticBody2D，理论上一致；这里实测一次，防止以后
