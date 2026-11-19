@@ -27,7 +27,7 @@ signal respawned
 ## 空中反向的急停速度：满速 273 归零约 2 帧，之后才按反方向重新加速。
 @export var air_turn_stop: float = 8200.0
 ## 凹弧强度：1 = 直线，2 = 参考图那种慢起后快的凹形，越大起步越"憋"。
-## 加速和刹车都压在两点连线下方，不会鼓起来。
+## 按速度大小计算曲线，左右方向互为镜像。
 @export_range(1.0, 3.0, 0.1) var curve_power: float = 2.0
 ## 空中单独用平曲线：1 = 直线，按下方向第一帧就有 34px/s，不会"按了没反应"。
 ## 地面仍然是上面的凹形，两边互不影响。
@@ -142,11 +142,12 @@ func _move(delta: float) -> void:
 		target = 0.0
 		# 空中松手用很小的阻力，动量会带着走；地面还是 3 帧急停
 		rate = friction if on_ground else air_friction
-	elif not on_ground and velocity.x * axis < 0.0:
-		# 空中反向：先用极短时间（满速约 2 帧）刹到 0，再从 0 反向加速
+	elif velocity.x * axis < 0.0:
+		# 反向分两段：先刹到 0，再朝新方向起步。
 		target = 0.0
-		rate = air_turn_stop
-		power = 1.0
+		rate = friction if on_ground else air_turn_stop
+		if not on_ground:
+			power = 1.0
 	# 地面用凹形（慢起后快），空中用平曲线（按下立刻动）
 	velocity.x = _approach_speed(target, rate, power, delta)
 
@@ -199,7 +200,8 @@ func _approach_speed(target: float, rate: float, power: float, delta: float) -> 
 	if u >= 1.0:
 		_ramp_on = false
 		return _ramp_to
-	return lerpf(_ramp_from, _ramp_to, _shape(u, _ramp_to > _ramp_from, power))
+	var speeding_up := absf(_ramp_to) > absf(_ramp_from)
+	return lerpf(_ramp_from, _ramp_to, _shape(u, speeding_up, power))
 
 
 ## 曲线压在起点—终点连线的下方（不鼓起来）：
