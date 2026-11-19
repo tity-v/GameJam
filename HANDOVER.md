@@ -161,10 +161,49 @@ player.respawn() ─emit─> player.respawned ─> echo_manager._on_player_respa
 - **改尺寸后的自检顺序**：框贴住贴图 → 橙线压在地面顶面 → 站到虚影头上两条橙线重合。
   框偏左上、脚陷进地里 = 只改了 `shape.size` 忘了改 `Collision.position`（见 §5 最后一行）
 
-**美术侧的规格**是另一套语言，写在 `README.md` §3.4：画布 28×38 = 碰撞框、比例必须 14:19、
-透明像素照样挡路、装饰不能超出画布、虚影头顶要平。配两张 10 倍模板图
-（`_reference/art_templates/*_guide_10x.png`）和交图校验脚本
-`python _reference/tools/check_art_size.py`——**美术不该被要求读 GDScript 才知道能画多大**。
+### 3.6 角色尺寸与美术交付规格
+
+> 给美术看的版本是 `README.md` §3.4（那边是「怎么画」）。这里写「为什么必须这样」，
+> 接手程序改角色尺寸前先读完这一节，否则很容易把美术的图改坏。
+
+**一句话：可画范围就是碰撞框，28×38，画布多一点少一点都不行。**
+
+引擎的真实行为（`player.gd` 的 `_fit_visuals()`）：
+
+```
+Sprite.scale = 碰撞体尺寸 / design_size        design_size 默认 28×38
+实际绘制尺寸 = 贴图尺寸 × Sprite.scale
+```
+
+也就是说，**只有当「碰撞体」变了，贴图才会被补偿**。贴图自己变大，`scale` 仍然是 `(1,1)`，
+角色就直接按原尺寸画出来。实测（把 `player.png` 换成 56×76 再重新导入）：
+
+```
+texture = (56, 76)   scale = (1, 1)   实际绘制 = (56, 76)   碰撞体 = (28, 38)
+```
+
+→ 角色比碰撞框大一圈，脚穿进地里、头插进平台，看起来像"贴图和碰撞错位"，其实是图交错了。
+
+**所以：**
+
+| 项 | 规则 |
+|---|---|
+| 主角画布 | 正好 28×38（`design_size` 的值） |
+| 死亡叉号 | 同样 28×38（和 `Sprite` 共用同一套缩放） |
+| 虚影两张图 | 同样 28×38，但只有顶部 28×8 薄片有碰撞，头顶轮廓要平 |
+| 想画 4 倍大图 | **只能同时把 `design_size` 改成 112×152**，还要同步叉号与虚影，不推荐；直接画 28×38 最省事 |
+| 物块 | 九宫格源图，尺寸必须和 §4.4 的表一致（改了要同步 tscn 里的 patch margins） |
+
+**交付给美术的三件东西**（缺一件就会反复返工）：
+
+1. 模板图 `_reference/art_templates/player_guide_10x.png` / `echo_guide_10x.png`
+   （10 倍，红框=碰撞框、青线=2px 安全区、橙线=脚底/可踩线；由 `make_art_templates.py` 生成）
+2. 交图校验 `python _reference/tools/check_art_size.py`（角色尺寸错会直接说"会显示成 2.00 倍大小"）
+3. 游戏里按 `F1`：黄框贴住角色、橙线压在地面，才算对
+
+**一条纪律**：「五条硬规则」和模板图用法只写在 `README.md` §3.4，本文件只保留程序必须知道的**因果与数字**。
+改规则时改 README，别在两个文件里各维护一份——之前就出现过 README 说"可以画 4 倍等比缩放"
+而实际不会缩放的情况，美术照做后全部返工。**凡是"引擎会帮你缩放"的直觉，先写测试验证再写进文档。**
 
 ---
 
@@ -238,6 +277,7 @@ player.respawn() ─emit─> player.respawned ─> echo_manager._on_player_respa
 | 场景里改了属性，重启又变回去 | 生成器被跑过（`--force`） | 别跑 `--force`；改了关卡就提交 git |
 | 改了角色尺寸后，脚陷进地里 / 贴图与碰撞错位 | 只改了 `Collision.shape.size`，没改 `Collision.position`（它是相对左上角原点的中心偏移） | `position = shape.size / 2`；按 `F1` 看一眼框是否贴在方块上，框偏左上就是漏了这步（§3.5） |
 | 调完尺寸觉得「明明对齐了还是踩空」 | 看的是贴图边缘，不是碰撞（贴图可以比 shape 画大一圈） | 判定永远以橙色线/黄框为准，别拿美术图的像素边缘当碰撞边界 |
+| 角色看着比碰撞框大一圈 / 隔空停住 / 脚陷进地里 | 贴图不是 28×38（引擎 1:1 绘制，**不会**把大图缩回去），或四周留了透明边 | 跑 `python _reference/tools/check_art_size.py`；画布必须正好 28×38（§3.6） |
 
 ---
 
@@ -487,6 +527,12 @@ godot --headless --path . --fixed-fps 60 --script res://_reference/tools/<test>.
 # 无头启动自检（检查场景/脚本有无加载错误）
 godot --headless --path . --quit-after 20
 
+# 美术交图后校验贴图尺寸（角色必须 28×38）
+python _reference/tools/check_art_size.py
+
+# 重新生成「可画范围」模板图（--force 覆盖）
+python _reference/tools/make_art_templates.py
+
 # 截图：仓库里没有截图脚本（早期用过的一次性 _capture.gd 已删除，别照着旧命令找）
 # 需要新图时临时写一个 SceneTree 脚本，运行几帧后：
 #   get_viewport().get_texture().get_image().save_png("res://_reference/preview_xxx.png")
@@ -504,3 +550,5 @@ godot --headless --path . --quit-after 20
 4. 虚影系统比原版「宽容」：满 5 条还能死、R 可以随时清场。这两处是刻意偏离原版的，理由在 §8.5。
 5. 数值手感全部照抄原版 `actor.gd`，唯一新增的是 `jump_cut = 0.65`（长短按两档跳高的系数）。调它之前先看 `player.gd` 的注释。
 6. 交美术前先教他按 `F1`：改尺寸时只看橙线，不要拿贴图像素边缘当碰撞——这是这个项目最容易反复沟通的一件事（§3.5）。
+7. 给美术交付尺寸，别口头说"大概 28×38"——直接给 `_reference/art_templates/` 里的模板图 + 一句
+   `python _reference/tools/check_art_size.py`。规格与原因见 §3.6，美术版在 `README.md` §3.4。
