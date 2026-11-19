@@ -363,6 +363,19 @@ done
 > 公开版的差异：把 `_reference/` 整个排除，同时把 `_reference/tools/test_*.gd` 挪到 `tests/`
 > （否则公开仓库既没有测试、也没有生成脚本）。这一步现在不做，等真要开源再说。
 
+**另外 13 个 `.import` 文件也在库里**（每个 png 一个，Godot 4 的导入设置就存在这里）。
+少了它们不是不能跑，但过滤/压缩参数会回落到默认值，画面可能和现在不一样——**别忽略 `.import`**。
+
+仓库里**没有**、但也不影响跑的东西：
+
+| 东西 | 情况 |
+|---|---|
+| `.godot/`（2.7 MB） | 首次打开/`--import` 自动重建，实测约十秒 |
+| `export_presets.cfg` | 被忽略。要统一导出 Windows 包时再提交一份，注意里面可能带本机路径与签名信息 |
+| `LICENSE` | 没放。Private 不需要；**要公开必须先选定许可证** |
+| `icon.svg` | 没配，`project.godot` 里没有 `config/icon`，导出时用默认图标 |
+| `_capture.gd` | 当初的临时截图脚本，已删（新截图写法见 §10） |
+
 ### 9.3 仓库里怎么摆
 
 **单项目 = 仓库根目录就是 Godot 项目根目录。** 不要套一层 `game/` 或 `src/`，否则 `project.godot` 不在根，克隆下来引擎不认。
@@ -424,6 +437,11 @@ git push -u origin main
 确认：能进 `level_01`、按 `F1` 有碰撞框、10 个测试脚本能跑。
 `.godot/` 不在仓库里是**正常**的，第一次打开会重建（约十几秒）。
 
+**这一步已经实测过**：把仓库克隆到干净目录（无 `.godot/`）后
+`--import` 无任何 error/warning，`test_hitbox_debug` 全项通过（脚底线与可踩线 0.00px 重合），
+`--quit-after 30` 启动干净，且克隆出的 `assets/*.import` 与源仓库逐字节一致。
+**结论：仓库是自洽的，只靠仓库里的 102 个文件就能跑起来。**
+
 **第 5 步：加队友**
 
 Settings → Collaborators 邀请；对方 `git clone` 后直接用 Godot 打开，不需要额外配置。
@@ -461,8 +479,10 @@ godot --headless --path . --fixed-fps 60 --script res://_reference/tools/<test>.
 # 无头启动自检（检查场景/脚本有无加载错误）
 godot --headless --path . --quit-after 20
 
-# 截图（需要真实渲染，不能 headless）
-godot --path . --fixed-fps 60 --script res://_capture.gd --rendering-driver opengl3
+# 截图：仓库里没有截图脚本（早期用过的一次性 _capture.gd 已删除，别照着旧命令找）
+# 需要新图时临时写一个 SceneTree 脚本，运行几帧后：
+#   get_viewport().get_texture().get_image().save_png("res://_reference/preview_xxx.png")
+# 必须真渲染（不能 --headless），加 --rendering-driver opengl3 更稳。
 ```
 
 ---
