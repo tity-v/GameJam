@@ -22,9 +22,9 @@
 |---|---|
 | 引擎 | **Godot 4.7.2**（`config/features` 写死 4.7，低版本打开会提示） |
 | 渲染 | `gl_compatibility`（兼容模式，老显卡/笔记本也能跑） |
-| 视口 | 1280 × 720，`canvas_items` 拉伸 |
+| 视口 | 1280 × 704（= 40 × 22 个 32px 瓦片），`canvas_items` 拉伸 |
 | 主场景 | `res://scenes/levels/complete_room.tscn`（`level_01.tscn` 保留为历史场景） |
-| 代码规模 | 16 个脚本，共约 1154 行 GDScript；17 个回归测试 |
+| 代码规模 | 16 个脚本，共约 1244 行 GDScript；19 个回归测试 |
 
 打开方式：Godot 项目管理器 → 导入 → 选仓库根目录（`project.godot` 在根）。
 
@@ -66,7 +66,11 @@
 | **出口结算 / 通关** | 完成 | `scripts/level_exit.gd`、`scenes/levels/complete_room.tscn` |
 | **尖刺伤害判定** | 完成（**只杀玩家**，虚影无感；尖刺块本身无碰撞体） | `scripts/spike_hazard.gd` |
 | **虚影对环境有体积**（压力板认、墙和关着的门挡得住、尖刺不杀、出口不认） | 完成 | `scripts/actor_bounds.gd`、`echo.gd` 的 `_clip_motion()`；断言见 `test_echo_environment.gd` |
+| **虚影判定体积与贴图解耦**（`body_size`，换皮不改谜题） | 完成 | `echo.gd` 的 `body_rect()` / `fit_visuals()`；断言见 `test_echo_contract.gd` |
+| **虚影单一激活状态**（回放 / 碰撞 / 机关同源，不会“看不见却挡人”） | 完成 | `echo.gd` 的 `_active`、`setup()` / `reset()`；断言见 `test_echo_contract.gd` |
 | **房间整体重置（通关面板 Replay → 重载场景）** | 完成 | `scripts/room_controller.gd` |
+| **关卡网格**：整屏 40×22 格 × 32px、空瓦片铺满整张地图、机关全部贴格线 | 完成 | `assets/tiles/`、`_reference/tools/room_grid.py`；断言见 `test_grid_room.gd`，说明见 §3.7 |
+| **灰盒搭建套件**（同学交付）：模板场景、机关零件、编辑器预览、独立验收 | 完成 | `graybox/README.md`；验收 `graybox/tests/test_graybox_kit.gd` |
 | 角色脚下/身体边缘判定 | 完成 | `scripts/actor_bounds.gd`（供压力板/出口/尖刺共用） |
 | 可通关房间搭建 | 完成 | `scenes/levels/complete_room.tscn`（说明见 `docs/完整房间使用说明.md`） |
 | 关卡名 / 关卡提示文字（原版有） | 未做 | — |
@@ -108,7 +112,7 @@ Level01 (Node2D)
 |---|---|---|---|
 | `player.gd` | 307 | 移动/跳跃手感、死亡淡出、重生、被虚影带着走 | `player.tscn` |
 | `echo_manager.gd` | 179 | 录轨迹（滚动窗口上限）、生成虚影、FIFO 上限、R 重置（人回起点 → 机关复位 → 清虚影） | 关卡内节点 |
-| `echo.gd` | 168 | 逐帧重放轨迹、世界阻挡（`cast_motion`）、单向碰撞、尸体淡出 | `echo.tscn` |
+| `echo.gd` | 244 | 逐帧重放轨迹、世界阻挡（`cast_motion`）、单向碰撞、尸体淡出；`body_size`（判定体积）、`_active`（唯一激活状态） | `echo.tscn` |
 | `hitbox_debug.gd` | 95 | 碰撞框可视化（纯 `_draw`，不参与物理；`@tool` + F1 开关） | 玩家/虚影的 `HitboxDebug` 子节点 |
 | `hud.gd` | 57 | 刷新「回声 n/5」、闪现提示淡出 | autoload `Hud` |
 | `camera_follow.gd` | 48 | 水平跟随 + 边界夹取 + 瞬移归位 | 关卡内 `Camera2D` |
@@ -118,12 +122,12 @@ Level01 (Node2D)
 | `level_exit.gd` | 25 | 门开后站上出口 → 结算 | `exit.tscn` |
 | `puzzle_door.gd` | 37 | 多块压力板全满足才开门，带锁存；`reset_mechanism()` 会**连锁存一起忘掉** | `door.tscn` |
 | `room_controller.gd` | 36 | 房间状态（`won` / `resetting`）、`reset_mechanisms()`（按 `mechanism` 组收口）、通关面板 Replay 的整关重来 | `complete_room.tscn` 根 |
-| `actor_bounds.gd` | 22 | 共用「脚底/身体范围」判定工具（静态函数） | 被上面几个脚本 `preload` |
+| `actor_bounds.gd` | 34 | 共用「脚底/身体范围」判定工具（静态函数；虚影只读 `body_size` 与 `is_active()`） | 被上面几个脚本 `preload` |
 | `key_hint.gd` | 21 | 一组「键帽 + 说明」 | `key_hint.tscn` |
 | `keycap.gd` | 18 | 单个键帽 | `keycap.tscn` |
 | `spike_hazard.gd` | 13 | 碰到尖刺 → 致死 | `spike_tile.tscn` |
 
-合计 16 个脚本、1154 行（`wc -l` 口径）。
+合计 16 个脚本、1244 行（`wc -l` 口径）。
 
 **新增机关的接入契约（两条，缺一条就会「按 R 不复位」）**
 
@@ -203,7 +207,8 @@ player.respawn() ─emit─> player.respawned ─> echo_manager._on_player_respa
 > 给美术看的版本是 `README.md` §3.4（那边是「怎么画」）。这里写「为什么必须这样」，
 > 接手程序改角色尺寸前先读完这一节，否则很容易把美术的图改坏。
 
-**一句话：可画范围就是碰撞框，28×38，画布多一点少一点都不行。**
+**一句话：主角的可画范围就是碰撞框，28×38，画布多一点少一点都不行；虚影反过来——判定框是
+`body_size`（28×38），贴图会被缩放到它，换图不影响判定。**
 
 引擎的真实行为（`player.gd` 的 `_fit_visuals()`）：
 
@@ -227,7 +232,7 @@ texture = (56, 76)   scale = (1, 1)   实际绘制 = (56, 76)   碰撞体 = (28,
 |---|---|
 | 主角画布 | 正好 28×38（`design_size` 的值） |
 | 死亡叉号 | 同样 28×38（和 `Sprite` 共用同一套缩放） |
-| 虚影两张图 | 同样 28×38，但只有顶部 28×8 薄片有碰撞，头顶轮廓要平 |
+| 虚影两张图 | **任意尺寸**（会被 `fit_visuals()` 缩放到 `body_size` 28×38，判定不受影响）；但比例最好保持 14:19，否则会被拉歪 |
 | 想画 4 倍大图 | **只能同时把 `design_size` 改成 112×152**，还要同步叉号与虚影，不推荐；直接画 28×38 最省事 |
 | 物块 | 九宫格源图，尺寸必须和 §4.5 的表一致（改了要同步 tscn 里的 patch margins） |
 
@@ -243,6 +248,76 @@ texture = (56, 76)   scale = (1, 1)   实际绘制 = (56, 76)   碰撞体 = (28,
 而实际不会缩放的情况，美术照做后全部返工。**凡是"引擎会帮你缩放"的直觉，先写测试验证再写进文档。**
 
 ---
+
+### 3.7 关卡网格：40 × 22 格，每格 32 × 32 像素
+
+> 给策划/美术看的操作版是 `README.md` §四。这里写「为什么长这样」和「改的时候会踩什么」。
+
+**一句话：一个房间 = 40 × 22 个瓦片 = 1280 × 704 像素 = 正好一屏。像素坐标除以 32 就是格子坐标。**
+
+改之前房间是「16px 的美术图集 + 节点 `scale = 2`」凑出来的：引擎里一格占 32px，画布上只有 16px，
+策划在编辑器里量的格子和美术手上的图差一倍；地图边界其实只是那块 `Polygon2D` 底色，
+哪一格能站、哪一格是空的，只能靠猜和试。现在图集本身就是 32×32、节点 `scale = 1`：
+
+| 项 | 值 |
+|---|---|
+| 格子 | 32 × 32 px |
+| 地图 | 40 列 × 22 行 = 1280 × 704 px |
+| 视口 | 1280 × 704（`project.godot`）——一屏就是一关，不需要相机滚动 |
+| 地面顶边 | y = 576（第 18 行的上边线），玩家脚底就踩在这条线上 |
+| 相机 | 固定 (640, 352)，即房间中心 |
+
+**房间场景的三个瓦片层**（顺序 = 绘制顺序，后面的盖在前面的上面）：
+
+```
+Background        Polygon2D      1280×704 纯色底，垫在最后
+Map_Placeholder   TileMapLayer   880 个空瓦片（air 0:1）铺满整张地图，collision_enabled = false
+World             TileMapLayer   地表 / 内层 / 两侧墙，有碰撞——玩家和虚影撞到的是这一层
+Decor             TileMapLayer   装饰，无碰撞，留给美术
+```
+
+**空瓦片（`air`）为什么值得单独存在**：地图边界不再是「背景色块大概多大」，而是 880 个格子里
+实打实的瓦片。策划在编辑器里能直接数格子、框选一片整体移动；美术拿到的是同一张 40×22 的纸，
+不会出现「我以为这里还能画，其实是空的」。游戏里它只有一条 alpha≈40 的极淡格线，看得出网格，
+但不抢戏。
+
+**图集** `assets/tiles/placeholder_32.png`（4×2 格，`make_grid_tiles.py` 生成）：
+
+| atlas 坐标 | 名字 | 语义 | 碰撞 |
+|---|---|---|---|
+| (0,0) | solid_top | 地表，顶部 3px 高光 | 实心 ±16 |
+| (1,0) | solid_fill | 地下内层 | 实心 ±16 |
+| (2,0) | solid_wall | 竖直墙体（右侧加深） | 实心 ±16 |
+| (3,0) | one_way | 单向板，只占顶部 8px | one_way |
+| (0,1) | air | 空瓦片，铺满整张地图 | 无 |
+| (1,1) | decor | 装饰板 | 无 |
+| (2,1) | spawn_mark | 出生点标记 | 无 |
+
+**机关也在这张网格上**（`block_size` 不变，只是位置贴到格线）：
+
+| 机关 | 像素矩形 | 格子 | 规则 |
+|---|---|---|---|
+| 出生点 | (128, 538, 28×38) | x = 4 列 | 脚底 576 |
+| 尖刺 | (32, 544, 64×32) | 1–2 列, 17 行 | 底边贴 576 |
+| 压力板 A / B | (352 / 640, 564, 64×12) | 11 / 20 列, 17 行 | 宽 2 格，底边贴 576 |
+| 门 | (832, 416, 64×160) | 26–27 列, 13–17 行 | 2×5 格，底边贴 576 |
+| 出口 | (1120, 448, 64×128) | 35–36 列, 14–17 行 | 2×4 格，底边贴 576 |
+
+判定规则统一成一句：**左边贴 32 的倍数、底边贴 576、宽是 32 的倍数**。`test_grid_room.gd`
+逐个机关断言这三条，谁挪了半个格子会当场炸。
+
+**改地图的两条路**：
+
+1. **在编辑器里刷** `World` 层（就是普通 TileMapLayer，画完保存即可）——适合局部调整
+2. **改 `_reference/tools/room_grid.py` 的 `LAYOUT`**（40 个字符 × 22 行，图例在文件头），
+   再 `python _reference/tools/make_room.py --force` 重新生成；加 `--preview` 只出预览图不动场景
+
+第 2 条存在的理由：瓦片数据是二进制（2 字节头 + 每格 12 字节），人眼从 `.tscn` 里看不出哪格错了；
+整张地图重排时用 ASCII 描述比在编辑器里一格一格点更可靠，也方便 diff 和 review。
+`make_room.py` 的重写是幂等的：只替换 `Background` 到 `RespawnPoint` 之间那一段，机关和 UI 不碰。
+
+---
+
 
 ## 4. 五个关键设计决策
 
@@ -343,6 +418,48 @@ global_position += last_delta      # 增量，不是赋值成记录坐标
 
 ---
 
+### 4.7 虚影的两个「单一真相」：`body_size` 与 `_active`
+
+这一节是给以后改虚影的人看的。两条规则各自只允许有一个来源，破了就会出现
+「美术换张图把谜题改了」和「看不见的虚影把板压住了」这类极难定位的问题。
+
+**① 判定体积 = `body_size`，不是贴图**
+
+| 用途 | 取什么 |
+|---|---|
+| 机关判定（压力板） | `echo.body_rect()` → `Rect2(global_position, body_size)` |
+| 撞墙扫描（`_clip_motion`） | probe = `body_size` 内缩 1px（26×36） |
+| 头顶可踩薄片 | 宽度 = `body_size.x`，高度固定 8 |
+| 外观（Body / Cross） | `scale = body_size / texture.size`，**图跟着判定走** |
+
+改之前是反过来的：`Body` 贴图矩形直接当判定，贴图多留 2px 透明边，
+「刚好碰不到」的压力板就变成「踩得到」。现在美术给 56×76 或留透明边，
+只会被缩放到 28×38，谜题不变。对应断言在 `test_echo_contract.gd`（换 56×76 的图后
+`body_rect()` 仍是 28×38、4px 重叠仍算踩住、完全离开仍不算）。
+
+⚠️ `Top` 的 shape 是场景里的 `sub_resource`，多实例共享。`fit_visuals()` 里先
+`duplicate()` 再改尺寸，否则改一个虚影的身体尺寸会把全场虚影的薄片一起改掉。
+
+**② 激活状态 = `_active`，不是 `visible`**
+
+`_active` 同时决定四件事：显示、碰撞层 bit 3（值 4）、`advance()` 是否推进、机关是否认它。
+
+| 时刻 | `_active` | 说明 |
+|---|---|---|
+| `setup(trail)` 刚生成（玩家还在死亡淡出） | `false` | 不显示、无碰撞、帧号停在 0，压力板不认 |
+| 玩家复活 → `reset()` | `true` | 三件事同时生效，从第 0 帧开始重放 |
+| 播完进入 1.3s 淡出 | `true` | 尸体仍能踩、仍压得住板 |
+| `_complete()` 淡出结束 | `false` | 显示与碰撞一起撤掉，机关随即释放 |
+
+改之前是分裂的：`setup()` 里直接把碰撞层打开，`echo_manager` 再 `visible = false`，
+而 `advance()` 照常推进——于是同一具虚影「物理上存在、机关上不存在」，
+玩家死亡那 1 秒多里可能被一个看不见的平台托住。
+
+**所以：以后让虚影出现，只调 `reset()`，不要手改 `visible`。**
+同理，机关判断虚影在不在场，只调 `is_active()` / `actor_bounds.available()`，不要看 `visible`。
+
+---
+
 ## 5. 已知坑（都踩过，别再踩）
 
 | 现象 | 原因 | 解法 |
@@ -364,14 +481,24 @@ global_position += last_delta      # 增量，不是赋值成记录坐标
 | 按 `R` 之后门又关上了，以为「开门白解了」 | **设计如此**：R 是「回到本关初始状态」，虚影与机关一起复位 | 想保留开门进度就别按 R；整关重来（含节点重建）仍是通关面板的 Replay |
 | 按 `R` 之后门看着关了，人却能穿过去 | `puzzle_door.reset_mechanism()` 里只开了碰撞、没先把 `opened` 置 false，`latch_open` 的早退分支下一帧就 return | 顺序必须是 `opened = false` → `$Collision.set_deferred("disabled", false)`；断言见 `test_complete_room` |
 | 新加的机关按 `R` 不复位，其它机关正常 | 忘了登记 `mechanism` 组，或没写 `reset_mechanism()` | 照 §3.2「新增机关的接入契约」两条做 |
-| 虚影压板时灵时不灵，或换皮后范围变大 | 压力板取的是 `Body` **贴图矩形**当体积，贴图尺寸变了判定就变 | `echo_body.png` 保持 28×38；`test_echo_environment.gd` 第 1 条就是这个断言 |
+| 换皮后虚影压板范围变了 | 判定被改回读 `Body` 贴图矩形了（贴图多留几像素透明边，`rect` 就变大） | 判定只准读 `body_size`（§4.7）；`test_echo_contract.gd` 会用 56×76 的图验一遍 |
+| 虚影还没出现就能挡人 / 压住板，或画面出现了板却不亮 | 显示、碰撞层、机关判定各判各的（`visible` / 层 bit / `is_gone`） | 全部统一走 `_active`：让虚影登场只调 `reset()`，**不要再手改 `visible`**（§4.7） |
+| 地图看着好好的，走上去墙是假的 / 地面只有第一格能踩 | `TileSet` 里碰撞多边形写成了**图集绝对坐标**（`16..48`、`48..80`…）。它要的是**瓦片局部坐标**（以瓦片中心为原点，每个格子都是同一份 `±16`） | 所有格子共用 `PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)`；判定看 `test_grid_room.gd` 的「左墙(8,300) 是实的」 |
 
 ---
 
 ## 6. 三条改动路径
 
 ### 策划：改关卡
-打开 `level_01.tscn`，拖实例。改物块大小用检查器的 `block_size`。改重生点挪 `RespawnPoint`。详规见 `README.md` 第三、四节。
+可玩房间是 `scenes/levels/complete_room.tscn`（`level_01.tscn` 是旧版块状关卡，留着做对照）。
+
+- **刷地形**：选中 `World` 层，用 TileMap 的画笔刷。格子 32px，40 列 × 22 行，一格都不能多出边界
+- **机关**：拖实例，尺寸在检查器改 `block_size`（贴图与碰撞一起变）。放完对齐格线：左边贴 32 的倍数、
+  底边贴 576、宽是 32 的倍数（§3.7 有对照表，`test_grid_room.gd` 会验）
+- **不用再改 `Background`**：地图边界是 `Map_Placeholder` 那 880 个空瓦片，不是色块
+- **整张图重排**：改 `_reference/tools/room_grid.py` → `make_room.py --force`
+
+其余拖拽规则见 `README.md` 第三、四节。
 
 ### 美术：换图
 覆盖 `assets/` 下的同名 png。物块是九宫格源图（尺寸见 `README.md` 3.1），不是最终尺寸图。
@@ -402,13 +529,12 @@ godot --headless --path . --import
 # 2) 跑单个测试
 godot --headless --path . --fixed-fps 60 --script res://_reference/tools/test_player_movement.gd
 
-# 3) 全跑一遍
-for t in test_player_movement test_death_respawn test_pause test_echo_system \
-         test_echo_lifetime test_reset_echoes test_echo_cap test_blocks_layout \
-         test_collider_size test_hitbox_debug; do
-  echo "=== $t ==="
-  godot --headless --path . --fixed-fps 60 --script "res://_reference/tools/$t.gd"
+# 3) 全跑一遍（用 glob 扫目录，别手写名单——手写的名单一定会漏掉新加的）
+for f in _reference/tools/test_*.gd; do
+  echo "=== $f ==="
+  godot --headless --path . --fixed-fps 60 --script "res://$f"
 done
+# 判定标准：输出里没有 FAIL / SCRIPT ERROR，且脚本自己打的「失败项：0」
 ```
 
 `--fixed-fps 60` **不能省**：测试里的帧数断言基于固定步长。
@@ -425,6 +551,13 @@ done
 | `test_blocks_layout` | block_size 同步贴图与碰撞、九宫格 margin、实例不串台、叉号随尺寸缩放 |
 | `test_collider_size` | 改主角尺寸的安全性：正确同步后脚底仍贴 560、只改 size 不改 position 会陷 19px、6000px/s 不穿墙、4×4 不抖 |
 | `test_hitbox_debug` | 调试框矩形范围、脚底线/可踩线世界坐标、踩上去两线重合（0.00px）、F1 开关、改尺寸后框跟随 |
+| `test_grid_room` | **关卡网格契约**：视口 = 40×22×32、空瓦片铺满 880 格、三层属性、图集语义（实心有碰撞/空的没有）、物理实证（地面顶边 576、两侧墙）、机关贴格线、相机中心 |
+| `test_complete_room` | 真实按键走完整关：虚影踩板、双板开门、出口结算、R 复位（人/虚影/机关）、门重新变实体、Replay 整关重来、尖刺致死与重生 |
+| `test_echo_environment` | 虚影被世界挡住（门/墙）、被挡后不隧穿、开门能过、虚影踩板、站出口不结算 |
+| `test_echo_contract` | `body_size` 与 `_active` 两个单一真相：换皮不改判定、未激活时显示/碰撞/机关全关 |
+| `test_echo_recording_cap` | 录制上限滚动窗口：满了丢最旧一半，尸体落点不被截断 |
+| `test_air_drag` / `test_air_turn` / `test_jump_curve` / `test_speed_curve` | 手感曲线（逐帧数值，见 `docs/手感调参.md`） |
+| `graybox/tests/test_graybox_kit` | 灰盒套件自己的验收（模板搭建、保存重开、单板/双板门、出口）。在 `.gdignore` 目录里，要显式 `--script res://graybox/tests/test_graybox_kit.gd` |
 
 **这些测试是回归网，改完物理或虚影相关代码务必全跑一遍。**
 
@@ -478,8 +611,8 @@ done
 
 ### 9.2 哪些进仓库，哪些不进
 
-一共 160 个文件会入库：`scripts/` 32（16 个 `.gd` + 16 个 `.uid`）、`assets/` 45、
-`scenes/` 15、`docs/` 10、`_reference/` 53、根目录 5。
+一共 188 个文件会入库：`scripts/` 32（16 个 `.gd` + 16 个 `.uid`）、`assets/` 45、
+`scenes/` 15、`docs/` 10、`_reference/` 62、`graybox/` 19、根目录 5。
 （数字会随开发变，以 `git ls-files | wc -l` 为准；结构稳定的是「哪些该进、哪些不该进」。）
 
 | 内容 | 进仓库 | 说明 |
@@ -489,8 +622,10 @@ done
 | `*.gd.uid` | ✅ | Godot 4.4+ 的资源 UID，**必须提交**，保证跨机器引用不乱 |
 | `README.md` `HANDOVER.md` | ✅ 根目录 | GitHub 会自动渲染根目录 `README.md` |
 | `.gitignore` `.gitattributes` | ✅ | 后者管换行与二进制，缺了 `.tscn` 会整片 diff |
-| `_reference/tools/` | ✅（Private） | 里面有 **10 个 `test_*.gd` 回归测试**，团队要能跑；`make_*.py` 已冻结 |
-| `_reference/preview_*.png` | ✅（Private） | 我们自己构建版本的截图，作为视觉基线 |
+| `_reference/tools/` | ✅（Private） | 里面有 **19 个 `test_*.gd` 回归测试**，团队要能跑；`make_*.py` 已冻结 |
+| `graybox/` | ✅ | 另一位同学交付的**灰盒搭建套件**（模板场景 + 机关 + 编辑器预览）。和本项目的 40×22 网格是**两套并行的做法**：灰盒套件用 `solid_ground.tscn` 块拼，网格房间用瓦片刷，见 §13 |
+| `_reference/preview_*.png` | ✅（Private） | 我们自己构建版本的截图，作为视觉基线；网格房间的两张见 `preview_grid_room*.png` |
+| `_reference/art_source/office_atlas_16.png` | ✅（Private） | 旧的 16px 办公室图集。换成 32px 占位图集后它不再被任何场景引用，移到 `_reference/` 作美术参考（该目录有 `.gdignore`，引擎不导入） |
 | `_reference/source_from_game/` | ❌ 已忽略 | 反编译源码，**泄露即侵权** |
 | `_reference/preview_level01_original.png` | ❌ 已忽略 | 原版游戏画面 |
 | `.godot/`（2.7 MB） | ❌ 已忽略 | 导入缓存，每台机器自动重建，提交必然二进制冲突 |
@@ -500,7 +635,7 @@ done
 > 公开版的差异：把 `_reference/` 整个排除，同时把 `_reference/tools/test_*.gd` 挪到 `tests/`
 > （否则公开仓库既没有测试、也没有生成脚本）。这一步现在不做，等真要开源再说。
 
-**另外 13 个 `.import` 文件也在库里**（每个 png 一个，Godot 4 的导入设置就存在这里）。
+**另外 26 个 `.import` 文件也在库里**（每个 png 一个，Godot 4 的导入设置就存在这里）。
 少了它们不是不能跑，但过滤/压缩参数会回落到默认值，画面可能和现在不一样——**别忽略 `.import`**。
 
 仓库里**没有**、但也不影响跑的东西：
@@ -525,6 +660,7 @@ your-past-self/            ← GitHub 仓库
 ├── .gitignore
 ├── .gitattributes
 ├── assets/                ← 美术换图只碰这里
+│   ├── tiles/             ← 关卡网格图集（32×32 占位瓦片）
 ├── scenes/                ← 关卡、角色、物块、UI
 ├── scripts/               ← 10 个 .gd
 └── _reference/            ← 对照资料 + 测试（Private 才进）
@@ -571,7 +707,7 @@ git push -u origin main
 **第 4 步：验证别人能跑**
 
 自己另找一台机器（或删掉 `.godot/` 后再打开）克隆一份，用 Godot 导入根目录，
-确认：能进 `complete_room`、按 `F1` 有碰撞框、17 个测试脚本能跑。
+确认：能进 `complete_room`、按 `F1` 有碰撞框、19 个测试脚本能跑。
 `.godot/` 不在仓库里是**正常**的，第一次打开会重建（约十几秒）。
 
 **这一步已经实测过**：把仓库克隆到干净目录（无 `.godot/`）后
@@ -618,6 +754,12 @@ godot --headless --path . --quit-after 20
 
 # 美术交图后校验贴图尺寸（角色必须 28×38）
 python _reference/tools/check_art_size.py
+
+# 关卡网格：重建 32px 占位图集 / 把 room_grid.py 的布局写回房间 / 只看预览图
+python _reference/tools/make_grid_tiles.py --force
+python _reference/tools/make_room.py --force
+python _reference/tools/make_room.py --preview
+python _reference/tools/room_grid.py          # 打印 40x22 布局与机关格子坐标
 
 # 重新生成「可画范围」模板图（--force 覆盖）
 python _reference/tools/make_art_templates.py
@@ -680,7 +822,8 @@ python _reference/tools/make_art_templates.py
 | 虚影贴墙时"粘"住，不沿墙滑 | `_clip_motion` 只截短位移，不做滑动求解 | 录的是"贴着墙滑下去"的路径时，虚影的水平分量被吃掉（垂直方向仍然正常） | 要滑就得对 `cast_motion` 结果做投影，会引入和录制路径的偏差，**不建议现在做** |
 | 尖刺不杀虚影 | `spike_hazard.gd` 只遍历 `player` 组；尖刺块本身也没有碰撞体 | 原版「让回声掉进尖刺」不成立，得改成玩家自己死在尖刺上（§4.4） | 设计选择。要改就命中虚影时让它进入淡出，同时补断言 |
 | `R` 不是"重载场景" | `R` 走 `reset_all()`：人回起点、机关复位、虚影清空，但**节点不重建**（相机、HUD、录制对象都还在） | 效果上等价于回到初始状态；只有极少数依赖 `_ready()` 重新初始化的状态才需要 Replay | 若哪天加了"只在本局内累计"的状态（如计时器、收集数），记得在 `reset_mechanisms()` 或 `reset_all()` 里一起清 |
-| 三个关卡是复制粘贴 | `level_01` / `complete_room` / `office_build` 各存一份 Player + EchoManager + Camera | 改一个机制要改三处，最容易漏的是新加的那关 | 抽 `LevelBase.tscn`（§3 结尾也提过） |
+| 四个场景是复制粘贴 | `level_01` / `complete_room` / `office_build` / `graybox/base_level` 各存一份 Player + EchoManager + Camera | 改一个机制要改四处，最容易漏的是新加的那处 | `graybox/glue/room.gd` 已经是「LevelBase 的雏形」（继承 `room_controller` 并管 spawn/player 接线），下一步是把 `complete_room` 也挂上去，而不是再抄一遍 |
+| **两套并行的摆地形方式**：网格房间用 32px 瓦片（§3.7），`graybox` 套件用 `solid_ground.tscn` 块拼 | 灰盒套件是另一位同学独立交付的，和改网格几乎同时落地 | 同一个房间有两种画法，新人不知道该跟哪套；块拼出来的房间和 40×22 网格对不齐 | 二选一：① 把 `graybox/base_level.tscn` 的 `Terrain` 换成同一套瓦片层（一次能改完）；② 明确分工——网格房间=正式关卡，灰盒套件=快速试搭。**目前倾向 ①** |
 | `kill_y = 750` 写在玩家节点上 | 沿用原版常量 | 做比 750 更高的关卡要逐实例改 | 改成关卡级参数，或跟相机视野算 |
 | 机关每帧都 `get_nodes_in_group` | `actor_bounds.actors()` 每次调用都新建数组 | 5 条虚影的规模下无所谓（每帧 3 次小分配） | 别提前优化，机关数量上百再说 |
 

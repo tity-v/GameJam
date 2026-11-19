@@ -4,11 +4,15 @@
 用法:
     python _reference/tools/check_art_size.py
 
-规则分三类（详细说明见 README「3.4 角色可画范围」）：
-  actor  角色。Sprite 按**原尺寸 1:1** 绘制（只再乘「碰撞体 / design_size」），
+规则分四类（详细说明见 README「3.4 角色可画范围」）：
+  actor  主角。Sprite 按**原尺寸 1:1** 绘制（只再乘「碰撞体 / design_size」），
          所以画布必须正好 28x38：画成 56x76 就会显示成两倍大。
+  echo   虚影。会被缩放到 body_size（默认 28x38），**任意尺寸都能用**；
+         只是比例不是 14:19 时会被拉歪（提示，不算错）。
   block  物块。九宫格源图，**尺寸必须完全一致**，否则四边固定的像素宽度会错。
   ui     按钮/图标。按 1:1 像素摆放，尺寸必须一致。
+  tile   关卡瓦片图集。宽高必须是 32 的整数倍（不是就必须改），
+         允许后面往图集里加格子；格子的碰撞写在 tileset_32.tres 里，与图无关。
 
 退出码：0 全部通过；1 有不可接受的问题。
 """
@@ -23,8 +27,8 @@ ROOT = Path(__file__).resolve().parents[2]
 SPEC = {
     "assets/actors/player.png": (28, 38, "actor"),
     "assets/actors/player_death_cross.png": (28, 38, "actor"),
-    "assets/echo/echo_body.png": (28, 38, "actor"),
-    "assets/echo/echo_cross.png": (28, 38, "actor"),
+    "assets/echo/echo_body.png": (28, 38, "echo"),
+    "assets/echo/echo_cross.png": (28, 38, "echo"),
     "assets/blocks/solid_ground.png": (32, 32, "block"),
     "assets/blocks/solid_wall.png": (32, 32, "block"),
     "assets/blocks/plate_off.png": (8, 8, "block"),
@@ -34,6 +38,16 @@ SPEC = {
     "assets/ui/continue_normal.png": (92, 92, "ui"),
     "assets/ui/continue_hover.png": (92, 92, "ui"),
     "assets/ui/continue_pressed.png": (92, 92, "ui"),
+    "assets/tiles/placeholder_32.png": (128, 64, "tile"),
+    # 机关贴图也是九宫格源图（场景里按 block_size 拉伸），尺寸必须像素级一致
+    "assets/mechanisms/pressure_off.png": (32, 8, "block"),
+    "assets/mechanisms/pressure_on.png": (32, 8, "block"),
+    "assets/mechanisms/door_closed.png": (32, 48, "block"),
+    "assets/mechanisms/door_open.png": (32, 48, "block"),
+    "assets/mechanisms/exit_inactive.png": (32, 48, "block"),
+    "assets/mechanisms/exit_active.png": (32, 48, "block"),
+    "assets/mechanisms/spikes_up.png": (32, 16, "block"),
+    "assets/mechanisms/wall_button_off.png": (16, 16, "block"),
 }
 
 OK = "\033[32mOK  \033[0m"
@@ -54,8 +68,25 @@ def main() -> int:
         if (w, h) == (ew, eh):
             print(f"{OK} {rel:42s} {w}x{h}")
             continue
-        if kind == "actor":
-            # 角色是 1:1 绘制，尺寸不对就会显示成「几倍大的角色」，不会被自动缩回去
+        if kind == "tile":
+            # 瓦片图集：只要求 32 的整数倍，加几列都不算错
+            if w % 32 == 0 and h % 32 == 0:
+                print(f"{WARN} {rel:42s} {w}x{h}"
+                      f"（{w // 32}x{h // 32} 格，合法；记得让 tileset_32.tres 也认到新格子）")
+            else:
+                print(f"{BAD} {rel:42s} {w}x{h}（宽高必须是 32 的整数倍，否则相邻瓦片会错位）")
+                problems += 1
+            warns += 1 if w % 32 == 0 and h % 32 == 0 else 0
+        elif kind == "echo":
+            # 虚影按 body_size 缩放，尺寸本身不影响玩法；只有比例歪了才提示
+            same_ratio = abs(w / h - ew / eh) < 0.01
+            if same_ratio:
+                print(f"{WARN} {rel:42s} {w}x{h}（等比，会被缩放到 {ew}x{eh}，能用）")
+            else:
+                print(f"{WARN} {rel:42s} {w}x{h}（比例和 {ew}x{eh} 不同，缩放后会被拉歪）")
+            warns += 1
+        elif kind == "actor":
+            # 主角是 1:1 绘制，尺寸不对就会显示成「几倍大的角色」，不会被自动缩回去
             kx, ky = w / ew, h / eh
             if abs(kx - ky) < 0.01:
                 detail = f"会显示成 {kx:.2f} 倍大小"

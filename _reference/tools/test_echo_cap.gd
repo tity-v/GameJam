@@ -71,9 +71,9 @@ func _add(pos: Vector2) -> void:
 	for i in 30:
 		trail.append(pos)
 	manager.call("_add_echo", trail)
-	# _add_echo 里新虚影是隐藏的，测试里手动显示以便观察
+	# _add_echo 里新虚影是未激活的，测试里手动激活以便观察
 	var e: Node2D = manager.get_child(manager.get_child_count() - 1)
-	e.visible = true
+	e.reset()
 
 
 func _xs() -> Array:

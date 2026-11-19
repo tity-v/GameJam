@@ -108,7 +108,10 @@ func _fit_visuals() -> void:
 		return
 	var k := Vector2(body.x / design_size.x, body.y / design_size.y)
 	if _sprite != null:
-		_sprite.scale = k
+		if _sprite.has_method("fit_to_body"):
+			_sprite.call("fit_to_body", body)
+		else:
+			_sprite.scale = k
 	if _mark != null:
 		_mark.scale = k
 

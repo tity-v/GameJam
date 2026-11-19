@@ -1,12 +1,13 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/echo.gd" id="1_echo"]
 [ext_resource type="Texture2D" path="res://assets/echo/echo_body.png" id="2_body"]
 [ext_resource type="Texture2D" path="res://assets/echo/echo_cross.png" id="3_cross"]
 [ext_resource type="Script" path="res://scripts/hitbox_debug.gd" id="4_debug"]
+[ext_resource type="Script" path="res://scripts/character_portrait.gd" id="5_portrait"]
 
 [sub_resource type="RectangleShape2D" id="1_top"]
-size = Vector2(28, 8)
+size = Vector2(32, 8)
 
 [node name="Echo" type="StaticBody2D" groups=["echo"]]
 collision_layer = 4
@@ -16,6 +17,8 @@ script = ExtResource("1_echo")
 [node name="Body" type="Sprite2D" parent="."]
 texture = ExtResource("2_body")
 centered = false
+script = ExtResource("5_portrait")
+echo_tint = true
 
 [node name="Cross" type="Sprite2D" parent="."]
 visible = false
@@ -23,7 +26,7 @@ texture = ExtResource("3_cross")
 centered = false
 
 [node name="Top" type="CollisionShape2D" parent="."]
-position = Vector2(14, 4)
+position = Vector2(16, 4)
 one_way_collision = true
 shape = SubResource("1_top")
 

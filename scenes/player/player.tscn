@@ -1,12 +1,13 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/actors/player.png" id="2_tex"]
 [ext_resource type="Texture2D" path="res://assets/actors/player_death_cross.png" id="3_cross"]
 [ext_resource type="Script" path="res://scripts/hitbox_debug.gd" id="4_debug"]
+[ext_resource type="Script" path="res://scripts/character_portrait.gd" id="5_portrait"]
 
 [sub_resource type="RectangleShape2D" id="1_shape"]
-size = Vector2(28, 38)
+size = Vector2(32, 44)
 
 [node name="Player" type="CharacterBody2D" groups=["player"]]
 collision_layer = 2
@@ -16,6 +17,7 @@ script = ExtResource("1_script")
 [node name="Sprite" type="Sprite2D" parent="."]
 texture = ExtResource("2_tex")
 centered = false
+script = ExtResource("5_portrait")
 
 [node name="DeathMark" type="Sprite2D" parent="."]
 visible = false
@@ -23,7 +25,7 @@ texture = ExtResource("3_cross")
 centered = false
 
 [node name="Collision" type="CollisionShape2D" parent="."]
-position = Vector2(14, 19)
+position = Vector2(16, 22)
 shape = SubResource("1_shape")
 
 [node name="HitboxDebug" type="Node2D" parent="."]

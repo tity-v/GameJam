@@ -9,8 +9,8 @@ extends Camera2D
 @export var anchor_x: float = 400.0
 ## 玩家节点原点是包围盒左上角，取中心需要补半径（宽 28 → 14）
 @export var target_center_offset_x: float = 14.0
-## 相机中心。1280x720 视口 → (640, 360)；垂直锁定用它
-@export var center: Vector2 = Vector2(640, 360)
+## 相机中心。1280x704 视口 → (640, 352)；垂直锁定用它
+@export var center: Vector2 = Vector2(640, 352)
 
 var _target: Node2D
 

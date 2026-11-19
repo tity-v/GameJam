@@ -79,7 +79,7 @@ func run() -> void:
 	root.add_child(room)
 	current_scene = room
 	var player = room.get_node("Player")
-	check(player.position.is_equal_approx(Vector2(210, 538)), "首次出生跟随移动后的标记")
+	check(player.position.is_equal_approx(Vector2(210, 532)), "首次出生跟随移动后的标记")
 	await frames(5)
 	check(player.is_on_floor(), "模板地形具有实体碰撞")
 	step = room.get_node("Terrain/Step")
@@ -91,7 +91,7 @@ func run() -> void:
 	var wall_display: Vector2 = wall.get_node("Patch").size
 	check(step_display == step_shape and wall_display == wall_shape, "保存重开后地形显示尺寸正确")
 	player.respawn()
-	check(player.position.is_equal_approx(Vector2(210, 538)), "重生跟随同一个标记")
+	check(player.position.is_equal_approx(Vector2(210, 532)), "重生跟随同一个标记")
 
 	mechanisms = room.get_node("Mechanisms")
 	plate_a = mechanisms.get_node("PlateA")
@@ -112,7 +112,8 @@ func run() -> void:
 
 	var echo = ECHO.instantiate()
 	room.add_child(echo)
-	echo.setup(PackedVector2Array([Vector2(plate_a.position.x, 538)]))
+	echo.setup(PackedVector2Array([Vector2(plate_a.position.x, 532)]))
+	echo.reset()  # 虚影只认 reset() 这一个登场入口：setup 只载入轨迹，不激活（HANDOVER §4.7）
 	await frames(3)
 	check(not plate_a.active, "仅玩家压力板拒绝 Echo")
 	door.plate_paths.assign([NodePath("../PlateA"), NodePath("../PlateB")])

@@ -109,7 +109,7 @@ func _make_echo(pos: Vector2, frames: int) -> Node2D:
 		trail.append(pos)
 	manager.call("_add_echo", trail)
 	var e: Node2D = manager.get_child(manager.get_child_count() - 1)
-	e.visible = true
+	e.reset()  # setup 只是载入，reset 才是「登场」
 	return e
 
 

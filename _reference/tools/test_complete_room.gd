@@ -28,6 +28,15 @@ func walk_to(x: float) -> void:
 	key(code, false)
 	await frames(8)
 
+## 等「真的死了一次」，而不是走固定帧数——走多少帧刚好落在死亡动画里是会随关卡几何漂移的。
+func wait_death(limit: int) -> bool:
+	for i in limit:
+		await physics_frame
+		if player.is_dead:
+			return true
+	return false
+
+
 func check(condition: bool, message: String) -> void:
 	if not condition:
 		push_error(message)
@@ -131,9 +140,11 @@ func run() -> void:
 	room = current_scene
 	player = room.get_node("Player")
 	check(not room.won and not room.get_node("Door").opened and not room.get_node("PlateA").active, "Replay resets completion and mechanisms")
-	await walk_to(52)
-	check(player.is_dead, "spikes kill player")
-	await frames(90)
+	key(KEY_A, true)
+	var died: bool = await wait_death(300)
+	key(KEY_A, false)
+	check(died, "spikes kill player")
+	await frames(120)
 	check(not player.is_dead and player.position.x > 100, "hazard death respawns")
 	print("COMPLETE_ROOM_ALL_PASS")
 	quit()
