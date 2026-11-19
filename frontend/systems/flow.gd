@@ -1,6 +1,8 @@
 extends RefCounted
 ## 纯数据。关卡目录的数组顺序决定游戏顺序，进度使用稳定 ID。
 
+const ROOMS_PER_CHAPTER := 5
+
 var levels: Array[Dictionary] = []
 var completed: Array[String] = []
 var recent := ""
@@ -31,6 +33,24 @@ func unlocked(index: int) -> bool:
 
 func playable(index: int) -> bool:
 	return available(index) and unlocked(index)
+
+func chapter_of(index: int) -> int:
+	@warning_ignore("integer_division")
+	return index / ROOMS_PER_CHAPTER
+
+func chapter_card(chapter: int) -> Dictionary:
+	var first := chapter * ROOMS_PER_CHAPTER
+	var count := 0
+	var entry := -1
+	var replay := -1
+	for index in range(first, mini(first + ROOMS_PER_CHAPTER, levels.size())):
+		if completed.has(levels[index].id):
+			count += 1
+			if replay < 0 and playable(index):
+				replay = index
+		elif entry < 0 and playable(index):
+			entry = index
+	return {"entry": entry if entry >= 0 else replay, "count": count}
 
 func continue_index() -> int:
 	for index in levels.size():

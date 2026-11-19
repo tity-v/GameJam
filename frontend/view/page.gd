@@ -21,7 +21,7 @@ func present(model: Dictionary) -> void:
 		scrim.color.a = 0.82
 	if model.has("cards"):
 		var grid := GridContainer.new()
-		grid.columns = clampi(model.columns, 4, 8)
+		grid.columns = model.columns
 		content.add_child(grid)
 		for card: Dictionary in model.cards:
 			add_button(grid, card)

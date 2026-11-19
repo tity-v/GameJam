@@ -48,8 +48,8 @@ func run() -> void:
 
 	expect(session.flow.page == "home" and session.flow.continue_index() == -1, "首次启动不显示继续")
 	await command("levels")
-	expect(session.page_model().cards.size() == 20, "选关显示 20 项")
-	expect(session.page_model().cards[1].disabled, "第二关初始锁定")
+	expect(session.page_model().cards.size() == 4, "选章显示四章")
+	expect(session.page_model().cards[1].disabled, "第二章初始锁定")
 	expect(not root.get_node("Hud").visible, "主界面隐藏旧 HUD")
 	await command("choose", 0)
 	expect(session.flow.page == "game" and current_scene.scene_file_path == ROOM, "正常进入真实关卡")
@@ -79,13 +79,20 @@ func run() -> void:
 	await command("retry")
 	expect(not paused and current_scene != room and session.flow.current == 0, "暂停重试重新实例化场景")
 
+	catalog.levels[1].scene = ""
+	current_scene.complete()
+	await frames()
+	expect(session.flow.page == "result" and session.page_model().buttons[0].disabled, "下一间待接入时停在当前房间")
+	catalog.levels[1].scene = ROOM
+	expect(session.flow.chapter_card(0).entry == 1, "章节定位到首个未完成房间")
+	await command("retry")
 	for index in range(20):
 		expect(session.flow.current == index, "顺序进入第 %s 关" % (index + 1))
 		current_scene.complete()
 		await frames()
 		expect(not current_scene.get_node("UI/Win").visible, "旧结算被隐藏")
 		expect(session.flow.completed.size() == index + 1, "进度记录一次")
-		if index < 19:
+		if index < 19 and (index + 1) % 5 == 0:
 			expect(session.flow.page == "result" and session.flow.playable(index + 1), "完成后解锁下一关")
 			await command("next")
 	expect(session.flow.page == "finished", "第 20 关显示全部通关")
@@ -106,7 +113,7 @@ func run() -> void:
 	expect(session.flow.completed.size() == 20 and session.flow.continue_index() == 19, "重启读取通关记录和继续位置")
 	expect(session.settings.volume == 42.0 and session.settings.muted, "重启读取设置")
 	await command("levels")
-	expect(session.page_model().cards[1].disabled, "待接入关卡无法进入")
+	expect(not session.flow.playable(1), "待接入房间无法进入")
 	await command("choose", 0)
 	expect(session.flow.page == "levels" and not session.notice.is_empty(), "无效场景留在当前页")
 	await command("continue_game")

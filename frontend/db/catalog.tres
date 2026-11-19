@@ -6,82 +6,82 @@
 script = ExtResource("1")
 levels = Array[Dictionary]([{
 "id": "level_01",
-"title": "第 01 关",
+"title": "第 1 章 · 房间 1/5",
 "scene": "res://scenes/levels/complete_room.tscn"
 }, {
 "id": "level_02",
-"title": "第 02 关",
+"title": "第 1 章 · 房间 2/5",
 "scene": ""
 }, {
 "id": "level_03",
-"title": "第 03 关",
+"title": "第 1 章 · 房间 3/5",
 "scene": ""
 }, {
 "id": "level_04",
-"title": "第 04 关",
+"title": "第 1 章 · 房间 4/5",
 "scene": ""
 }, {
 "id": "level_05",
-"title": "第 05 关",
+"title": "第 1 章 · 房间 5/5",
 "scene": ""
 }, {
 "id": "level_06",
-"title": "第 06 关",
+"title": "第 2 章 · 房间 1/5",
 "scene": ""
 }, {
 "id": "level_07",
-"title": "第 07 关",
+"title": "第 2 章 · 房间 2/5",
 "scene": ""
 }, {
 "id": "level_08",
-"title": "第 08 关",
+"title": "第 2 章 · 房间 3/5",
 "scene": ""
 }, {
 "id": "level_09",
-"title": "第 09 关",
+"title": "第 2 章 · 房间 4/5",
 "scene": ""
 }, {
 "id": "level_10",
-"title": "第 10 关",
+"title": "第 2 章 · 房间 5/5",
 "scene": ""
 }, {
 "id": "level_11",
-"title": "第 11 关",
+"title": "第 3 章 · 房间 1/5",
 "scene": ""
 }, {
 "id": "level_12",
-"title": "第 12 关",
+"title": "第 3 章 · 房间 2/5",
 "scene": ""
 }, {
 "id": "level_13",
-"title": "第 13 关",
+"title": "第 3 章 · 房间 3/5",
 "scene": ""
 }, {
 "id": "level_14",
-"title": "第 14 关",
+"title": "第 3 章 · 房间 4/5",
 "scene": ""
 }, {
 "id": "level_15",
-"title": "第 15 关",
+"title": "第 3 章 · 房间 5/5",
 "scene": ""
 }, {
 "id": "level_16",
-"title": "第 16 关",
+"title": "第 4 章 · 房间 1/5",
 "scene": ""
 }, {
 "id": "level_17",
-"title": "第 17 关",
+"title": "第 4 章 · 房间 2/5",
 "scene": ""
 }, {
 "id": "level_18",
-"title": "第 18 关",
+"title": "第 4 章 · 房间 3/5",
 "scene": ""
 }, {
 "id": "level_19",
-"title": "第 19 关",
+"title": "第 4 章 · 房间 4/5",
 "scene": ""
 }, {
 "id": "level_20",
-"title": "第 20 关",
+"title": "第 4 章 · 房间 5/5",
 "scene": ""
 }])

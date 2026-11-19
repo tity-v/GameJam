@@ -91,6 +91,11 @@ func _process(_delta: float) -> void:
 		pending.clear()
 		flow.mark_complete()
 		save_progress()
+		var following := flow.current + 1
+		if flow.playable(following) and flow.chapter_of(following) == flow.chapter_of(flow.current):
+			launch(following)
+			if switching:
+				return
 		redraw()
 	var commands := pending.duplicate()
 	pending.clear()
@@ -275,18 +280,16 @@ func page_model() -> Dictionary:
 			buttons.append_array([button("start", "new_game", not flow.playable(0)), button("level_list", "levels"), button("settings", "open_settings"), button("quit", "quit")])
 		"levels":
 			model.detail = tr_copy("progress") % [flow.completed.size(), flow.levels.size()]
-			model.columns = catalog.columns
+			model.columns = 2
 			model.cards = []
-			for index in flow.levels.size():
-				var level := flow.levels[index]
-				var status := "missing"
-				if flow.available(index):
-					if flow.completed.has(level.id):
-						status = "done"
-					else:
-						status = "ready" if flow.unlocked(index) else "locked"
-				var card := button("", "choose", not flow.playable(index), index)
-				card.text = "%s\n%s" % [level.title, tr_copy(status)]
+			for first in range(0, flow.levels.size(), flow.ROOMS_PER_CHAPTER):
+				var chapter := flow.chapter_of(first)
+				var data := flow.chapter_card(chapter)
+				var card := button("", "choose", data.entry < 0, data.entry)
+				var status := tr_copy("chapter_progress") % [data.count, flow.ROOMS_PER_CHAPTER]
+				if card.disabled:
+					status += " · " + tr_copy("locked" if flow.available(first) else "missing")
+				card.text = "%s\n%s" % [tr_copy("chapter") % (chapter + 1), status]
 				model.cards.append(card)
 			footer.append(button("back", "go_back"))
 		"pause":
@@ -300,8 +303,14 @@ func page_model() -> Dictionary:
 			footer.append(button("back", "go_back"))
 		"result":
 			model.overlay = true
-			model.detail = tr_copy("completed_level") % flow.levels[flow.current].title
-			buttons.append(button("next" if flow.playable(flow.current + 1) else "missing", "next", not flow.playable(flow.current + 1)))
+			var next_label := "next"
+			if (flow.current + 1) % flow.ROOMS_PER_CHAPTER == 0:
+				next_label = "next_chapter"
+				model.title = tr_copy("chapter_done")
+				model.detail = tr_copy("chapter") % (flow.chapter_of(flow.current) + 1)
+			else:
+				model.detail = tr_copy("completed_level") % flow.levels[flow.current].title
+			buttons.append(button(next_label if flow.playable(flow.current + 1) else "missing", "next", not flow.playable(flow.current + 1)))
 			buttons.append(button("retry", "retry"))
 			footer.append_array([button("level_list", "levels"), button("menu", "home")])
 		"finished":
