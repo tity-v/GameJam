@@ -11,7 +11,8 @@
 
 把 2D 平台解谜游戏《过去的你》的第一关搬进 Godot 4.7，并实现它的核心机制：**死后留下一个重放你上一轮动作的虚影，用虚影替你踩机关、当垫脚**。
 
-当前状态：**机制闭环已跑通，关卡规则未完成**——第一关实际是**过不去的**（门是实体墙，压力板不响应）。这不是 bug，是待办。
+当前状态：**机制闭环已跑通，且有一个能从头打到尾的房间** `complete_room`（压力板→双板锁存开门→出口结算，含尖刺致死与 `R` 重载）。
+历史场景 `level_01` 仍是「过不去」的状态（门是实体墙、压力板不响应），保留作为对照，不是 bug。
 
 ---
 
@@ -22,19 +23,23 @@
 | 引擎 | **Godot 4.7.2**（`config/features` 写死 4.7，低版本打开会提示） |
 | 渲染 | `gl_compatibility`（兼容模式，老显卡/笔记本也能跑） |
 | 视口 | 1280 × 720，`canvas_items` 拉伸 |
-| 主场景 | `res://scenes/levels/level_01.tscn` |
-| 代码规模 | 10 个脚本，共约 800 行 GDScript |
+| 主场景 | `res://scenes/levels/complete_room.tscn`（`level_01.tscn` 保留为历史场景） |
+| 代码规模 | 16 个脚本，共约 1010 行 GDScript；15 个回归测试 |
 
 打开方式：Godot 项目管理器 → 导入 → 选仓库根目录（`project.godot` 在根）。
 
 **按键**：`A/D` 移动（方向键也行）· `Space` 跳跃（长按更高）· `E` 自杀 · `R` 重置全部虚影 · `Esc` 暂停。
 
-**每局必做的验证动作**（30 秒判断环境是否正常）：
-1. 开局站在地面，`y = 522`
-2. 按住 `D` 跑，撞到 x=790 的门停住 → 说明碰撞与关卡数据都加载对了
+**每局必做的验证动作**（30 秒判断环境是否正常，以下数字对应主场景 `complete_room`）：
+
+1. 开局站在地面，脚底 `y = 576`（角色原点 y=538）
+2. 按住 `D` 跑，撞到 **x=850** 的门停住 → 说明碰撞与关卡数据都加载对了
+   （门占 x 850~914、y 416~576；这里答不上来就说明场景没进对）
 3. 按 `E`，方块淡出带红叉，1.3 秒后回出生点，同时留下一个蓝色虚影
 4. 虚影重放完再活 1.3 秒后消失
-5. 按 `F1`：角色身上出现黄色碰撞框、脚下出现橙色粗线，且橙线正好压在地面顶面（560）
+5. 按 `F1`：角色身上出现黄色碰撞框、脚下出现橙色粗线，且橙线正好压在地面顶面（576）
+
+> 换成 `level_01.tscn` 时这些数字都不同（那关地面顶面 560、门在 x=790），别拿一套数去对另一关。
 
 ---
 
@@ -54,9 +59,12 @@
 | `Esc` 暂停 + 点击继续 | 完成 | `scenes/ui/pause_menu.tscn`（autoload） |
 | 底部操作提示栏 + 虚影计数 | 完成 | `scenes/ui/hud.tscn`（autoload） |
 | 碰撞框可视化（脚底线 / 可踩线，`F1` 开关） | 完成 | `scripts/hitbox_debug.gd` |
-| **压力板 → 开门** | **未做** | — |
-| **出口结算 / 通关** | **未做** | — |
-| **尖刺伤害判定** | **未做**（尖刺物块已备好） | — |
+| **压力板 → 开门**（双板锁存） | 完成 | `scripts/pressure_plate.gd`、`scripts/puzzle_door.gd` |
+| **出口结算 / 通关** | 完成 | `scripts/level_exit.gd`、`scenes/levels/complete_room.tscn` |
+| **尖刺伤害判定** | 完成 | `scripts/spike_hazard.gd` |
+| **房间整体重置（`R` 重载场景）** | 完成 | `scripts/room_controller.gd` |
+| 角色脚下/身体边缘判定 | 完成 | `scripts/actor_bounds.gd`（供压力板/出口/尖刺共用） |
+| 可通关房间搭建 | 完成 | `scenes/levels/complete_room.tscn`（说明见 `docs/完整房间使用说明.md`） |
 | 关卡名 / 关卡提示文字（原版有） | 未做 | — |
 | 第 2–8 关 | 未做 | 原数据见 `_reference/source_from_game/scripts/platformer/levels.gd` |
 
@@ -65,6 +73,9 @@
 ## 3. 代码结构
 
 ### 3.1 场景树（`level_01.tscn`）
+
+> 主场景已切到 `complete_room.tscn`，它的节点结构（压力板 / 门 / 出口 / 尖刺 / 提示文字）
+> 见 `docs/完整房间使用说明.md`。本节保留 `level_01` 的树，用来理解最基础的那一层。
 
 ```
 Level01 (Node2D)
@@ -91,16 +102,24 @@ Level01 (Node2D)
 
 | 脚本 | 行数 | 职责 | 挂在哪 |
 |---|---|---|---|
-| `player.gd` | 222 | 移动/跳跃手感、死亡淡出、重生、被虚影带着走 | `player.tscn` |
-| `echo_manager.gd` | 142 | 录轨迹、生成虚影、FIFO 上限、R 重置 | 关卡内节点 |
+| `player.gd` | 294 | 移动/跳跃手感、死亡淡出、重生、被虚影带着走 | `player.tscn` |
+| `echo_manager.gd` | 146 | 录轨迹、生成虚影、FIFO 上限、R 重置 | 关卡内节点 |
 | `echo.gd` | 115 | 逐帧重放轨迹、单向碰撞、尸体淡出 | `echo.tscn` |
+| `hitbox_debug.gd` | 95 | 碰撞框可视化（纯 `_draw`，不参与物理；`@tool` + F1 开关） | 玩家/虚影的 `HitboxDebug` 子节点 |
 | `hud.gd` | 57 | 刷新「回声 n/5」、闪现提示淡出 | autoload `Hud` |
 | `camera_follow.gd` | 48 | 水平跟随 + 边界夹取 + 瞬移归位 | 关卡内 `Camera2D` |
 | `pause_menu.gd` | 41 | `Esc` 切换 `SceneTree.paused` | autoload `PauseMenu` |
 | `block.gd` | 38 | `block_size` 同步贴图与碰撞（`@tool`） | 所有物块场景根 |
+| `pressure_plate.gd` | 34 | 判断「谁站在板上」（玩家/虚影，可分别开关） | `plate_off.tscn` |
+| `level_exit.gd` | 25 | 门开后站上出口 → 结算 | `exit.tscn` |
+| `puzzle_door.gd` | 23 | 多块压力板全满足才开门，带锁存 | `door.tscn` |
+| `room_controller.gd` | 22 | 房间状态（`won` / `resetting`）、`R` 重载场景 | `complete_room.tscn` 根 |
+| `actor_bounds.gd` | 22 | 共用「脚底/身体范围」判定工具（静态函数） | 被上面几个脚本 `preload` |
 | `key_hint.gd` | 21 | 一组「键帽 + 说明」 | `key_hint.tscn` |
 | `keycap.gd` | 18 | 单个键帽 | `keycap.tscn` |
-| `hitbox_debug.gd` | 95 | 碰撞框可视化（纯 `_draw`，不参与物理；`@tool` + F1 开关） | 玩家/虚影的 `HitboxDebug` 子节点 |
+| `spike_hazard.gd` | 13 | 碰到尖刺 → 致死 | `spike_tile.tscn` |
+
+合计 16 个脚本、1012 行（`wc -l` 口径）。
 
 ### 3.3 信号流
 
@@ -393,7 +412,9 @@ done
 
 ### 9.2 哪些进仓库，哪些不进
 
-一共 102 个文件会入库，其中 64 个是游戏本体、38 个在 `_reference/`。
+一共 158 个文件会入库：`scripts/` 32（16 个 `.gd` + 16 个 `.uid`）、`assets/` 45、
+`scenes/` 15、`docs/` 10、`_reference/` 51、根目录 5。
+（数字会随开发变，以 `git ls-files | wc -l` 为准；结构稳定的是「哪些该进、哪些不该进」。）
 
 | 内容 | 进仓库 | 说明 |
 |---|---|---|
@@ -484,13 +505,13 @@ git push -u origin main
 **第 4 步：验证别人能跑**
 
 自己另找一台机器（或删掉 `.godot/` 后再打开）克隆一份，用 Godot 导入根目录，
-确认：能进 `level_01`、按 `F1` 有碰撞框、10 个测试脚本能跑。
+确认：能进 `complete_room`、按 `F1` 有碰撞框、15 个测试脚本能跑。
 `.godot/` 不在仓库里是**正常**的，第一次打开会重建（约十几秒）。
 
 **这一步已经实测过**：把仓库克隆到干净目录（无 `.godot/`）后
 `--import` 无任何 error/warning，`test_hitbox_debug` 全项通过（脚底线与可踩线 0.00px 重合），
 `--quit-after 30` 启动干净，且克隆出的 `assets/*.import` 与源仓库逐字节一致。
-**结论：仓库是自洽的，只靠仓库里的 102 个文件就能跑起来。**
+**结论：仓库是自洽的，只靠仓库里的文件就能跑起来**（截至 `fc97996` 为 158 个文件）。
 
 **第 5 步：加队友**
 
