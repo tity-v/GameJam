@@ -59,7 +59,7 @@ desc = "自杀"
 
 [node name="ResetEchoes" parent="Root/Hints" instance=ExtResource("2_hint")]
 keys = PackedStringArray("R")
-desc = "重置虚影"
+desc = "重置本关"
 
 [node name="Pause" parent="Root/Hints" instance=ExtResource("2_hint")]
 keys = PackedStringArray("ESC")

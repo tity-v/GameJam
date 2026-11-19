@@ -1,6 +1,6 @@
 # Your Past Self — Godot 项目结构说明
 
-> 当前可玩入口已更新为 scenes/levels/complete_room.tscn。压力板、双板锁存开门、出口结算、尖刺已实现；`R` 为「清空虚影 + 回出生点」，整关重来走通关面板的 Replay。解法与搭建说明见 [完整房间使用说明](docs/完整房间使用说明.md)。下文有关第一关未完成的说明描述历史 level_01 场景。
+> 当前可玩入口已更新为 scenes/levels/complete_room.tscn。压力板、双板锁存开门、出口结算、尖刺已实现；`R` 为「回到本关初始状态」（清空虚影 + 玩家回出生点 + 机关复位，不重载场景），整关重来走通关面板的 Replay。解法与搭建说明见 [完整房间使用说明](docs/完整房间使用说明.md)。下文有关第一关未完成的说明描述历史 level_01 场景。
 
 
 第一关已从原版 `YourPastSelf.exe` 搬进 Godot 4.7。本项目按「场景化」组织：
@@ -252,7 +252,7 @@ HUD 是 autoload（`project.godot` → `[autoload]` → `Hud`），**所有关�
 | `player/player.tscn` | `scripts/player.gd` | 移动、跳跃、死亡/重生 |
 | （玩家/虚影里的 HitboxDebug） | `scripts/hitbox_debug.gd` | 碰撞框可视化，纯绘制，F1 开关，**不参与物理** |
 | `echo/echo.tscn` | `scripts/echo.gd` | 轨迹重放、单向碰撞、死亡延时 |
-| （关卡里的 EchoManager） | `scripts/echo_manager.gd` | 录制、生成虚影、上限、`R` 重置（清虚影 + 回出生点） |
+| （关卡里的 EchoManager） | `scripts/echo_manager.gd` | 录制、生成虚影、上限、`R` 重置（人回起点 → 机关复位 → 清虚影） |
 | （关卡里的 Camera2D） | `scripts/camera_follow.gd` | 跟随 + 边界夹取 |
 | `ui/hud.tscn` | `scripts/hud.gd` | 底部操作栏、回声计数、闪现提示 |
 | `ui/key_hint.tscn` | `scripts/key_hint.gd` | 一组「键帽 + 说明」 |
