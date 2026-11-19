@@ -1,15 +1,26 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://graybox/base_level.tscn" id="base"]
+[ext_resource type="PackedScene" path="res://scenes/blocks/solid_ground.tscn" id="terrain"]
+[ext_resource type="PackedScene" path="res://scenes/blocks/exit.tscn" id="exit"]
+[ext_resource type="Script" path="res://scenes/levels/tutorial_open_exit.gd" id="open"]
 
-[ext_resource type="PackedScene" path="res://graybox/base_level.tscn" id="1_base"]
-[ext_resource type="Script" path="res://scenes/levels/walkthrough_placeholder.gd" id="2_room"]
+[node name="Chapter01Room3" instance=ExtResource("base")]
 
-[node name="Chapter01Room3" instance=ExtResource("1_base") node_paths=PackedStringArray("spawn_point", "player")]
-script = ExtResource("2_room")
-spawn_point = NodePath("RespawnPoint")
-player = NodePath("Player")
+[node name="Ground" parent="Terrain" index="0"]
+position = Vector2(0, 640)
+block_size = Vector2(1280, 64)
+
+[node name="Exit" parent="Mechanisms" instance=ExtResource("exit")]
+position = Vector2(1192, 384)
+block_size = Vector2(64, 96)
+script = ExtResource("open")
+
+[node name="Ledge2" parent="Terrain" instance=ExtResource("terrain")]
+position = Vector2(544, 480)
+block_size = Vector2(736, 160)
 
 [node name="RespawnPoint" parent="." index="3"]
-position = Vector2(8, 532)
+position = Vector2(56, 596)
 
 [node name="Player" parent="." index="4"]
-position = Vector2(8, 532)
+position = Vector2(56, 596)

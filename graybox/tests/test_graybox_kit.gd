@@ -104,7 +104,7 @@ func run() -> void:
 	check(plate_a.active and door.opened and door.get_node("Collision").disabled, "单板持续门打开并禁用碰撞")
 	player.position.x = door.position.x + 5.0
 	await frames(3)
-	check(not plate_a.active and door.opened, "玩家在门内时延后关闭")
+	check(not plate_a.active and not door.opened, "玩家进入门身后松开压板也立即关门")
 	player.position.x = plate_b.position.x
 	await frames(3)
 	check(not door.opened and not door.get_node("Collision").disabled, "玩家离开后门关闭并恢复碰撞")

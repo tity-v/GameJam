@@ -1,15 +1,44 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene format=3]
+[ext_resource type="PackedScene" path="res://graybox/base_level.tscn" id="base"]
+[ext_resource type="PackedScene" path="res://scenes/blocks/solid_ground.tscn" id="terrain"]
+[ext_resource type="PackedScene" path="res://graybox/pressure_plate.tscn" id="plate"]
+[ext_resource type="PackedScene" path="res://graybox/door.tscn" id="door"]
+[ext_resource type="PackedScene" path="res://graybox/exit.tscn" id="exit"]
 
-[ext_resource type="PackedScene" path="res://graybox/base_level.tscn" id="1_base"]
-[ext_resource type="Script" path="res://scenes/levels/walkthrough_placeholder.gd" id="2_room"]
+[node name="Chapter01Room5" instance=ExtResource("base")]
 
-[node name="Chapter01Room5" instance=ExtResource("1_base") node_paths=PackedStringArray("spawn_point", "player")]
-script = ExtResource("2_room")
-spawn_point = NodePath("RespawnPoint")
-player = NodePath("Player")
+[node name="Ground" parent="Terrain" index="0"]
+position = Vector2(0, 640)
+block_size = Vector2(1280, 64)
+
+[node name="Exit" parent="Mechanisms" instance=ExtResource("exit")]
+position = Vector2(1192, 416)
+block_size = Vector2(64, 96)
+door_path = NodePath("../Door")
+
+[node name="Ledge2" parent="Terrain" instance=ExtResource("terrain")]
+position = Vector2(488, 512)
+block_size = Vector2(792, 128)
+
+[node name="PlateA" parent="Mechanisms" instance=ExtResource("plate")]
+position = Vector2(88, 408)
+block_size = Vector2(64, 8)
+
+[node name="PlateB" parent="Mechanisms" instance=ExtResource("plate")]
+position = Vector2(648, 504)
+block_size = Vector2(64, 8)
+
+[node name="Ledge3" parent="Terrain" instance=ExtResource("terrain")]
+position = Vector2(0, 416)
+block_size = Vector2(320, 40)
+
+[node name="Door" parent="Mechanisms" instance=ExtResource("door")]
+position = Vector2(1120, 384)
+block_size = Vector2(64, 128)
+plate_paths = Array[NodePath]([NodePath("../PlateA"), NodePath("../PlateB")])
 
 [node name="RespawnPoint" parent="." index="3"]
-position = Vector2(8, 532)
+position = Vector2(56, 596)
 
 [node name="Player" parent="." index="4"]
-position = Vector2(8, 532)
+position = Vector2(56, 596)

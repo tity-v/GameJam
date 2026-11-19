@@ -7,7 +7,7 @@ script = ExtResource("1")
 levels = Array[Dictionary]([{
 "id": "level_01",
 "title": "第 1 章 · 房间 1/5",
-"scene": "res://scenes/levels/complete_room.tscn"
+"scene": "res://scenes/levels/chapter_01_room_01.tscn"
 }, {
 "id": "level_02",
 "title": "第 1 章 · 房间 2/5",

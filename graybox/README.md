@@ -16,7 +16,7 @@
 | `scenes/blocks/spike_tile.tscn` | 拖到 Mechanisms，放在地面上，用 **Block Size** 调整尖刺范围。 |
 | `graybox/respawn_point.tscn` | 模板自带。需要补回时放在房间根节点下，命名为 `RespawnPoint`。 |
 | `graybox/pressure_plate.tscn` | **Block Size** 决定宽高，**Accepts Player** 和 **Accepts Echo** 决定触发对象。黄色边框标出接受脚底的位置范围，压板下方应有地面。 |
-| `graybox/door.tscn` | 向 **Plate Paths** 列表添加元素，并逐项选择压板。所有板同时激活才开门。将 **Safety Player** 指向当前房间的玩家。松开任意一块板后关门，玩家还在门内时延后关闭。 |
+| `graybox/door.tscn` | 向 **Plate Paths** 列表添加元素，并逐项选择压板。所有板同时激活才开门。松开任意一块板后关门。 |
 | `graybox/exit.tscn` | **Door Path** 选择关联门，**Block Size** 调检测范围。绿色边框标出范围。门打开后只有当前玩家能触发通关。 |
 
 检查场景树中门、出口和房间根节点的配置警告，补全缺失的节点关联。要查看已配置的双板示例，选中 `complete_room.tscn` 中的门。
