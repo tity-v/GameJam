@@ -161,6 +161,11 @@ player.respawn() ─emit─> player.respawned ─> echo_manager._on_player_respa
 - **改尺寸后的自检顺序**：框贴住贴图 → 橙线压在地面顶面 → 站到虚影头上两条橙线重合。
   框偏左上、脚陷进地里 = 只改了 `shape.size` 忘了改 `Collision.position`（见 §5 最后一行）
 
+**美术侧的规格**是另一套语言，写在 `README.md` §3.4：画布 28×38 = 碰撞框、比例必须 14:19、
+透明像素照样挡路、装饰不能超出画布、虚影头顶要平。配两张 10 倍模板图
+（`_reference/art_templates/*_guide_10x.png`）和交图校验脚本
+`python _reference/tools/check_art_size.py`——**美术不该被要求读 GDScript 才知道能画多大**。
+
 ---
 
 ## 4. 五个关键设计决策
@@ -246,6 +251,9 @@ player.respawn() ─emit─> player.respawned ─> echo_manager._on_player_respa
 
 改完角色/物块的尺寸后按 `F1` 开调试层自检一遍（§3.5）：黄框要贴住贴图、橙色脚底线要压在地面顶面。
 **换图本身不用动碰撞**——只要新图的透明区域不变，保持 `shape.size` 不动就是对的。
+
+交图前让他跑 `python _reference/tools/check_art_size.py`：尺寸/比例不对会直接标 `BAD`。
+可画范围与模板图见 `README.md` §3.4。
 
 ### 程序：改逻辑
 数值都是 `@export`，优先在检查器里调，别硬编码。新增机制按现有模式走：
