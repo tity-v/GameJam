@@ -1,5 +1,5 @@
 extends SceneTree
-## 通过真实按键走完房间，验证 Echo 足部触发、锁存、出口，以及 R 的「回到初始状态」
+## 通过真实按键走完房间，验证 Echo 足部触发、持续开门、出口，以及 R 的「回到初始状态」
 ## （虚影 + 机关一起复位、场景不重载、门重新变成墙）。
 
 var room: Node2D
@@ -93,8 +93,7 @@ func run() -> void:
 	key(KEY_D, true)
 	await frames(140)
 	key(KEY_D, false)
-	var door_x: float = room.get_node("Door").position.x
-	check(player.position.x < door_x, "closed door blocks player again after R")
+	check(player.position.x < 850.0, "closed door blocks player again after R")
 
 	# --- 再按一次 R 清掉刚才那段路，验证复位后这一关仍然可解 ---
 	key(KEY_R, true)
@@ -103,6 +102,7 @@ func run() -> void:
 	await frames(10)
 	player = room.get_node("Player")
 	await walk_to(365)
+	await frames(540)
 	key(KEY_E, true)
 	await frames(2)
 	key(KEY_E, false)
@@ -110,10 +110,18 @@ func run() -> void:
 	check(room.get_node("EchoManager").echo_count() == 1, "R leaves the room solvable (new echo created)")
 	await walk_to(665)
 	await frames(20)
-	check(room.get_node("Door").opened, "door opens again after re-solving")
+	check(room.get_node("Door").opened, "door opens again when both plates are held")
+	await walk_to(755)
+	check(not room.get_node("Door").opened, "releasing one plate closes the door")
+	await walk_to(665)
+	await frames(240)
+	key(KEY_E, true)
+	await frames(2)
+	key(KEY_E, false)
+	await frames(85)
 
 	key(KEY_D, true)
-	await frames(125)
+	await frames(260)
 	key(KEY_D, false)
 	check(room.won, "player physically passes door and reaches exit")
 	if DisplayServer.get_name() != "headless":
@@ -131,7 +139,7 @@ func run() -> void:
 	await frames(20)
 	room = current_scene
 	player = room.get_node("Player")
-	check(not room.won and not room.get_node("Door").opened and not room.get_node("PlateA").active, "Replay resets completion and latched mechanism")
+	check(not room.won and not room.get_node("Door").opened and not room.get_node("PlateA").active, "Replay resets completion and mechanisms")
 	key(KEY_A, true)
 	var died: bool = await wait_death(300)
 	key(KEY_A, false)
