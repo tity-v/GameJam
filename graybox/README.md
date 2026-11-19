@@ -1,17 +1,19 @@
 # 关卡灰盒搭建套件
 
-使用 Godot 4.7.2。模板和机关扩展都在 `res://graybox/`，使用项目现有的玩家、Echo、物理层和全局输入。现成解谜示例是 `res://scenes/levels/complete_room.tscn`，可按 F5 运行。
+使用 Godot 4.7.2。模板和机关扩展都在 `res://graybox/`，使用项目现有的玩家、Echo、物理层和全局输入。按 **F5** 从主菜单运行整个游戏。要单测房间，打开房间场景按 **F6**。双压板示例在 `res://scenes/levels/complete_room.tscn`。
 
 ## 搭一间新房
 
 1. 打开 `graybox/base_level.tscn`，使用 **场景 → 场景另存为**，在自己的关卡目录保存副本。保留根脚本以及 `RespawnPoint`、`Player`、`EchoManager` 和 `UI/Win/Replay` 的接线。
 2. 在 `Terrain` 下拖入 `scenes/blocks/solid_ground.tscn` 或 `solid_wall.tscn`，在每个关卡实例上用 **Block Size** 调宽高。地面块也可以用作静态平台。装饰放在 `Decor`，通过 `Camera2D` 的位置和 **Limit** 调整画面。
 3. 移动 `RespawnPoint` 的十字标记，首次出生和复活都用这个位置。标记是玩家碰撞框的左上角，例如 38px 高的玩家站在 Y=576 的地板上时，标记可以放在 Y=538。替换标记或玩家实例后，在根节点 Inspector 重新指定 **Spawn Point** 和 **Player**。
-4. 把下表的灰盒场景拖到 `Mechanisms`，在 Inspector 里配置。选节点时打开字段旁的节点选择器。
+4. 把压板、门、出口和尖刺拖到 `Mechanisms`，在 Inspector 里配置。选节点时打开字段旁的节点选择器。
 5. 保存并按 **F6**。按 **E** 主动死亡，重生后留下 Echo。关卡内按 **R** 清除 Echo 并回出生点，锁存门保持开启。通关后点 **再玩一次** 完整复位房间。保存后重新打开场景，核对布局和关联仍然有效。
 
 | 零件 | Inspector 配置 |
 | --- | --- |
+| `scenes/blocks/solid_ground.tscn`、`scenes/blocks/solid_wall.tscn` | 拖到 Terrain，用 **Block Size** 调整平台或墙的尺寸。 |
+| `scenes/blocks/spike_tile.tscn` | 拖到 Mechanisms，放在地面上，用 **Block Size** 调整尖刺范围。 |
 | `graybox/respawn_point.tscn` | 模板自带。需要补回时放在房间根节点下，命名为 `RespawnPoint`。 |
 | `graybox/pressure_plate.tscn` | **Block Size** 决定宽高，**Accepts Player** 和 **Accepts Echo** 决定触发对象。黄色边框标出接受脚底的位置范围，压板下方应有地面。 |
 | `graybox/door.tscn` | 向 **Plate Paths** 列表添加元素，并逐项选择压板。所有板同时激活才开门。勾选 **Latch Open** 时保持开启直到完整重置。持续型门取消勾选，并把 **Safety Player** 指向当前房间的玩家。触发条件失效且玩家离开门身后关门。 |
