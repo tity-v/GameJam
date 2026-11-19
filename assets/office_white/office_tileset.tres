@@ -1,6 +1,6 @@
-[gd_resource type="TileSet" format=3]
+[gd_resource type="TileSet" format=3 uid="uid://dm8qyjc7guhl8"]
 
-[ext_resource type="Texture2D" path="res://assets/office_white/office_atlas_16.png" id="1_hs8rn"]
+[ext_resource type="Texture2D" uid="uid://dshklcssj2hke" path="res://assets/office_white/office_atlas_16.png" id="1_hs8rn"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_lshyk"]
 texture = ExtResource("1_hs8rn")
@@ -41,4 +41,3 @@ texture = ExtResource("1_hs8rn")
 [resource]
 physics_layer_0/collision_layer = 1
 sources/0 = SubResource("TileSetAtlasSource_lshyk")
-
