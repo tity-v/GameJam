@@ -1,0 +1,46 @@
+[gd_resource type="Resource" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://frontend/db/copy_config.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+strings = {
+  "home": "游戏主菜单",
+  "game_title": "Your Past Self",
+  "levels": "选择关卡",
+  "pause": "游戏暂停",
+  "settings": "设置",
+  "result": "关卡完成",
+  "finished": "全部通关",
+  "progress": "已完成 %d / %d 关",
+  "start": "新游戏",
+  "continue_game": "继续游戏",
+  "quit": "退出游戏",
+  "resume": "继续",
+  "retry": "重试本关",
+  "next": "下一关",
+  "back": "返回",
+  "menu": "主菜单",
+  "level_list": "选择关卡",
+  "volume": "主音量",
+  "mute": "静音",
+  "fullscreen": "全屏",
+  "controls": "操作说明",
+  "keys": "A / D 或方向键　移动\n空格　跳跃　　E　主动死亡\nR　复位本关　　Esc　暂停 / 继续",
+  "clear": "重置进度",
+  "cancel": "取消",
+  "confirm": "确认",
+  "restart_prompt": "开始新游戏会清除已完成关卡和继续位置。",
+  "clear_prompt": "清除全部关卡进度？",
+  "leave_prompt": "离开后将放弃本轮过程，已完成的关卡会保留。",
+  "ready": "可进入",
+  "locked": "锁定",
+  "done": "已完成",
+  "missing": "待接入",
+  "load_failed": "关卡加载失败，请检查关卡目录和场景配置。",
+  "catalog_failed": "关卡目录包含重复或缺失的关卡 ID。",
+  "save_failed": "保存失败。请检查游戏数据目录。",
+  "read_failed": "存档无法读取，本次使用默认值。原文件已保留。",
+  "completed_level": "已完成 %s",
+  "finished_detail": "你完成了全部关卡。"
+}
