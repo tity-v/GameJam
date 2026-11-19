@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3]
 
-[ext_resource type="Texture2D" path="res://assets/blocks/door.png" id="1_door"]
-[ext_resource type="Script" path="res://scripts/block.gd" id="2_block"]
+[ext_resource type="Texture2D" path="res://assets/mechanisms/door_closed.png" id="1_door"]
+[ext_resource type="Script" path="res://scripts/puzzle_door.gd" id="2_block"]
 
 [sub_resource type="RectangleShape2D" id="1_shape"]
 resource_local_to_scene = true

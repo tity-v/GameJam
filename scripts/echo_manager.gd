@@ -44,7 +44,11 @@ func _physics_process(_delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	# 本节点是 PAUSABLE，暂停时这里不会被调用，所以暂停中按 R 不会偷偷清场
 	if event.is_action_pressed("reset_echoes"):
-		clear_all()
+		var level := get_tree().current_scene
+		if level != null and level.has_method("reset_room"):
+			level.reset_room()
+		else:
+			clear_all()
 		get_viewport().set_input_as_handled()
 
 
