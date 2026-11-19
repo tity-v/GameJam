@@ -3,7 +3,7 @@ extends CharacterBody2D
 ## 坐标约定：本节点的 position 就是角色包围盒左上角（与原游戏 actor.pos 一致），
 ## 所以关卡里直接填出生点 (90, 522)，和原始数据对得上。
 ##
-## 数值全部沿用原游戏 scripts/platformer/actor.gd；只有「长按/短按不同跳高」是本步新增。
+## 数值沿用原游戏 scripts/platformer/actor.gd；水平加减速改成了 6 帧起步 / 3 帧刹停的凹形曲线（见 L14–L27）。
 ## 死亡流程照抄原版：按住不动 → 1.3s 内淡出并画叉 → 回到重生点。
 
 ## 死亡瞬间发一次（echo_manager 靠它收尾本次录制）
@@ -12,20 +12,34 @@ signal died
 signal respawned
 
 @export_group("水平移动")
-## 原 SPEED。满速 210px/s，横穿 1280 宽的屏幕约 6 秒。
-@export var max_speed: float = 210.0
-## 原 ACCEL。地面 0 → 满速约 0.12s，按下就走、不拖泥带水。
-@export var accel: float = 1800.0
-## 原 AIR_ACCEL。空中略弱于地面，但 0.16s 就能反向，满足「空中可调整方向」。
-@export var air_accel: float = 1300.0
-## 原 FRICTION。松手后约 0.1s 停下，不会滑冰。
-@export var friction: float = 2200.0
+## 满速 273px/s（原 210 × 1.3），横穿 1280 宽的屏幕约 4.7 秒。
+@export var max_speed: float = 273.0
+## 起步：0 → 满速 6 帧（60fps = 0.1s）。这里填这段的平均加速度，
+## 实际速度是凹形：慢起、后段越走越快，见 curve_power。
+@export var accel: float = 2730.0
+## 空中起步 7 帧（0.116s），比地面软，但空中修正够快；比上一版快 15%。
+@export var air_accel: float = 2355.0
+## 刹停：满速 → 0 3 帧（0.05s），比加速陡一倍，松手马上收住。
+@export var friction: float = 5460.0
+## 空中松手后的阻力：比地面小得多，跳起来会顺着惯性飞一段，不再"空中急刹"。
+## 400 约 0.68s / 93px 滑停；想要更飘调到 250，想要更黏调到 800。
+@export var air_friction: float = 400.0
+## 空中反向的急停速度：满速 273 归零约 2 帧，之后才按反方向重新加速。
+@export var air_turn_stop: float = 8200.0
+## 凹弧强度：1 = 直线，2 = 参考图那种慢起后快的凹形，越大起步越"憋"。
+## 加速和刹车都压在两点连线下方，不会鼓起来。
+@export_range(1.0, 3.0, 0.1) var curve_power: float = 2.0
+## 空中单独用平曲线：1 = 直线，按下方向第一帧就有 34px/s，不会"按了没反应"。
+## 地面仍然是上面的凹形，两边互不影响。
+@export_range(1.0, 3.0, 0.1) var air_curve_power: float = 1.0
 
 @export_group("跳跃")
-## 原 GRAVITY。配合 jump_velocity，跳跃是「上快下慢」的固定重力曲线。
-@export var gravity: float = 1400.0
-## 原 JUMP。按住不放时跃起高度约 93px，0.36s 到顶。
-@export var jump_velocity: float = -510.0
+## 原 GRAVITY 1400。现在 1550：到顶约 0.39s，整段约 0.78s（下落再乘 1.1）。
+@export var gravity: float = 1550.0
+## 原 JUMP -510。配合 gravity=1550，按住不放跃起约 115px（高度不变，只是更快）。
+@export var jump_velocity: float = -610.0
+## 下落时的重力倍率：上升用 100%，下落用 110%，落地更干脆，顶点也会偏前。
+@export var fall_gravity_mult: float = 1.1
 ## 新增：上升途中松开跳跃键，上升速度乘以该系数。
 ## 0.65 对应「轻点一帧约 37px，按住约 93px」，高度差 2.5 倍，肉眼一眼能分辨。
 @export var jump_cut: float = 0.65
@@ -61,6 +75,15 @@ var _coyote := 0.0
 var _buffer := 0.0
 ## 脚下踩着的虚影（如果踩的是地面则为 null）
 var _support: Node2D
+
+## 一段加减速的起点、终点、进度，用来把直线换成凹形（见 _approach_speed）
+var _ramp_from := 0.0
+var _ramp_to := 0.0
+var _ramp_rate := 0.0
+var _ramp_power := 1.0
+var _ramp_dur := 0.0
+var _ramp_time := 0.0
+var _ramp_on := false
 
 
 func _ready() -> void:
@@ -111,12 +134,21 @@ func _move(delta: float) -> void:
 	_carry()
 
 	var axis := Input.get_axis("move_left", "move_right")
-	var rate := accel if is_on_floor() else air_accel
-
-	if absf(axis) > 0.01:
-		velocity.x = move_toward(velocity.x, axis * max_speed, rate * delta)
-	else:
-		velocity.x = move_toward(velocity.x, 0.0, friction * delta)
+	var on_ground := is_on_floor()
+	var target := axis * max_speed
+	var rate := accel if on_ground else air_accel
+	var power := curve_power if on_ground else air_curve_power
+	if absf(axis) <= 0.01:
+		target = 0.0
+		# 空中松手用很小的阻力，动量会带着走；地面还是 3 帧急停
+		rate = friction if on_ground else air_friction
+	elif not on_ground and velocity.x * axis < 0.0:
+		# 空中反向：先用极短时间（满速约 2 帧）刹到 0，再从 0 反向加速
+		target = 0.0
+		rate = air_turn_stop
+		power = 1.0
+	# 地面用凹形（慢起后快），空中用平曲线（按下立刻动）
+	velocity.x = _approach_speed(target, rate, power, delta)
 
 	# 土狼时间：刚踩空的那几帧仍允许起跳
 	if is_on_floor():
@@ -139,9 +171,45 @@ func _move(delta: float) -> void:
 	if Input.is_action_just_released("jump") and velocity.y < 0.0:
 		velocity.y *= jump_cut
 
-	velocity.y = minf(velocity.y + gravity * delta, max_fall_speed)
+	velocity.y = minf(velocity.y + _gravity_now() * delta, max_fall_speed)
 	move_and_slide()
 	_refresh_support()
+
+
+## 上升用基础重力，下落乘 fall_gravity_mult（默认 1.1），所以落地比起跳更快。
+func _gravity_now() -> float:
+	return gravity * (fall_gravity_mult if velocity.y > 0.0 else 1.0)
+
+
+## 朝 target 逼近，但不是匀速：rate 是这段的平均加速度，
+## 所以走完的时间仍是 |Δv| / rate（273 / 2730 = 6 帧），只是速度变化不是直线。
+func _approach_speed(target: float, rate: float, power: float, delta: float) -> float:
+	if (not _ramp_on or not is_equal_approx(target, _ramp_to)
+			or not is_equal_approx(rate, _ramp_rate) or not is_equal_approx(power, _ramp_power)):
+		_ramp_from = velocity.x
+		_ramp_to = target
+		_ramp_rate = rate
+		_ramp_power = power
+		_ramp_dur = absf(target - _ramp_from) / maxf(rate, 0.0001)
+		_ramp_time = 0.0
+		_ramp_on = true
+
+	_ramp_time += delta
+	var u := clampf(_ramp_time / maxf(_ramp_dur, 0.0001), 0.0, 1.0)
+	if u >= 1.0:
+		_ramp_on = false
+		return _ramp_to
+	return lerpf(_ramp_from, _ramp_to, _shape(u, _ramp_to > _ramp_from, power))
+
+
+## 曲线压在起点—终点连线的下方（不鼓起来）：
+## 加速 = 慢起、后段越走越快；刹车 = 先掉得快、尾巴慢慢收。
+## p = 1 是直线，2 是参考图那种明显的凹弧，p 越大起步越"憋"。
+func _shape(u: float, rising: bool, p: float) -> float:
+	var e := maxf(p, 1.0)
+	if rising:
+		return pow(u, e)
+	return 1.0 - pow(1.0 - u, e)
 
 
 ## 虚影是逐帧瞬移的静态体，引擎不会自动带人；原版也是手动补位移（support.delta_pos）。
@@ -179,6 +247,7 @@ func die() -> void:
 	_buffer = 0.0
 	_coyote = 0.0
 	_support = null
+	_ramp_on = false
 	# 叉号是独立 Sprite，不随方块一起淡出（原版也是分开画的）
 	if _mark != null:
 		_mark.visible = true
@@ -190,7 +259,7 @@ func _tick_death(delta: float) -> void:
 
 	# 原版：死亡中 x 方向只有摩擦，y 方向继续受重力，所以会顺着惯性滑一小段再落下
 	velocity.x = move_toward(velocity.x, 0.0, friction * delta)
-	velocity.y = minf(velocity.y + gravity * delta, max_fall_speed)
+	velocity.y = minf(velocity.y + _gravity_now() * delta, max_fall_speed)
 	move_and_slide()
 
 	if _sprite != null:
@@ -207,6 +276,7 @@ func respawn() -> void:
 	velocity = Vector2.ZERO
 	_coyote = 0.0
 	_buffer = 0.0
+	_ramp_on = false
 	global_position = respawn_position
 	if _sprite != null:
 		_sprite.modulate.a = 1.0
