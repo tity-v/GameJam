@@ -10,7 +10,7 @@ const Config = preload("res://graybox/db/editor.tres")
 
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
-	if not latch_open and safety_player == null:
+	if safety_player == null:
 		warnings.append(Config.safety_player_warning)
 	if not _has_valid_plates():
 		warnings.append(Config.plate_warning)
@@ -29,7 +29,7 @@ func _has_valid_plates() -> bool:
 func _physics_process(delta: float) -> void:
 	if Engine.is_editor_hint() or not _has_valid_plates():
 		return
-	if opened and not latch_open and safety_player != null:
+	if opened and safety_player != null:
 		var area := global_transform * Rect2(Vector2.ZERO, block_size)
 		if area.intersects(ActorBounds.rect(safety_player)):
 			return

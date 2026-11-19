@@ -56,7 +56,6 @@ func run() -> void:
 	check(not door._get_configuration_warnings().is_empty(), "门未配置时有提示")
 	check(not exit_piece._get_configuration_warnings().is_empty(), "出口未配置时有提示")
 	door.plate_paths.assign([NodePath("../PlateA")])
-	door.latch_open = false
 	door.safety_player = room.get_node("Player")
 	exit_piece.door_path = NodePath("../Door")
 	var scene := PackedScene.new()
@@ -118,16 +117,30 @@ func run() -> void:
 	await frames(3)
 	check(not plate_a.active, "仅玩家压力板拒绝 Echo")
 	door.plate_paths.assign([NodePath("../PlateA"), NodePath("../PlateB")])
-	door.latch_open = true
 	echo.position.x = plate_b.position.x
 	await frames(3)
 	check(plate_b.active and not door.opened, "Echo 能踩板，但双板门在单板激活时保持关闭")
 	player.position.x = plate_a.position.x
 	await frames(3)
-	check(door.opened, "两块板同时激活后打开锁存门")
+	check(door.opened, "两块板同时激活后开门")
 	echo.position.x = exit_piece.position.x
 	await frames(3)
-	check(door.opened and not plate_b.active and not room.won, "松开压板后门保持打开，Echo 经过出口无法通关")
+	check(not door.opened and not plate_b.active and not room.won, "松开任意关联压板即关门")
+	echo.position.x = plate_b.position.x
+	await frames(3)
+	check(door.opened, "再次同时踩住两块板可开门")
+	# 保持两个压板都由 Echo 踩住，验证出口只接受玩家。
+	plate_a.accepts_echo = true
+	var echo_a = ECHO.instantiate()
+	room.add_child(echo_a)
+	echo_a.setup(PackedVector2Array([Vector2(plate_a.position.x, 532)]))
+	echo_a.reset()
+	var exit_echo = ECHO.instantiate()
+	room.add_child(exit_echo)
+	exit_echo.setup(PackedVector2Array([Vector2(exit_piece.position.x, 532)]))
+	exit_echo.reset()
+	await frames(3)
+	check(door.opened and not room.won, "开启的出口不接受 Echo")
 	player.position.x = exit_piece.position.x
 	await frames(3)
 	check(room.won, "当前玩家进入出口触发通关")

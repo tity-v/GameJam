@@ -2,7 +2,6 @@
 extends "res://scripts/block.gd"
 
 @export var plate_paths: Array[NodePath] = []
-@export var latch_open := true
 var opened := false
 
 func _ready() -> void:
@@ -12,7 +11,7 @@ func _ready() -> void:
 		add_to_group("mechanism")
 
 func _physics_process(_delta: float) -> void:
-	if Engine.is_editor_hint() or (opened and latch_open):
+	if Engine.is_editor_hint():
 		return
 	var satisfied := not plate_paths.is_empty()
 	for path in plate_paths:
@@ -25,10 +24,7 @@ func _physics_process(_delta: float) -> void:
 		$Patch.texture = load("res://assets/mechanisms/door_open.png" if opened else "res://assets/mechanisms/door_closed.png")
 
 
-## R 用：连同「已锁存」这件事一起忘掉，回到从未被打开的状态。
-##
-## 必须先把 opened 置 false 再开碰撞——`latch_open` 的早退分支判的就是 opened，
-## 如果 opened 还是 true，下一帧会直接 return，碰撞永远开不回来（门看着关了却能穿）。
+## R 用：同步关门状态、外观和碰撞。
 func reset_mechanism() -> void:
 	if not opened:
 		return
