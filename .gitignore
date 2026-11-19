@@ -1,0 +1,32 @@
+# ---------- Godot 4 ----------
+# 引擎缓存与导入产物：每台机器重新生成，提交会导致二进制冲突
+.godot/
+*.translation
+
+# 导出配置（含本机路径/签名，因人而异）
+export_presets.cfg
+export.cfg
+
+# 导出产物
+/build/
+/export/
+/dist/
+
+# ---------- 编辑器 / 系统 ----------
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ---------- 本项目：版权敏感，禁止入库 ----------
+# 从原版游戏 exe 反编译出的工程源码（world.gd / main.gd / levels.gd 等）。
+# 见 HANDOVER.md「上传仓库前必读」，这份东西只能留本地做数值对照。
+_reference/source_from_game/
+
+# 原版游戏运行截图（画面内容属于原游戏，公开仓库有风险）
+_reference/preview_level01_original.png
+
+# ---------- 本地工具数据 ----------
+# AI 协作记录（不影响游戏运行，也不需要团队共享）
+.workbuddy/

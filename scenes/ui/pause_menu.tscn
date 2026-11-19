@@ -1,0 +1,101 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/pause_menu.gd" id="1_menu"]
+[ext_resource type="Texture2D" path="res://assets/ui/continue_normal.png" id="2_normal"]
+[ext_resource type="Texture2D" path="res://assets/ui/continue_hover.png" id="3_hover"]
+[ext_resource type="Texture2D" path="res://assets/ui/continue_pressed.png" id="4_pressed"]
+
+[node name="PauseMenu" type="CanvasLayer"]
+process_mode = 3
+layer = 10
+script = ExtResource("1_menu")
+
+[node name="Root" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Scrim" type="ColorRect" parent="Root"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+color = Color(0.062745, 0.090196, 0.12549, 0.78)
+
+[node name="Title" type="Label" parent="Root"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = -152.0
+offset_right = 160.0
+offset_bottom = -112.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.505882, 0.564706, 0.572549, 1)
+theme_override_font_sizes/font_size = 20
+text = "已暂停"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ContinueButton" type="TextureButton" parent="Root"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -46.0
+offset_top = -46.0
+offset_right = 46.0
+offset_bottom = 46.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("2_normal")
+texture_hover = ExtResource("3_hover")
+texture_pressed = ExtResource("4_pressed")
+ignore_texture_size = true
+stretch_mode = 0
+
+[node name="Caption" type="Label" parent="Root"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -120.0
+offset_top = 58.0
+offset_right = 120.0
+offset_bottom = 86.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.835294, 0.866667, 0.878431, 1)
+theme_override_font_sizes/font_size = 18
+text = "继续"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Hint" type="Label" parent="Root"]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -160.0
+offset_top = 92.0
+offset_right = 160.0
+offset_bottom = 112.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.392157, 0.45098, 0.478431, 1)
+theme_override_font_sizes/font_size = 13
+text = "或按 ESC 键"
+horizontal_alignment = 1
+vertical_alignment = 1

@@ -1,0 +1,102 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Script" path="res://scripts/hud.gd" id="1_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/key_hint.tscn" id="2_hint"]
+
+[sub_resource type="StyleBoxFlat" id="1_bar"]
+bg_color = Color(0.0196078, 0.0392157, 0.0588235, 0.760784)
+border_width_top = 1
+border_color = Color(0.25, 0.35, 0.37, 0.6)
+
+[node name="Hud" type="CanvasLayer"]
+layer = 1
+
+[node name="Root" type="Control" parent="."]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_hud")
+
+[node name="BarBg" type="Panel" parent="Root"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -58.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_styles/panel = SubResource("1_bar")
+
+[node name="Hints" type="HBoxContainer" parent="Root"]
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 28.0
+offset_top = -58.0
+offset_right = -228.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+alignment = 1
+theme_override_constants/separation = 26
+
+[node name="Move" parent="Root/Hints" instance=ExtResource("2_hint")]
+keys = PackedStringArray("A", "D")
+desc = "移动"
+
+[node name="Jump" parent="Root/Hints" instance=ExtResource("2_hint")]
+keys = PackedStringArray("空格")
+desc = "跳跃（长按更高）"
+
+[node name="Die" parent="Root/Hints" instance=ExtResource("2_hint")]
+keys = PackedStringArray("E")
+desc = "自杀"
+
+[node name="ResetEchoes" parent="Root/Hints" instance=ExtResource("2_hint")]
+keys = PackedStringArray("R")
+desc = "重置虚影"
+
+[node name="Pause" parent="Root/Hints" instance=ExtResource("2_hint")]
+keys = PackedStringArray("ESC")
+desc = "暂停"
+
+[node name="Count" type="Label" parent="Root"]
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -228.0
+offset_top = -58.0
+offset_right = -28.0
+offset_bottom = -10.0
+grow_horizontal = 0
+grow_vertical = 0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.529412, 0.647059, 0.635294, 1)
+theme_override_font_sizes/font_size = 15
+text = "回声 0 / 5"
+horizontal_alignment = 2
+vertical_alignment = 1
+
+[node name="Flash" type="Label" parent="Root"]
+modulate = Color(1, 1, 1, 0)
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_top = -88.0
+offset_bottom = -62.0
+grow_horizontal = 2
+grow_vertical = 0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.87451, 0.964706, 0.929412, 1)
+theme_override_font_sizes/font_size = 17
+text = "虚影已重置"
+horizontal_alignment = 1
+vertical_alignment = 1

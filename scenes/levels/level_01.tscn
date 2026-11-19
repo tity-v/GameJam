@@ -1,0 +1,171 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/blocks/solid_ground.tscn" id="1_ground"]
+[ext_resource type="PackedScene" path="res://scenes/blocks/solid_wall.tscn" id="2_wall"]
+[ext_resource type="PackedScene" path="res://scenes/blocks/plate_off.tscn" id="3_plate"]
+[ext_resource type="PackedScene" path="res://scenes/blocks/door.tscn" id="4_door"]
+[ext_resource type="PackedScene" path="res://scenes/blocks/exit.tscn" id="5_exit"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="6_player"]
+[ext_resource type="Script" path="res://scripts/camera_follow.gd" id="7_cam"]
+[ext_resource type="Script" path="res://scripts/echo_manager.gd" id="8_echo"]
+
+[node name="Level01" type="Node2D"]
+metadata/_note = "直接在编辑器里编辑本关卡。不要运行 _reference/tools/make_level.py（它会覆盖本文件），维护说明见根目录 README.md。"
+
+[node name="Background" type="ColorRect" parent="."]
+offset_right = 1600.0
+offset_bottom = 720.0
+color = Color(0.062745, 0.090196, 0.12549, 1)
+
+[node name="Grid" type="Node2D" parent="."]
+
+[node name="VLine0" type="Line2D" parent="Grid"]
+points = PackedVector2Array(0, 100, 0, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine80" type="Line2D" parent="Grid"]
+points = PackedVector2Array(80, 100, 80, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine160" type="Line2D" parent="Grid"]
+points = PackedVector2Array(160, 100, 160, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine240" type="Line2D" parent="Grid"]
+points = PackedVector2Array(240, 100, 240, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine320" type="Line2D" parent="Grid"]
+points = PackedVector2Array(320, 100, 320, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine400" type="Line2D" parent="Grid"]
+points = PackedVector2Array(400, 100, 400, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine480" type="Line2D" parent="Grid"]
+points = PackedVector2Array(480, 100, 480, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine560" type="Line2D" parent="Grid"]
+points = PackedVector2Array(560, 100, 560, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine640" type="Line2D" parent="Grid"]
+points = PackedVector2Array(640, 100, 640, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine720" type="Line2D" parent="Grid"]
+points = PackedVector2Array(720, 100, 720, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine800" type="Line2D" parent="Grid"]
+points = PackedVector2Array(800, 100, 800, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine880" type="Line2D" parent="Grid"]
+points = PackedVector2Array(880, 100, 880, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine960" type="Line2D" parent="Grid"]
+points = PackedVector2Array(960, 100, 960, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine1040" type="Line2D" parent="Grid"]
+points = PackedVector2Array(1040, 100, 1040, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine1120" type="Line2D" parent="Grid"]
+points = PackedVector2Array(1120, 100, 1120, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine1200" type="Line2D" parent="Grid"]
+points = PackedVector2Array(1200, 100, 1200, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine1280" type="Line2D" parent="Grid"]
+points = PackedVector2Array(1280, 100, 1280, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine1360" type="Line2D" parent="Grid"]
+points = PackedVector2Array(1360, 100, 1360, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine1440" type="Line2D" parent="Grid"]
+points = PackedVector2Array(1440, 100, 1440, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="VLine1520" type="Line2D" parent="Grid"]
+points = PackedVector2Array(1520, 100, 1520, 560)
+width = 1.0
+default_color = Color(0.4, 0.7, 0.7, 0.04)
+
+[node name="Solids" type="Node2D" parent="."]
+
+[node name="Ground" parent="Solids" instance=ExtResource("1_ground")]
+position = Vector2(-40, 560)
+
+[node name="Wall" parent="Solids" instance=ExtResource("2_wall")]
+position = Vector2(-40, 0)
+
+[node name="Plates" type="Node2D" parent="."]
+
+[node name="PlateA" parent="Plates" instance=ExtResource("3_plate")]
+position = Vector2(390, 548)
+
+[node name="LabelA" type="Label" parent="Plates"]
+offset_left = 395.0
+offset_top = 527.0
+offset_right = 415.0
+offset_bottom = 547.0
+theme_override_colors/font_color = Color(0.505882, 0.564706, 0.572549, 1)
+theme_override_font_sizes/font_size = 15
+text = "A"
+
+[node name="Doors" type="Node2D" parent="."]
+
+[node name="Door0" parent="Doors" instance=ExtResource("4_door")]
+position = Vector2(790, 390)
+
+[node name="Exit" parent="." instance=ExtResource("5_exit")]
+position = Vector2(1370, 495)
+
+[node name="RespawnPoint" type="Marker2D" parent="." groups=["respawn_point"]]
+position = Vector2(90, 522)
+
+[node name="Player" parent="." instance=ExtResource("6_player")]
+position = Vector2(90, 522)
+
+[node name="EchoManager" type="Node2D" parent="." groups=["echo_manager"]]
+script = ExtResource("8_echo")
+player_path = NodePath("../Player")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(640, 360)
+limit_left = 0
+limit_right = 1600
+limit_top = 0
+limit_bottom = 720
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0
+script = ExtResource("7_cam")
+target_path = NodePath("../Player")

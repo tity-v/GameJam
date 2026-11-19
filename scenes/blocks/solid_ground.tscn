@@ -1,0 +1,21 @@
+[gd_scene load_steps=4 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/blocks/solid_ground.png" id="1_solid_ground"]
+[ext_resource type="Script" path="res://scripts/block.gd" id="2_block"]
+
+[sub_resource type="RectangleShape2D" id="1_shape"]
+resource_local_to_scene = true
+size = Vector2(1800, 120)
+
+[node name="SolidGround" type="StaticBody2D"]
+script = ExtResource("2_block")
+block_size = Vector2(1800, 120)
+
+[node name="Patch" type="NinePatchRect" parent="."]
+size = Vector2(1800, 120)
+texture = ExtResource("1_solid_ground")
+patch_margin_top = 3
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+position = Vector2(900.0, 60.0)
+shape = SubResource("1_shape")

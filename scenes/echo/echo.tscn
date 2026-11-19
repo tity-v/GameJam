@@ -1,0 +1,35 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/echo.gd" id="1_echo"]
+[ext_resource type="Texture2D" path="res://assets/echo/echo_body.png" id="2_body"]
+[ext_resource type="Texture2D" path="res://assets/echo/echo_cross.png" id="3_cross"]
+[ext_resource type="Script" path="res://scripts/hitbox_debug.gd" id="4_debug"]
+
+[sub_resource type="RectangleShape2D" id="1_top"]
+size = Vector2(28, 8)
+
+[node name="Echo" type="StaticBody2D" groups=["echo"]]
+collision_layer = 4
+collision_mask = 0
+script = ExtResource("1_echo")
+
+[node name="Body" type="Sprite2D" parent="."]
+texture = ExtResource("2_body")
+centered = false
+
+[node name="Cross" type="Sprite2D" parent="."]
+visible = false
+texture = ExtResource("3_cross")
+centered = false
+
+[node name="Top" type="CollisionShape2D" parent="."]
+position = Vector2(14, 4)
+one_way_collision = true
+shape = SubResource("1_top")
+
+[node name="HitboxDebug" type="Node2D" parent="."]
+script = ExtResource("4_debug")
+shape_path = NodePath("../Top")
+box_fill = Color(0.48, 0.89, 0.73, 0.16)
+box_line = Color(0.48, 0.89, 0.73, 0.85)
+stand_line = true
