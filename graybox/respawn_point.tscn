@@ -1,0 +1,4 @@
+[gd_scene format=3]
+
+[node name="RespawnPoint" type="Marker2D" groups=["respawn_point"]]
+gizmo_extents = 16.0

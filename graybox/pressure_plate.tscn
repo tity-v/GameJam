@@ -1,0 +1,11 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/blocks/plate_off.tscn" id="1_base"]
+[ext_resource type="Script" path="res://graybox/view/trigger_outline.gd" id="2_outline"]
+
+[node name="PressurePlate" instance=ExtResource("1_base")]
+
+[node name="TriggerOutline" type="Node2D" parent="." node_paths=PackedStringArray("patch")]
+script = ExtResource("2_outline")
+patch = NodePath("../Patch")
+show_plate_feet_range = true

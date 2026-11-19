@@ -1,0 +1,67 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://graybox/glue/room.gd" id="1_room"]
+[ext_resource type="PackedScene" path="res://scenes/blocks/solid_ground.tscn" id="2_ground"]
+[ext_resource type="PackedScene" path="res://graybox/respawn_point.tscn" id="3_spawn"]
+[ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="4_player"]
+[ext_resource type="Script" path="res://scripts/echo_manager.gd" id="5_echo"]
+
+[node name="BaseLevel" type="Node2D" node_paths=PackedStringArray("spawn_point", "player")]
+texture_filter = 1
+script = ExtResource("1_room")
+spawn_point = NodePath("RespawnPoint")
+player = NodePath("Player")
+
+[node name="Decor" type="Node2D" parent="."]
+
+[node name="Background" type="Polygon2D" parent="Decor"]
+color = Color(0.607843, 0.682353, 0.74902, 1)
+polygon = PackedVector2Array(0, 0, 1280, 0, 1280, 720, 0, 720)
+
+[node name="Terrain" type="Node2D" parent="."]
+
+[node name="Ground" parent="Terrain" instance=ExtResource("2_ground")]
+position = Vector2(0, 576)
+block_size = Vector2(1280, 144)
+
+[node name="Mechanisms" type="Node2D" parent="."]
+
+[node name="RespawnPoint" parent="." instance=ExtResource("3_spawn")]
+position = Vector2(128, 538)
+
+[node name="Player" parent="." instance=ExtResource("4_player")]
+position = Vector2(128, 538)
+
+[node name="EchoManager" type="Node2D" parent="." groups=["echo_manager"]]
+script = ExtResource("5_echo")
+player_path = NodePath("../Player")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(640, 360)
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+[node name="Win" type="Panel" parent="UI"]
+visible = false
+offset_left = 370.0
+offset_top = 230.0
+offset_right = 910.0
+offset_bottom = 450.0
+
+[node name="Title" type="Label" parent="UI/Win"]
+layout_mode = 0
+offset_left = 28.0
+offset_top = 28.0
+offset_right = 512.0
+offset_bottom = 65.0
+theme_override_font_sizes/font_size = 26
+text = "关卡完成"
+horizontal_alignment = 1
+
+[node name="Replay" type="Button" parent="UI/Win"]
+layout_mode = 0
+offset_left = 150.0
+offset_top = 120.0
+offset_right = 390.0
+offset_bottom = 180.0
+text = "再玩一次"
