@@ -70,6 +70,7 @@
 | **虚影单一激活状态**（回放 / 碰撞 / 机关同源，不会“看不见却挡人”） | 完成 | `echo.gd` 的 `_active`、`setup()` / `reset()`；断言见 `test_echo_contract.gd` |
 | **房间整体重置（通关面板 Replay → 重载场景）** | 完成 | `scripts/room_controller.gd` |
 | **关卡网格**：整屏 40×22 格 × 32px、空瓦片铺满整张地图、机关全部贴格线 | 完成 | `assets/tiles/`、`_reference/tools/room_grid.py`；断言见 `test_grid_room.gd`，说明见 §3.7 |
+| **灰盒搭建套件**（同学交付）：模板场景、机关零件、编辑器预览、独立验收 | 完成 | `graybox/README.md`；验收 `graybox/tests/test_graybox_kit.gd` |
 | 角色脚下/身体边缘判定 | 完成 | `scripts/actor_bounds.gd`（供压力板/出口/尖刺共用） |
 | 可通关房间搭建 | 完成 | `scenes/levels/complete_room.tscn`（说明见 `docs/完整房间使用说明.md`） |
 | 关卡名 / 关卡提示文字（原版有） | 未做 | — |
@@ -556,6 +557,7 @@ done
 | `test_echo_contract` | `body_size` 与 `_active` 两个单一真相：换皮不改判定、未激活时显示/碰撞/机关全关 |
 | `test_echo_recording_cap` | 录制上限滚动窗口：满了丢最旧一半，尸体落点不被截断 |
 | `test_air_drag` / `test_air_turn` / `test_jump_curve` / `test_speed_curve` | 手感曲线（逐帧数值，见 `docs/手感调参.md`） |
+| `graybox/tests/test_graybox_kit` | 灰盒套件自己的验收（模板搭建、保存重开、单板/双板门、出口）。在 `.gdignore` 目录里，要显式 `--script res://graybox/tests/test_graybox_kit.gd` |
 
 **这些测试是回归网，改完物理或虚影相关代码务必全跑一遍。**
 
@@ -609,8 +611,8 @@ done
 
 ### 9.2 哪些进仓库，哪些不进
 
-一共 169 个文件会入库：`scripts/` 32（16 个 `.gd` + 16 个 `.uid`）、`assets/` 45、
-`scenes/` 15、`docs/` 10、`_reference/` 62、根目录 5。
+一共 188 个文件会入库：`scripts/` 32（16 个 `.gd` + 16 个 `.uid`）、`assets/` 45、
+`scenes/` 15、`docs/` 10、`_reference/` 62、`graybox/` 19、根目录 5。
 （数字会随开发变，以 `git ls-files | wc -l` 为准；结构稳定的是「哪些该进、哪些不该进」。）
 
 | 内容 | 进仓库 | 说明 |
@@ -621,6 +623,7 @@ done
 | `README.md` `HANDOVER.md` | ✅ 根目录 | GitHub 会自动渲染根目录 `README.md` |
 | `.gitignore` `.gitattributes` | ✅ | 后者管换行与二进制，缺了 `.tscn` 会整片 diff |
 | `_reference/tools/` | ✅（Private） | 里面有 **19 个 `test_*.gd` 回归测试**，团队要能跑；`make_*.py` 已冻结 |
+| `graybox/` | ✅ | 另一位同学交付的**灰盒搭建套件**（模板场景 + 机关 + 编辑器预览）。和本项目的 40×22 网格是**两套并行的做法**：灰盒套件用 `solid_ground.tscn` 块拼，网格房间用瓦片刷，见 §13 |
 | `_reference/preview_*.png` | ✅（Private） | 我们自己构建版本的截图，作为视觉基线；网格房间的两张见 `preview_grid_room*.png` |
 | `_reference/art_source/office_atlas_16.png` | ✅（Private） | 旧的 16px 办公室图集。换成 32px 占位图集后它不再被任何场景引用，移到 `_reference/` 作美术参考（该目录有 `.gdignore`，引擎不导入） |
 | `_reference/source_from_game/` | ❌ 已忽略 | 反编译源码，**泄露即侵权** |
@@ -819,7 +822,8 @@ python _reference/tools/make_art_templates.py
 | 虚影贴墙时"粘"住，不沿墙滑 | `_clip_motion` 只截短位移，不做滑动求解 | 录的是"贴着墙滑下去"的路径时，虚影的水平分量被吃掉（垂直方向仍然正常） | 要滑就得对 `cast_motion` 结果做投影，会引入和录制路径的偏差，**不建议现在做** |
 | 尖刺不杀虚影 | `spike_hazard.gd` 只遍历 `player` 组；尖刺块本身也没有碰撞体 | 原版「让回声掉进尖刺」不成立，得改成玩家自己死在尖刺上（§4.4） | 设计选择。要改就命中虚影时让它进入淡出，同时补断言 |
 | `R` 不是"重载场景" | `R` 走 `reset_all()`：人回起点、机关复位、虚影清空，但**节点不重建**（相机、HUD、录制对象都还在） | 效果上等价于回到初始状态；只有极少数依赖 `_ready()` 重新初始化的状态才需要 Replay | 若哪天加了"只在本局内累计"的状态（如计时器、收集数），记得在 `reset_mechanisms()` 或 `reset_all()` 里一起清 |
-| 三个关卡是复制粘贴 | `level_01` / `complete_room` / `office_build` 各存一份 Player + EchoManager + Camera | 改一个机制要改三处，最容易漏的是新加的那关 | 抽 `LevelBase.tscn`（§3 结尾也提过） |
+| 四个场景是复制粘贴 | `level_01` / `complete_room` / `office_build` / `graybox/base_level` 各存一份 Player + EchoManager + Camera | 改一个机制要改四处，最容易漏的是新加的那处 | `graybox/glue/room.gd` 已经是「LevelBase 的雏形」（继承 `room_controller` 并管 spawn/player 接线），下一步是把 `complete_room` 也挂上去，而不是再抄一遍 |
+| **两套并行的摆地形方式**：网格房间用 32px 瓦片（§3.7），`graybox` 套件用 `solid_ground.tscn` 块拼 | 灰盒套件是另一位同学独立交付的，和改网格几乎同时落地 | 同一个房间有两种画法，新人不知道该跟哪套；块拼出来的房间和 40×22 网格对不齐 | 二选一：① 把 `graybox/base_level.tscn` 的 `Terrain` 换成同一套瓦片层（一次能改完）；② 明确分工——网格房间=正式关卡，灰盒套件=快速试搭。**目前倾向 ①** |
 | `kill_y = 750` 写在玩家节点上 | 沿用原版常量 | 做比 750 更高的关卡要逐实例改 | 改成关卡级参数，或跟相机视野算 |
 | 机关每帧都 `get_nodes_in_group` | `actor_bounds.actors()` 每次调用都新建数组 | 5 条虚影的规模下无所谓（每帧 3 次小分配） | 别提前优化，机关数量上百再说 |
 

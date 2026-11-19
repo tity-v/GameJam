@@ -114,6 +114,7 @@ func run() -> void:
 	var echo = ECHO.instantiate()
 	room.add_child(echo)
 	echo.setup(PackedVector2Array([Vector2(plate_a.position.x, 538)]))
+	echo.reset()  # 虚影只认 reset() 这一个登场入口：setup 只载入轨迹，不激活（HANDOVER §4.7）
 	await frames(3)
 	check(not plate_a.active, "仅玩家压力板拒绝 Echo")
 	door.plate_paths.assign([NodePath("../PlateA"), NodePath("../PlateB")])
