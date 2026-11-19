@@ -122,7 +122,7 @@ offset_right = 1208.0
 offset_bottom = 129.0
 theme_override_font_sizes/font_size = 22
 theme_override_colors/font_color = Color(0.15294118, 0.21176471, 0.27058825, 1)
-text = "A、B 同时激活后门保持打开。走进右侧出口。R 完整重置。"
+text = "A、B 同时激活后门保持打开。走进右侧出口。R 只清回声、回起点，机关不复位。"
 
 [node name="Win" type="Panel" parent="UI" unique_id=1298433081]
 visible = false
@@ -147,4 +147,4 @@ offset_left = 150.0
 offset_top = 120.0
 offset_right = 390.0
 offset_bottom = 180.0
-text = "再玩一次 / R"
+text = "再玩一次"

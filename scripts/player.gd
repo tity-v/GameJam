@@ -273,22 +273,35 @@ func _tick_death(delta: float) -> void:
 
 
 func respawn() -> void:
+	_place_at_spawn()
+	respawned.emit()
+
+
+## R 重置用：把玩家瞬间拉回出生点，但**不发 `respawned`**。
+## 为什么要区分：`respawned` 的语义是"复活"，echo_manager 收到后会把现有虚影倒回第 0 帧继续播；
+## 而 R 是把虚影整批删掉（见 `echo_manager.reset_all`），两者不是一回事。
+## 死亡淡出中按 R 也能直接打断淡出、立刻回到出生点。
+func reset_to_spawn() -> void:
+	_place_at_spawn()
+
+
+## respawn() 与 reset_to_spawn() 共用的落点逻辑：位置、速度、各种计时器、贴图状态、相机。
+func _place_at_spawn() -> void:
 	is_dead = false
 	_death_time = 0.0
 	velocity = Vector2.ZERO
 	_coyote = 0.0
 	_buffer = 0.0
 	_ramp_on = false
+	_support = null
 	global_position = respawn_position
 	if _sprite != null:
 		_sprite.modulate.a = 1.0
-	_support = null
 	if _mark != null:
 		_mark.visible = false
-	# 相机原本是平滑跟随，重生是瞬移，要让镜头立刻归位而不是从旧位置滑过来
+	# 相机原本是平滑跟随，重生/重置都是瞬移，要让镜头立刻归位而不是从旧位置滑过来
 	var cam := get_viewport().get_camera_2d()
 	if cam != null and cam.has_method("snap_to_target"):
 		cam.call("snap_to_target")
-	respawned.emit()
 
 

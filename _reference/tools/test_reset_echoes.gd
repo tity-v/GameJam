@@ -33,7 +33,7 @@ func _run() -> void:
 		var fl: Label = bar.get_node("Flash")
 		print("[HUD 反馈] %s（alpha=%.2f）" % [fl.text, fl.modulate.a])
 
-	print("=== 3. 重置后这一轮的录制是否从当下重来 ===")
+	print("=== 3. 重置后这一轮的录制是否从出生点重来 ===")
 	await _fresh()
 	# 先跑到 x≈500（前面这段路不该出现在重置后的虚影里）
 	player.global_position = Vector2(500, 522)
@@ -42,8 +42,9 @@ func _run() -> void:
 	_key(KEY_R, true)
 	await physics_frame
 	_key(KEY_R, false)
-	var x_reset: float = player.global_position.x
 	await _wait(2)
+	var x_reset: float = player.global_position.x
+	print("[R 后人位置] x=%.1f（出生点 %.1f，应基本重合）" % [x_reset, player.respawn_position.x])
 	# 重置后继续往右跑半秒再死
 	_key(KEY_D, true)
 	await _wait(30)
@@ -51,7 +52,7 @@ func _run() -> void:
 	await _die_and_wait()
 	var echo := _first_echo()
 	if echo != null:
-		print("[虚影首帧] x=%.1f（重置点 %.1f，差值应 < 60；若从出生点 90 重来则差 ~400）" % [
+		print("[虚影首帧] x=%.1f（应从重置点 %.1f 附近开始，差值应 < 60）" % [
 			echo.frames[0].x, x_reset])
 		print("[虚影末帧] x=%.1f（死亡位置，应 > 重置点）" % echo.frames[echo.frames.size() - 1].x)
 	else:

@@ -43,16 +43,33 @@ func _physics_process(_delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	# 本节点是 PAUSABLE，暂停时这里不会被调用，所以暂停中按 R 不会偷偷清场
-	if event.is_action_pressed("reset_echoes"):
-		var level := get_tree().current_scene
-		if level != null and level.has_method("reset_room"):
-			level.reset_room()
-		else:
-			clear_all()
-		get_viewport().set_input_as_handled()
+	if not event.is_action_pressed("reset_echoes"):
+		return
+	get_viewport().set_input_as_handled()
+	# 通关后按 R 不做事：整关重来是 Win 面板上 Replay 的职责（见 room_controller.reset_room）
+	var level := get_tree().current_scene
+	if level != null and level.get("won") == true:
+		return
+	reset_all()
 
 
-## R：清掉此前留下的所有虚影，并让这一轮从当下重新开始录。
+## R：清掉所有虚影，并把玩家送回出生点。**不动关卡状态**——
+## 门开没开、板踩没踩、通没通关，全部保持当下。
+##
+## 为什么不再像以前那样调 `level.reset_room()` 重载场景：
+## 那样按 R 等于"重开一关"，门被关上、机关复位，和"重置虚影"的预期不符；
+## 而且重载会丢掉玩家已经解出来的进度。
+func reset_all() -> void:
+	# 顺序不能换：先把人放回出生点，再清录制。
+	# 反过来的话 _trail 里会留下一条"从原地瞬移到出生点"的假轨迹，
+	# 下一次死亡留下的虚影会先闪一下再走路。
+	if _player != null and _player.has_method("reset_to_spawn"):
+		_player.reset_to_spawn()
+	clear_all()
+
+
+## R 的"虚影部分"：清掉此前留下的所有虚影，并让这一轮从当下重新开始录。
+## 玩家位置由 `reset_all()` 负责，这里不管人。
 ## 为什么连录制也清：否则重置后死一次，留下的虚影里会包含重置前走过的路，
 ## 看着像"没重置干净"。
 func clear_all() -> void:
