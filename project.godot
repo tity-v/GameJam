@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="Your Past Self"
-run/main_scene="res://scenes/levels/complete_room.tscn"
+run/main_scene="res://frontend/entry.tscn"
 config/features=PackedStringArray("4.7")
 
 [autoload]
