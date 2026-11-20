@@ -2,7 +2,6 @@ extends SceneTree
 ## 从基础模板搭建临时房间，验证独立尺寸、保存重开及机关配置。
 
 const TEMPLATE = preload("res://graybox/base_level.tscn")
-const GROUND = preload("res://scenes/blocks/solid_ground.tscn")
 const PLATE = preload("res://graybox/pressure_plate.tscn")
 const DOOR = preload("res://graybox/door.tscn")
 const EXIT = preload("res://graybox/exit.tscn")
@@ -42,11 +41,8 @@ func run() -> void:
 	var mechanisms := room.get_node("Mechanisms")
 	var spawn := room.get_node("RespawnPoint") as Marker2D
 	spawn.position.x = 210.0
-	var terrain := room.get_node("Terrain")
-	var step = add_piece(GROUND, terrain, room, "Step", Vector2(1024, 544))
-	var wall = add_piece(GROUND, terrain, room, "Wall", Vector2(1160, 480))
-	step.block_size = Vector2(94, 32)
-	wall.block_size = Vector2(42, 96)
+	var world := room.get_node("World") as TileMapLayer
+	world.set_cell(Vector2i(32,17),0,Vector2i(1,0))
 	var plate_a = add_piece(PLATE, mechanisms, room, "PlateA", Vector2(240, 564))
 	var plate_b = add_piece(PLATE, mechanisms, room, "PlateB", Vector2(430, 564))
 	plate_a.accepts_echo = false
@@ -79,14 +75,8 @@ func run() -> void:
 	check(player.position.is_equal_approx(Vector2(210, 532)), "首次出生跟随移动后的标记")
 	await frames(5)
 	check(player.is_on_floor(), "模板地形具有实体碰撞")
-	step = room.get_node("Terrain/Step")
-	wall = room.get_node("Terrain/Wall")
-	var step_shape: Vector2 = step.get_node("Collision").shape.size
-	var wall_shape: Vector2 = wall.get_node("Collision").shape.size
-	check(step_shape == Vector2(94, 32) and wall_shape == Vector2(42, 96), "保存重开后两个地形实例独立同步碰撞")
-	var step_display: Vector2 = step.get_node("Patch").size
-	var wall_display: Vector2 = wall.get_node("Patch").size
-	check(step_display == step_shape and wall_display == wall_shape, "保存重开后地形显示尺寸正确")
+	world = room.get_node("World")
+	check(world.get_cell_source_id(Vector2i(32,17)) == 0, "保存重开保留绘制的地形砖")
 	player.respawn()
 	check(player.position.is_equal_approx(Vector2(210, 532)), "重生跟随同一个标记")
 

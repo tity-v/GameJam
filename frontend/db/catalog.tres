@@ -6,11 +6,11 @@
 script = ExtResource("1_cmda0")
 levels = Array[Dictionary]([{
 "id": "level_01",
-"scene": "res://scenes/levels/chapter_01_room_01.tscn",
+"scene": "res://scenes/levels/tutorial_relay.tscn",
 "title": "第 1 章 · 房间 1/5"
 }, {
 "id": "level_02",
-"scene": "res://scenes/levels/chapter_01_room_02.tscn",
+"scene": "res://scenes/levels/tutorial_steps.tscn",
 "title": "第 1 章 · 房间 2/5"
 }, {
 "id": "level_03",

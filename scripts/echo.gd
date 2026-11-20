@@ -215,6 +215,14 @@ func _build_probe() -> void:
 ## 把这一帧的位移按世界碰撞截短：撞上就只走到接触点。
 ## 用 cast_motion（形状扫描）而不是"目标点是否重叠"，因为后者会漏掉隧穿。
 func _clip_motion(motion: Vector2) -> Vector2:
+	# 分轴扫描，落地只截断竖直位移，贴墙只截断水平位移。
+	# 整个向量按同一比例截短会丢掉沿地面或墙面的轨迹，误差会逐帧累积。
+	var horizontal := _cast_motion(Vector2(motion.x, 0), global_position)
+	var vertical := _cast_motion(Vector2(0, motion.y), global_position + horizontal)
+	return horizontal + vertical
+
+
+func _cast_motion(motion: Vector2, start: Vector2) -> Vector2:
 	if motion == Vector2.ZERO:
 		return Vector2.ZERO
 	if _probe == null:
@@ -224,7 +232,7 @@ func _clip_motion(motion: Vector2) -> Vector2:
 		return motion
 	var params := PhysicsShapeQueryParameters2D.new()
 	params.shape = _probe
-	params.transform = Transform2D(0.0, global_position + _probe_offset)
+	params.transform = Transform2D(0.0, start + _probe_offset)
 	params.motion = motion
 	params.collision_mask = WORLD_LAYER
 	params.exclude = [get_rid()]
