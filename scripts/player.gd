@@ -307,5 +307,3 @@ func _place_at_spawn() -> void:
 	var cam := get_viewport().get_camera_2d()
 	if cam != null and cam.has_method("snap_to_target"):
 		cam.call("snap_to_target")
-
-
