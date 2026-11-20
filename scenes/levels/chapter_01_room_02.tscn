@@ -1,6 +1,6 @@
 [gd_scene format=3]
 [ext_resource type="PackedScene" path="res://graybox/base_level.tscn" id="base"]
-[ext_resource type="PackedScene" path="res://scenes/blocks/solid_ground.tscn" id="terrain"]
+[ext_resource type="PackedScene" path="res://graybox/terrain.tscn" id="terrain"]
 [ext_resource type="PackedScene" path="res://graybox/pressure_plate.tscn" id="plate"]
 [ext_resource type="PackedScene" path="res://graybox/door.tscn" id="door"]
 [ext_resource type="PackedScene" path="res://graybox/exit.tscn" id="exit"]
@@ -31,7 +31,7 @@ block_size = Vector2(64, 512)
 [node name="Exit" parent="Mechanisms" instance=ExtResource("exit")]
 position = Vector2(1184, 544)
 block_size = Vector2(64, 96)
-door_path = NodePath("../Door")
+
 
 [node name="RespawnPoint" parent="." index="3"]
 position = Vector2(56, 596)

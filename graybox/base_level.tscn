@@ -1,10 +1,10 @@
 [gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://graybox/glue/room.gd" id="1_room"]
-[ext_resource type="PackedScene" path="res://scenes/blocks/solid_ground.tscn" id="2_ground"]
+[ext_resource type="PackedScene" path="res://graybox/terrain.tscn" id="2_ground"]
 [ext_resource type="PackedScene" path="res://graybox/respawn_point.tscn" id="3_spawn"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="4_player"]
-[ext_resource type="Script" path="res://scripts/echo_manager.gd" id="5_echo"]
+[ext_resource type="Script" path="res://graybox/glue/trail_adapter.gd" id="5_echo"]
 
 [node name="BaseLevel" type="Node2D" node_paths=PackedStringArray("spawn_point", "player")]
 texture_filter = 1
@@ -32,7 +32,7 @@ position = Vector2(128, 532)
 [node name="Player" parent="." instance=ExtResource("4_player")]
 position = Vector2(128, 532)
 
-[node name="EchoManager" type="Node2D" parent="." groups=["echo_manager"]]
+[node name="EchoManager" type="Node2D" parent="." groups=["echo_manager","graybox_trail_adapter"]]
 script = ExtResource("5_echo")
 player_path = NodePath("../Player")
 

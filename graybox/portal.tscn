@@ -1,0 +1,13 @@
+[gd_scene format=3]
+[ext_resource type="Script" path="res://graybox/glue/portal.gd" id="script"]
+[ext_resource type="Script" path="res://graybox/view/bindings.gd" id="links"]
+
+[node name="portal" type="Node2D" groups=["graybox_recordable"]]
+script = ExtResource("script")
+
+
+[node name="Face" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-16,-32,16,-32,16,32,-16,32)
+color = Color(0.4,0.35,0.85,0.8)
+[node name="Bindings" type="Node2D" parent="."]
+script = ExtResource("links")
