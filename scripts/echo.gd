@@ -6,7 +6,7 @@ extends StaticBody2D
 ## 我们录轨迹，等价但更稳）。
 ##
 ## 外观全部由场景里的两个 Sprite2D 提供，代码不画任何像素：
-##   Body  → assets/echo/echo_body.png   半透明方块 + 顶边亮线
+##   Body  → assets/actors/office_character/idle.png（character_portrait：缩放 + 眨眼 + 青色）
 ##   Cross → assets/echo/echo_cross.png  死亡叉号（默认隐藏）
 ## 换皮只需替换这两张 png（或改 echo.tscn 里 Sprite 的 texture），不用碰脚本。
 ##
@@ -69,7 +69,7 @@ var last_delta := Vector2.ZERO
 
 ## 世界层：地形、门都在这层。虚影只被这层挡，不会被别的虚影或玩家挡。
 const WORLD_LAYER := 1
-## 扫描用的形状和内缩量。形状比身体小 1px（26x36 塞在 28x38 里），
+## 扫描用的形状和内缩量。形状比身体小 1px（body_size 32x44 时是 31x43），
 ## 否则「脚正好贴地」这种静止接触会被判成碰撞，虚影一出生就卡死。
 const PROBE_INSET := 1.0
 

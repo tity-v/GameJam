@@ -11,7 +11,10 @@
 
 把 2D 平台解谜游戏《过去的你》的第一关搬进 Godot 4.7，并实现它的核心机制：**死后留下一个重放你上一轮动作的虚影，用虚影替你踩机关、当垫脚**。
 
-当前状态：**机制闭环已跑通，且有一个能从头打到尾的房间** `complete_room`（压力板→双板锁存开门→出口结算，含尖刺致死与 `R` 回到初始状态）。
+当前状态：**有完整入口和第一章**——启动进 `frontend/entry.tscn` 主菜单，四章 × 五间共 20 关的目录里
+第一章五间已接入并能连着打通（`scenes/levels/chapter_01_room_01..05.tscn`，灰盒块拼）。
+机制示例房间 `complete_room` 保留：压力板 → 双板同时踩住才开门（松开任一板就关，见 §4.8）→ 出口结算，
+含尖刺致死与 `R` 回到初始状态。
 历史场景 `level_01` 仍是「过不去」的状态（门是实体墙、压力板不响应），保留作为对照，不是 bug。
 
 ---
@@ -23,17 +26,17 @@
 | 引擎 | **Godot 4.7.2**（`config/features` 写死 4.7，低版本打开会提示） |
 | 渲染 | `gl_compatibility`（兼容模式，老显卡/笔记本也能跑） |
 | 视口 | 1280 × 704（= 40 × 22 个 32px 瓦片），`canvas_items` 拉伸 |
-| 主场景 | `res://scenes/levels/complete_room.tscn`（`level_01.tscn` 保留为历史场景） |
-| 代码规模 | 16 个脚本，共约 1244 行 GDScript；19 个回归测试 |
+| 主场景 | `res://frontend/entry.tscn`（主菜单 → 选章 → 关卡）；单房间调试打开房间按 **F6** |
+| 代码规模 | `scripts/` 17 个脚本约 1333 行，另有 `frontend/`（10 个）与 `graybox/`（6 个）；21 个回归测试 |
 
 打开方式：Godot 项目管理器 → 导入 → 选仓库根目录（`project.godot` 在根）。
 
 **按键**：`A/D` 移动（方向键也行）· `Space` 跳跃（长按更高）· `E` 自杀 · `R` 回到本关初始状态（清虚影 + 机关复位 + 回出生点）· `Esc` 暂停。
 
-**每局必做的验证动作**（30 秒判断环境是否正常，以下数字对应主场景 `complete_room`）：
+**每局必做的验证动作**（30 秒判断环境是否正常，以下数字对应机制示例房间 `complete_room`）：
 
-1. 开局站在地面，脚底 `y = 576`（角色原点 y=538）
-2. 按住 `D` 跑，撞到 **x=850** 的门停住 → 说明碰撞与关卡数据都加载对了
+1. 开局站在地面，脚底 `y = 576`（角色原点 y=532，碰撞高 44）
+2. 按住 `D` 跑，撞到 **x=832** 的门停住 → 说明碰撞与关卡数据都加载对了
    （门占 x 850~914、y 416~576；这里答不上来就说明场景没进对）
 3. 按 `E`，方块淡出带红叉，1.3 秒后回出生点，同时留下一个蓝色虚影
 4. 虚影重放完再活 1.3 秒后消失
@@ -62,7 +65,7 @@
 | `Esc` 暂停 + 点击继续 | 完成 | `scenes/ui/pause_menu.tscn`（autoload） |
 | 底部操作提示栏 + 虚影计数 | 完成 | `scenes/ui/hud.tscn`（autoload） |
 | 碰撞框可视化（脚底线 / 可踩线，`F1` 开关） | 完成 | `scripts/hitbox_debug.gd` |
-| **压力板 → 开门**（双板锁存） | 完成 | `scripts/pressure_plate.gd`、`scripts/puzzle_door.gd` |
+| **压力板 → 开门**（双板同时踩住才开；松开任一板就关，但门口站着玩家时会等它走出去再关） | 完成 | `scripts/pressure_plate.gd`、`scripts/puzzle_door.gd`；断言见 `test_door_safety.gd` |
 | **出口结算 / 通关** | 完成 | `scripts/level_exit.gd`、`scenes/levels/complete_room.tscn` |
 | **尖刺伤害判定** | 完成（**只杀玩家**，虚影无感；尖刺块本身无碰撞体） | `scripts/spike_hazard.gd` |
 | **虚影对环境有体积**（压力板认、墙和关着的门挡得住、尖刺不杀、出口不认） | 完成 | `scripts/actor_bounds.gd`、`echo.gd` 的 `_clip_motion()`；断言见 `test_echo_environment.gd` |
@@ -71,6 +74,9 @@
 | **房间整体重置（通关面板 Replay → 重载场景）** | 完成 | `scripts/room_controller.gd` |
 | **关卡网格**：整屏 40×22 格 × 32px、空瓦片铺满整张地图、机关全部贴格线 | 完成 | `assets/tiles/`、`_reference/tools/room_grid.py`；断言见 `test_grid_room.gd`，说明见 §3.7 |
 | **灰盒搭建套件**（同学交付）：模板场景、机关零件、编辑器预览、独立验收 | 完成 | `graybox/README.md`；验收 `graybox/tests/test_graybox_kit.gd` |
+| **游戏前端**（同学交付）：主菜单 / 选关 / 暂停 / 设置 / 结算 / 全通 / 存档，20 关目录、章内换房 | 完成 | `frontend/README.md`；验收 `frontend/tests/test_frontend.gd` |
+| **第一章五间**（同学交付）：块拼房间，各自一套压板/门/出口 谜题 | 完成 | `scenes/levels/chapter_01_room_0*.tscn` |
+| **人物两帧待机动画**（眨眼），外观与判定解耦 | 完成 | `scripts/character_portrait.gd`；说明 `docs/人物动画与尺寸调整.md`，断言 `test_character_portrait.gd` |
 | 角色脚下/身体边缘判定 | 完成 | `scripts/actor_bounds.gd`（供压力板/出口/尖刺共用） |
 | 可通关房间搭建 | 完成 | `scenes/levels/complete_room.tscn`（说明见 `docs/完整房间使用说明.md`） |
 | 关卡名 / 关卡提示文字（原版有） | 未做 | — |
@@ -82,8 +88,9 @@
 
 ### 3.1 场景树（`level_01.tscn`）
 
-> 主场景已切到 `complete_room.tscn`，它的节点结构（压力板 / 门 / 出口 / 尖刺 / 提示文字）
-> 见 `docs/完整房间使用说明.md`。本节保留 `level_01` 的树，用来理解最基础的那一层。
+> 主场景现在是 `frontend/entry.tscn`（前端会话层，按目录换场景）。机制示例房间 `complete_room`
+> 的节点结构（压力板 / 门 / 出口 / 尖刺 / 提示文字）见 `docs/完整房间使用说明.md`；
+> 本节保留 `level_01` 的树，用来理解最基础的那一层。
 
 ```
 Level01 (Node2D)
@@ -120,7 +127,7 @@ Level01 (Node2D)
 | `block.gd` | 38 | `block_size` 同步贴图与碰撞（`@tool`） | 所有物块场景根 |
 | `pressure_plate.gd` | 49 | 判断「谁站在板上」（玩家/虚影，可分别开关）、`reset_mechanism()` | `plate_off.tscn` |
 | `level_exit.gd` | 25 | 门开后站上出口 → 结算 | `exit.tscn` |
-| `puzzle_door.gd` | 37 | 多块压力板全满足才开门，带锁存；`reset_mechanism()` 会**连锁存一起忘掉** | `door.tscn` |
+| `puzzle_door.gd` | 54 | 多块压力板全满足才开门；松开任一板就关，关之前先看门口有没有玩家（`_player_in_doorway()`，避免把人夹死）；`reset_mechanism()` 是硬关 | `door.tscn` |
 | `room_controller.gd` | 36 | 房间状态（`won` / `resetting`）、`reset_mechanisms()`（按 `mechanism` 组收口）、通关面板 Replay 的整关重来 | `complete_room.tscn` 根 |
 | `actor_bounds.gd` | 34 | 共用「脚底/身体范围」判定工具（静态函数；虚影只读 `body_size` 与 `is_active()`） | 被上面几个脚本 `preload` |
 | `key_hint.gd` | 21 | 一组「键帽 + 说明」 | `key_hint.tscn` |
@@ -133,11 +140,12 @@ Level01 (Node2D)
 
 1. 在 `_ready()` 里 `add_to_group("mechanism")`——`room_controller.reset_mechanisms()` 只遍历这个组，
    不按节点名找，所以加机关不用回来改控制器；
-2. 实现 `reset_mechanism()`，自己把「初始状态」写完（贴图、碰撞、内部锁存标志一起）。
+2. 实现 `reset_mechanism()`，自己把「初始状态」写完（贴图、碰撞、内部状态一起）。
 
-典型陷阱：`puzzle_door.gd` 的锁存早退是 `if opened and latch_open: return`，
-复位时如果只把碰撞开回来、忘了先 `opened = false`，下一帧会直接 return，
-门看起来关了却能穿——`test_complete_room.gd` 的 `R re-enables door collision` + `closed door blocks player again after R` 就是拦这个的。
+典型陷阱：复位门时如果只把碰撞开回来、忘了先把 `opened` 置回 false，下一帧的
+`_physics_process` 会认为「状态没变」直接 return，门看起来关了却能穿。
+顺序必须是 `opened = false` → `$Collision.set_deferred("disabled", false)`，
+`test_complete_room.gd` 的 `R re-enables door collision` + `closed door blocks player again after R` 就是拦这个的。
 
 ### 3.3 信号流
 
@@ -172,7 +180,7 @@ player.respawn() ─emit─> player.respawned ─> echo_manager._on_player_respa
 
 **坐标约定（重要）**：所有角色的 `position` 是**包围盒左上角**，不是中心。这是原版 `actor.pos` 的约定，`levels.gd` 里的 `Rect2(x, y, w, h)` 可以直接抄。
 
-- 出生点 `(90, 522)`，主角 28×38 → 脚底 560 = 地面顶部
+- 出生点 `(90, 516)`，主角 32×44 → 脚底 560 = 地面顶部
 - 物块也是左上角对齐（`CollisionShape2D.position` 自动取 `block_size / 2`）
 - `Camera2D` 需要用 `target_center_offset_x = 14` 补回半个身位
 
@@ -185,8 +193,8 @@ player.respawn() ─emit─> player.respawned ─> echo_manager._on_player_respa
 
 | 节点 | 画的内容 | 意义 |
 |---|---|---|
-| `player.tscn / HitboxDebug` | 黄色框 28×38 + **底边橙色粗线**（`feet_line`） | 框是「能不能钻过缝」，橙线是真正踩地的那条边 |
-| `echo.tscn / HitboxDebug` | 青绿框 28×8 + **顶边橙色粗线**（`stand_line`） | 薄片就是虚影唯一的实体部分，橙线是可踩面 |
+| `player.tscn / HitboxDebug` | 黄色框 32×44 + **底边橙色粗线**（`feet_line`） | 框是「能不能钻过缝」，橙线是真正踩地的那条边 |
+| `echo.tscn / HitboxDebug` | 青绿框 32×8 + **顶边橙色粗线**（`stand_line`） | 薄片就是虚影唯一的实体部分，橙线是可踩面 |
 
 两条橙线**用同一个颜色、同一种画法**（2px 实线 + 两端短刻度），所以「贴着站上去了吗」是一眼的事：
 重合 = 引擎判定成立的瞬间。
@@ -204,48 +212,40 @@ player.respawn() ─emit─> player.respawned ─> echo_manager._on_player_respa
 
 ### 3.6 角色尺寸与美术交付规格
 
-> 给美术看的版本是 `README.md` §3.4（那边是「怎么画」）。这里写「为什么必须这样」，
-> 接手程序改角色尺寸前先读完这一节，否则很容易把美术的图改坏。
+> 给美术看的版本是 `README.md` §3.4（那边是「怎么画」）。这里写「为什么是这样」，
+> 接手程序改角色尺寸前先读完这一节。
 
-**一句话：主角的可画范围就是碰撞框，28×38，画布多一点少一点都不行；虚影反过来——判定框是
-`body_size`（28×38），贴图会被缩放到它，换图不影响判定。**
+**一句话：判定和外观是两套数字，互不影响。** 判定 32×44（玩家取 `Collision.shape.size`，
+虚影取 `body_size`）；外观固定 **48 高**、底部对齐，宽度由画布自己的长宽比决定。
+判定永远不读贴图——这是 11-19 那次 `body_size` 改造定下的规则，别退回去。
 
-引擎的真实行为（`player.gd` 的 `_fit_visuals()`）：
-
-```
-Sprite.scale = 碰撞体尺寸 / design_size        design_size 默认 28×38
-实际绘制尺寸 = 贴图尺寸 × Sprite.scale
-```
-
-也就是说，**只有当「碰撞体」变了，贴图才会被补偿**。贴图自己变大，`scale` 仍然是 `(1,1)`，
-角色就直接按原尺寸画出来。实测（把 `player.png` 换成 56×76 再重新导入）：
-
-```
-texture = (56, 76)   scale = (1, 1)   实际绘制 = (56, 76)   碰撞体 = (28, 38)
-```
-
-→ 角色比碰撞框大一圈，脚穿进地里、头插进平台，看起来像"贴图和碰撞错位"，其实是图交错了。
-
-**所以：**
+11-19 之前是另一套：贴图 1:1 当判定，画布必须正好 28×38。那时换一张稍大的图就会改谜题
+（多留几像素透明边，"刚好碰不到"的压力板变成"踩得到"）。现在的规则：
 
 | 项 | 规则 |
 |---|---|
-| 主角画布 | 正好 28×38（`design_size` 的值） |
-| 死亡叉号 | 同样 28×38（和 `Sprite` 共用同一套缩放） |
-| 虚影两张图 | **任意尺寸**（会被 `fit_visuals()` 缩放到 `body_size` 28×38，判定不受影响）；但比例最好保持 14:19，否则会被拉歪 |
-| 想画 4 倍大图 | **只能同时把 `design_size` 改成 112×152**，还要同步叉号与虚影，不推荐；直接画 28×38 最省事 |
-| 物块 | 九宫格源图，尺寸必须和 §4.5 的表一致（改了要同步 tscn 里的 patch margins） |
+| 判定 | 玩家 32×44；虚影 32×44（`body_size`） |
+| 外观 | 高 = 判定高 × `visual_height_ratio`（48/44）≈ **48**；宽 = 48 × 画布宽 ÷ 画布高（380×400 → 45.6） |
+| 对齐 | 画布**底边** = 碰撞底边，所以人物比碰撞框高 4px，头发可以伸出判定范围 |
+| 虚影可踩薄片 | 碰撞框顶部那条，宽 = `body_size.x`、高 8；人物头顶比它高 4px |
+| 死亡叉号 | 仍按 `碰撞尺寸 / design_size(28×38)` 缩放——它标的是**判定矩形**，不是人物剪影 |
+| 换图 | 换 `Sprite.texture`（闭眼帧填 `blink_texture`），或运行时 `set_art(睁眼, 闭眼)` + 再调 `fit_visuals()` |
+| 旧图 | `actors/player.png`、`echo/echo_body.png` 是 28×38 的占位图，场景已不引用，留作参考 |
+
+**踩过的坑（11-20 修掉）**：`character_portrait` 过去每帧硬写 `texture = 常量`，
+美术把新 png 拖到 `Sprite` 上完全没有反应；`fit_to_body()` 又拿常量图的高度算比例，
+换一张不同尺寸的图会被缩成几像素。现在睁眼帧取场景里的贴图、比例按当前贴图算，
+换角色只改资源，不用动脚本。
 
 **交付给美术的三件东西**（缺一件就会反复返工）：
 
-1. 模板图 `_reference/art_templates/player_guide_10x.png` / `echo_guide_10x.png`
-   （10 倍，红框=碰撞框、青线=2px 安全区、橙线=脚底/可踩线；由 `make_art_templates.py` 生成）
-2. 交图校验 `python _reference/tools/check_art_size.py`（角色尺寸错会直接说"会显示成 2.00 倍大小"）
+1. 画布说明：`README.md` §3.4 的四条硬规则（画布比例决定胖瘦、判定不跟贴图、脚底对齐、虚影头顶要平）
+2. 交图校验 `python _reference/tools/check_art_size.py`（尺寸类别不对会 `BAD`）
 3. 游戏里按 `F1`：黄框贴住角色、橙线压在地面，才算对
 
-**一条纪律**：「五条硬规则」和模板图用法只写在 `README.md` §3.4，本文件只保留程序必须知道的**因果与数字**。
-改规则时改 README，别在两个文件里各维护一份——之前就出现过 README 说"可以画 4 倍等比缩放"
-而实际不会缩放的情况，美术照做后全部返工。**凡是"引擎会帮你缩放"的直觉，先写测试验证再写进文档。**
+**一条纪律**：规则只写在 `README.md` §3.4，本文件只保留程序必须知道的**因果与数字**。
+改规则时改 README，别在两个文件里各维护一份——之前出现过 README 写"可以画 4 倍等比缩放"
+而引擎实际不缩放，美术照做后全部返工。**凡是"引擎会帮你缩放"的直觉，先写测试验证再写进文档。**
 
 ---
 
@@ -297,7 +297,7 @@ Decor             TileMapLayer   装饰，无碰撞，留给美术
 
 | 机关 | 像素矩形 | 格子 | 规则 |
 |---|---|---|---|
-| 出生点 | (128, 538, 28×38) | x = 4 列 | 脚底 576 |
+| 出生点 | (128, 532, 32×44) | x = 4 列 | 脚底 576 |
 | 尖刺 | (32, 544, 64×32) | 1–2 列, 17 行 | 底边贴 576 |
 | 压力板 A / B | (352 / 640, 564, 64×12) | 11 / 20 列, 17 行 | 宽 2 格，底边贴 576 |
 | 门 | (832, 416, 64×160) | 26–27 列, 13–17 行 | 2×5 格，底边贴 576 |
@@ -372,7 +372,7 @@ global_position += last_delta      # 增量，不是赋值成记录坐标
 |---|---|
 | **必须增量推进** | 原来写 `global_position = frames[next]`。被墙截住之后，若记录轨迹跨过那面墙，绝对赋值会在下一帧直接**隧穿**过去，扫描等于白做 |
 | **只扫 layer 1（World）** | 虚影之间不互相挡、玩家也推不动它。多扫一层就会出现「虚影被另一个虚影卡住」这种没人想调的行为 |
-| **扫描形状内缩 1px**（26×36 塞在 28×38 里） | 不内缩的话，「脚正好贴地」这种静止接触会被判成碰撞，虚影一出生就卡在原地 |
+| **扫描形状内缩 1px**（31×43 塞在 32×44 里） | 不内缩的话，「脚正好贴地」这种静止接触会被判成碰撞，虚影一出生就卡在原地 |
 
 **代价（关卡设计约束）**：被挡住时**帧号照常前进**，只是位置停在墙边。于是会出现
 「录的时候门开着、重放时门关着 → 虚影卡在门外，永远走不到门里的压力板」。
@@ -428,14 +428,15 @@ global_position += last_delta      # 增量，不是赋值成记录坐标
 | 用途 | 取什么 |
 |---|---|
 | 机关判定（压力板） | `echo.body_rect()` → `Rect2(global_position, body_size)` |
-| 撞墙扫描（`_clip_motion`） | probe = `body_size` 内缩 1px（26×36） |
+| 撞墙扫描（`_clip_motion`） | probe = `body_size` 内缩 1px（32×44 → 31×43） |
 | 头顶可踩薄片 | 宽度 = `body_size.x`，高度固定 8 |
-| 外观（Body / Cross） | `scale = body_size / texture.size`，**图跟着判定走** |
+| 外观（Body） | `character_portrait.fit_to_body()`：高 = `body_size.y × 48/44`（44 → 48），宽按**画布自己的长宽比**，底部对齐 |
 
 改之前是反过来的：`Body` 贴图矩形直接当判定，贴图多留 2px 透明边，
-「刚好碰不到」的压力板就变成「踩得到」。现在美术给 56×76 或留透明边，
-只会被缩放到 28×38，谜题不变。对应断言在 `test_echo_contract.gd`（换 56×76 的图后
-`body_rect()` 仍是 28×38、4px 重叠仍算踩住、完全离开仍不算）。
+「刚好碰不到」的压力板就变成「踩得到」。现在换任何尺寸的图都只改外观
+（等比缩放到 48 高、底部对齐），判定仍是 `body_size` 32×44。
+对应断言在 `test_echo_contract.gd`（`set_art()` 换成 56×76 的图后 `body_rect()` 仍是 32×44、
+外观保持原图长宽比且脚底对齐、4px 重叠仍算踩住、完全离开仍不算）。
 
 ⚠️ `Top` 的 shape 是场景里的 `sub_resource`，多实例共享。`fit_visuals()` 里先
 `duplicate()` 再改尺寸，否则改一个虚影的身体尺寸会把全场虚影的薄片一起改掉。
@@ -460,6 +461,33 @@ global_position += last_delta      # 增量，不是赋值成记录坐标
 
 ---
 
+### 4.8 门「松开就关」，但绝不允许关在玩家身上
+
+门的语义在 11-19 改过一次：**去掉了 `latch_open`（锁存）**，现在是「所有关联压板同时被踩住
+才开，松开任意一块就关」。这样第一章五间房能用同一套门，也让「两条回声各踩一块板、你自己穿过去」
+变成真正的时间配合题，而不是一次开门永久通行。
+
+代价是门可能正好关在玩家身上，而 **CharacterBody2D 一旦被 StaticBody2D 包住就推不动**——
+实测把玩家放在门洞里按住 `D` 跑 130 帧：`x` 一个像素都没变，`y` 在 543↔564 之间抖动，
+除了按 `R` 没有别的出路。所以 `puzzle_door._physics_process()` 在关门前多做一步：
+
+```gdscript
+if not satisfied and _player_in_doorway():
+    return          # 门口有人：先不关，等人走出去
+```
+
+三条边界，改之前先读：
+
+1. **只认玩家，不认虚影**。虚影被门关住只是看着卡住，不会造成软锁；反过来让虚影也能顶门，
+   一条刚好停在门口的轨迹就能把门永久撑开。
+2. **R 复位是硬关**，不看门口——调用前玩家已经被送回出生点（`reset_all()` 的顺序：人 → 机关 → 虚影）。
+3. 这不是「延迟关门的动画」，而是**状态机不前进**：`opened` 保持 true、碰撞保持关闭，
+   所以这期间出口依旧可用。断言在 `test_door_safety.gd`（人站门里不关 / 能走出去 / 走后补关 /
+   关上是墙 / 虚影顶不开门）。
+
+这个守卫原来写在 `graybox/glue/door.gd` 的 `safety_player` 字段上（需要手动接线）。现在收进核心脚本，
+自动扫 `player` 组，`safety_player` 字段和相关提示已删除。
+
 ## 5. 已知坑（都踩过，别再踩）
 
 | 现象 | 原因 | 解法 |
@@ -476,10 +504,12 @@ global_position += last_delta      # 增量，不是赋值成记录坐标
 | 场景里改了属性，重启又变回去 | 生成器被跑过（`--force`） | 别跑 `--force`；改了关卡就提交 git |
 | 改了角色尺寸后，脚陷进地里 / 贴图与碰撞错位 | 只改了 `Collision.shape.size`，没改 `Collision.position`（它是相对左上角原点的中心偏移） | `position = shape.size / 2`；按 `F1` 看一眼框是否贴在方块上，框偏左上就是漏了这步（§3.5） |
 | 调完尺寸觉得「明明对齐了还是踩空」 | 看的是贴图边缘，不是碰撞（贴图可以比 shape 画大一圈） | 判定永远以橙色线/黄框为准，别拿美术图的像素边缘当碰撞边界 |
-| 角色看着比碰撞框大一圈 / 隔空停住 / 脚陷进地里 | 贴图不是 28×38（引擎 1:1 绘制，**不会**把大图缩回去），或四周留了透明边 | 跑 `python _reference/tools/check_art_size.py`；画布必须正好 28×38（§3.6） |
+| 角色看着比碰撞框大一圈 / 隔空停住 / 脚陷进地里 | 角色有两套尺寸：判定 32×44（碰撞体 / `body_size`），外观固定 **48 高**、画布底边对齐脚底；四周留透明边会显得"没碰到就停住" | 判定只认黄框/橙线（§3.5）；外观只由 `character_portrait.fit_to_body()` 决定，画布比例只影响胖瘦（§3.4） |
+| 把新角色图拖到 `Sprite.texture` 上，游戏里没反应 | `character_portrait` 过去每帧硬写 `texture = 常量`，下一帧就把你的图顶回去了 | 现在睁眼帧就是场景里给的贴图，直接换即可；运行时换皮用 `set_art(睁眼, 闭眼)`，再调一次 `fit_visuals()` |
+| 门关在玩家身上，人横向完全推不动 | 门是「松开任一板就关」，如果关的瞬间玩家在门洞里，`CharacterBody2D` 被 `StaticBody2D` 包住就出不来（实测 x 不变、y 抖动） | `puzzle_door._player_in_doorway()` 会等门口空出来再关（§4.8）；**别把这个守卫删掉**，断言 `test_door_safety.gd` |
 | 虚影被门挡住，没走到压力板上 | **不是 bug**：虚影每帧做 `cast_motion`，撞上就停在接触点，而帧号继续走。录的时候门开着、重放时门关着就会这样 | 关卡设计上避免「关键路线依赖一扇之后会关的门」；要放开就查 `echo.gd` 的 `_clip_motion`（README §6.1） |
 | 按 `R` 之后门又关上了，以为「开门白解了」 | **设计如此**：R 是「回到本关初始状态」，虚影与机关一起复位 | 想保留开门进度就别按 R；整关重来（含节点重建）仍是通关面板的 Replay |
-| 按 `R` 之后门看着关了，人却能穿过去 | `puzzle_door.reset_mechanism()` 里只开了碰撞、没先把 `opened` 置 false，`latch_open` 的早退分支下一帧就 return | 顺序必须是 `opened = false` → `$Collision.set_deferred("disabled", false)`；断言见 `test_complete_room` |
+| 按 `R` 之后门看着关了，人却能穿过去 | `puzzle_door.reset_mechanism()` 里只开了碰撞、没先把 `opened` 置 false，下一帧 `_physics_process` 判「状态没变」直接 return | 顺序必须是 `opened = false` → `$Collision.set_deferred("disabled", false)`；断言见 `test_complete_room` |
 | 新加的机关按 `R` 不复位，其它机关正常 | 忘了登记 `mechanism` 组，或没写 `reset_mechanism()` | 照 §3.2「新增机关的接入契约」两条做 |
 | 换皮后虚影压板范围变了 | 判定被改回读 `Body` 贴图矩形了（贴图多留几像素透明边，`rect` 就变大） | 判定只准读 `body_size`（§4.7）；`test_echo_contract.gd` 会用 56×76 的图验一遍 |
 | 虚影还没出现就能挡人 / 压住板，或画面出现了板却不亮 | 显示、碰撞层、机关判定各判各的（`visible` / 层 bit / `is_gone`） | 全部统一走 `_active`：让虚影登场只调 `reset()`，**不要再手改 `visible`**（§4.7） |
@@ -556,6 +586,8 @@ done
 | `test_echo_environment` | 虚影被世界挡住（门/墙）、被挡后不隧穿、开门能过、虚影踩板、站出口不结算 |
 | `test_echo_contract` | `body_size` 与 `_active` 两个单一真相：换皮不改判定、未激活时显示/碰撞/机关全关 |
 | `test_echo_recording_cap` | 录制上限滚动窗口：满了丢最旧一半，尸体落点不被截断 |
+| `test_door_safety` | 门「松开即关」的安全性：玩家站门洞里门不关 / 人能走出去 / 走后补关 / 关上是墙 / 虚影顶不开门 |
+| `test_character_portrait` | 两帧眨眼与暂停冻结、外观高 48 与脚底对齐、换图不改判定 |
 | `test_air_drag` / `test_air_turn` / `test_jump_curve` / `test_speed_curve` | 手感曲线（逐帧数值，见 `docs/手感调参.md`） |
 | `graybox/tests/test_graybox_kit` | 灰盒套件自己的验收（模板搭建、保存重开、单板/双板门、出口）。在 `.gdignore` 目录里，要显式 `--script res://graybox/tests/test_graybox_kit.gd` |
 
@@ -611,8 +643,8 @@ done
 
 ### 9.2 哪些进仓库，哪些不进
 
-一共 188 个文件会入库：`scripts/` 32（16 个 `.gd` + 16 个 `.uid`）、`assets/` 45、
-`scenes/` 15、`docs/` 10、`_reference/` 62、`graybox/` 19、根目录 5。
+一共 236 个文件会入库：`scripts/` 34（17 个 `.gd` + 17 个 `.uid`）、`assets/` 49、
+`scenes/` 24、`docs/` 13、`_reference/` 64、`graybox/` 19、`frontend/` 28、根目录 5。
 （数字会随开发变，以 `git ls-files | wc -l` 为准；结构稳定的是「哪些该进、哪些不该进」。）
 
 | 内容 | 进仓库 | 说明 |
@@ -622,8 +654,9 @@ done
 | `*.gd.uid` | ✅ | Godot 4.4+ 的资源 UID，**必须提交**，保证跨机器引用不乱 |
 | `README.md` `HANDOVER.md` | ✅ 根目录 | GitHub 会自动渲染根目录 `README.md` |
 | `.gitignore` `.gitattributes` | ✅ | 后者管换行与二进制，缺了 `.tscn` 会整片 diff |
-| `_reference/tools/` | ✅（Private） | 里面有 **19 个 `test_*.gd` 回归测试**，团队要能跑；`make_*.py` 已冻结 |
-| `graybox/` | ✅ | 另一位同学交付的**灰盒搭建套件**（模板场景 + 机关 + 编辑器预览）。和本项目的 40×22 网格是**两套并行的做法**：灰盒套件用 `solid_ground.tscn` 块拼，网格房间用瓦片刷，见 §13 |
+| `_reference/tools/` | ✅（Private） | 里面有 **21 个 `test_*.gd` 回归测试**，团队要能跑；`make_*.py` 已冻结 |
+| `graybox/` | ✅ | 另一位同学交付的**灰盒搭建套件**（模板场景 + 机关 + 编辑器预览）。第一章五间房都是用它的块拼法搭的（`solid_ground.tscn`），和 40×22 瓦片网格并行，取舍见 §13 |
+| `frontend/` | ✅ | 另一位同学交付的**游戏前端**：主菜单 / 选关 / 暂停 / 设置 / 结算 / 全通 + 存档（`user://frontend/*.cfg`）。按 `db/catalog.tres` 的 20 关目录换场景 |
 | `_reference/preview_*.png` | ✅（Private） | 我们自己构建版本的截图，作为视觉基线；网格房间的两张见 `preview_grid_room*.png` |
 | `_reference/art_source/office_atlas_16.png` | ✅（Private） | 旧的 16px 办公室图集。换成 32px 占位图集后它不再被任何场景引用，移到 `_reference/` 作美术参考（该目录有 `.gdignore`，引擎不导入） |
 | `_reference/source_from_game/` | ❌ 已忽略 | 反编译源码，**泄露即侵权** |
@@ -635,7 +668,7 @@ done
 > 公开版的差异：把 `_reference/` 整个排除，同时把 `_reference/tools/test_*.gd` 挪到 `tests/`
 > （否则公开仓库既没有测试、也没有生成脚本）。这一步现在不做，等真要开源再说。
 
-**另外 26 个 `.import` 文件也在库里**（每个 png 一个，Godot 4 的导入设置就存在这里）。
+**另外 29 个 `.import` 文件也在库里**（每个 png 一个，Godot 4 的导入设置就存在这里）。
 少了它们不是不能跑，但过滤/压缩参数会回落到默认值，画面可能和现在不一样——**别忽略 `.import`**。
 
 仓库里**没有**、但也不影响跑的东西：
@@ -707,7 +740,7 @@ git push -u origin main
 **第 4 步：验证别人能跑**
 
 自己另找一台机器（或删掉 `.godot/` 后再打开）克隆一份，用 Godot 导入根目录，
-确认：能进 `complete_room`、按 `F1` 有碰撞框、19 个测试脚本能跑。
+确认：F5 能进主菜单并打开第一章第一间、按 `F1` 有碰撞框、21 个测试脚本能跑。
 `.godot/` 不在仓库里是**正常**的，第一次打开会重建（约十几秒）。
 
 **这一步已经实测过**：把仓库克隆到干净目录（无 `.godot/`）后
@@ -752,7 +785,7 @@ godot --headless --path . --fixed-fps 60 --script res://_reference/tools/<test>.
 # 无头启动自检（检查场景/脚本有无加载错误）
 godot --headless --path . --quit-after 20
 
-# 美术交图后校验贴图尺寸（角色必须 28×38）
+# 美术交图后校验贴图尺寸 / 瓦片格线（角色判定 32×44、外观 48 高）
 python _reference/tools/check_art_size.py
 
 # 关卡网格：重建 32px 占位图集 / 把 room_grid.py 的布局写回房间 / 只看预览图
@@ -781,7 +814,7 @@ python _reference/tools/make_art_templates.py
 4. 虚影系统比原版「宽容」：满 5 条还能死、R 可以随时清场。这两处是刻意偏离原版的，理由在 §8.5。
 5. 数值手感原来照抄原版 `actor.gd`，**2026-11-19 起已整体重调**（满速 273、凹形起停、跳跃 115px/0.78s、下落 ×1.1、空中惯性与反向急停）。现值、逐帧实测和调参公式见 **`docs/手感调参.md`**；别再拿 `actor.gd` 的数字当预期值。
 6. 交美术前先教他按 `F1`：改尺寸时只看橙线，不要拿贴图像素边缘当碰撞——这是这个项目最容易反复沟通的一件事（§3.5）。
-7. 给美术交付尺寸，别口头说"大概 28×38"——直接给 `_reference/art_templates/` 里的模板图 + 一句
+7. 给美术交付尺寸，别口头说"大概 48 高"——直接给 `README.md` §3.4 的四条硬规则 + 一句
    `python _reference/tools/check_art_size.py`。规格与原因见 §3.6，美术版在 `README.md` §3.4。
 8. **虚影会被墙和关着的门挡住，但绝不要给它加 `collision_mask`**。挡住靠的是每帧 `cast_motion`
    截短位移（§4.3）；加 mask 会让引擎去推它，和喂进去的坐标打架，整关错位。
@@ -822,7 +855,7 @@ python _reference/tools/make_art_templates.py
 | 虚影贴墙时"粘"住，不沿墙滑 | `_clip_motion` 只截短位移，不做滑动求解 | 录的是"贴着墙滑下去"的路径时，虚影的水平分量被吃掉（垂直方向仍然正常） | 要滑就得对 `cast_motion` 结果做投影，会引入和录制路径的偏差，**不建议现在做** |
 | 尖刺不杀虚影 | `spike_hazard.gd` 只遍历 `player` 组；尖刺块本身也没有碰撞体 | 原版「让回声掉进尖刺」不成立，得改成玩家自己死在尖刺上（§4.4） | 设计选择。要改就命中虚影时让它进入淡出，同时补断言 |
 | `R` 不是"重载场景" | `R` 走 `reset_all()`：人回起点、机关复位、虚影清空，但**节点不重建**（相机、HUD、录制对象都还在） | 效果上等价于回到初始状态；只有极少数依赖 `_ready()` 重新初始化的状态才需要 Replay | 若哪天加了"只在本局内累计"的状态（如计时器、收集数），记得在 `reset_mechanisms()` 或 `reset_all()` 里一起清 |
-| 四个场景是复制粘贴 | `level_01` / `complete_room` / `office_build` / `graybox/base_level` 各存一份 Player + EchoManager + Camera | 改一个机制要改四处，最容易漏的是新加的那处 | `graybox/glue/room.gd` 已经是「LevelBase 的雏形」（继承 `room_controller` 并管 spawn/player 接线），下一步是把 `complete_room` 也挂上去，而不是再抄一遍 |
+| 场景是复制粘贴 | `level_01` / `complete_room` / `office_build` / `graybox/base_level` / 第一章五间各存一份 Player + EchoManager + Camera | 改一个机制要改八处，最容易漏的是新加的那处 | `graybox/glue/room.gd` 已经是「LevelBase 的雏形」（继承 `room_controller` 并管 spawn/player 接线），下一步是把 `complete_room` 也挂上去，而不是再抄一遍 |
 | **两套并行的摆地形方式**：网格房间用 32px 瓦片（§3.7），`graybox` 套件用 `solid_ground.tscn` 块拼 | 灰盒套件是另一位同学独立交付的，和改网格几乎同时落地 | 同一个房间有两种画法，新人不知道该跟哪套；块拼出来的房间和 40×22 网格对不齐 | 二选一：① 把 `graybox/base_level.tscn` 的 `Terrain` 换成同一套瓦片层（一次能改完）；② 明确分工——网格房间=正式关卡，灰盒套件=快速试搭。**目前倾向 ①** |
 | `kill_y = 750` 写在玩家节点上 | 沿用原版常量 | 做比 750 更高的关卡要逐实例改 | 改成关卡级参数，或跟相机视野算 |
 | 机关每帧都 `get_nodes_in_group` | `actor_bounds.actors()` 每次调用都新建数组 | 5 条虚影的规模下无所谓（每帧 3 次小分配） | 别提前优化，机关数量上百再说 |
@@ -830,3 +863,10 @@ python _reference/tools/make_art_templates.py
 **本轮已修掉的**：录制上限满 100 秒后只是"停止追加"，虚影重放的是这一生**最初**的 100 秒，
 尸体落在几百像素之前（实测调成 1 秒上限时差 320px）。现在改成滚动窗口丢最旧一半，
 保留最近一段，尸体落点回到死亡处，断言在 `test_echo_recording_cap.gd`。
+
+**11-20 修掉的**：① 门「松开即关」会把玩家夹死在门洞里（x 完全推不动，只能按 R）——
+现在关门前检查 `_player_in_doorway()`，断言 `test_door_safety.gd`；
+② `character_portrait` 每帧硬写 `texture`，导致换角色图完全没反应——
+现在睁眼帧取场景里的贴图，运行时换皮走 `set_art()`；③ 三处硬编码 28×38 的旧断言
+（`test_blocks_layout` / `test_echo_contract` / `test_echo_environment`）改成读
+`body_size` 与 `visual_height_ratio`，尺寸再改也不会假红。

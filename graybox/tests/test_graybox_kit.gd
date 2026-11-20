@@ -55,7 +55,6 @@ func run() -> void:
 	var exit_piece = add_piece(EXIT, mechanisms, room, "Exit", Vector2(700, 510))
 	check(not door._get_configuration_warnings().is_empty(), "门未配置时有提示")
 	door.plate_paths.assign([NodePath("../PlateA")])
-	door.safety_player = room.get_node("Player")
 	var scene := PackedScene.new()
 	var scratch_path := ProjectSettings.globalize_path("res://build/graybox-kit-%d.tscn" % OS.get_process_id())
 	var packed := scene.pack(room)

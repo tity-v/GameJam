@@ -3,10 +3,6 @@ extends "res://scripts/puzzle_door.gd"
 
 const PressurePlate = preload("res://scripts/pressure_plate.gd")
 const Config = preload("res://graybox/db/editor.tres")
-const Bounds = preload("res://scripts/actor_bounds.gd")
-
-@export var safety_player: CharacterBody2D
-
 
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()

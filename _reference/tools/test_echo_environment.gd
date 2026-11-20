@@ -52,11 +52,14 @@ func run() -> void:
 	var plate := room.get_node("PlateA") as Node2D
 	var area: Rect2 = plate.global_transform * Rect2(Vector2.ZERO, plate.block_size)
 
-	# --- 0. 虚影的"体积"就是 28x38 身体矩形（美术换图会改变这个矩形） ---
-	var probe := place_echo(Vector2(120, 538))
+	# --- 0. 虚影的"体积"就是 body_size 矩形（美术换图不会改这个矩形） ---
+	# 尺寸从脚本读，不写死数字：人物尺寸调整过一次（28x38 -> 32x44），
+	# 写死像素的断言会变成"改个外观就红"，那不是它要守的东西。
+	var probe := place_echo(Vector2(120, 532))
 	await frames(2)
+	var body_size: Vector2 = probe.body_size
 	var rect: Rect2 = preload("res://scripts/actor_bounds.gd").rect(probe)
-	check(rect.size.is_equal_approx(Vector2(28, 38)), "echo body rect is 28x38 (from body_size, not art)")
+	check(rect.size.is_equal_approx(body_size), "echo body rect equals body_size (not art)")
 
 	# --- 1. 空场：板不亮 ---
 	probe.queue_free()
@@ -65,26 +68,26 @@ func run() -> void:
 
 	# --- 2. 虚影站上去 → 板响应（用户要求的那条） ---
 	var foot_y: float = area.position.y
-	var stand := place_echo(Vector2(area.position.x + 10.0, foot_y - 38.0))
+	var stand := place_echo(Vector2(area.position.x + 10.0, foot_y - body_size.y))
 	await frames(4)
 	check(plate.active, "echo standing on plate presses it")
 	check(plate.get_node("Patch").texture.resource_path.ends_with("pressure_on.png"), "plate swaps to on texture")
 
 	# --- 3. 虚影走开 → 板释放 ---
-	stand.global_position = Vector2(area.position.x - 300.0, foot_y - 38.0)
+	stand.global_position = Vector2(area.position.x - 300.0, foot_y - body_size.y)
 	await frames(4)
 	check(not plate.active, "echo leaving plate releases it")
 
 	# --- 4. 悬在板的上方（脚够不着）不触发：判定看脚底，不是整块重叠 ---
-	stand.global_position = Vector2(area.position.x + 10.0, foot_y - 38.0 - 40.0)
+	stand.global_position = Vector2(area.position.x + 10.0, foot_y - body_size.y - 40.0)
 	await frames(4)
 	check(not plate.active, "echo floating above plate does not press it")
 
 	# --- 5. 半拉出板的横向范围 → 只要还有重叠就算踩住 ---
-	stand.global_position = Vector2(area.end.x - 4.0, foot_y - 38.0)
+	stand.global_position = Vector2(area.end.x - 4.0, foot_y - body_size.y)
 	await frames(4)
 	check(plate.active, "4px horizontal overlap still counts")
-	stand.global_position = Vector2(area.end.x + 2.0, foot_y - 38.0)
+	stand.global_position = Vector2(area.end.x + 2.0, foot_y - body_size.y)
 	await frames(4)
 	check(not plate.active, "fully off the plate does not count")
 
@@ -110,7 +113,7 @@ func run() -> void:
 	var door_right: float = door_left + door.block_size.x
 	var path := PackedVector2Array()
 	for f in 100:
-		path.append(Vector2(790.0 + f * 5.0, 538.0))  # 790 → 1285，横穿整道门
+		path.append(Vector2(790.0 + f * 5.0, 576.0 - body_size.y))  # 790 → 1285，横穿整道门
 	var crosser := ECHO.instantiate()
 	room.add_child(crosser)
 	crosser.setup(path)
@@ -122,14 +125,18 @@ func run() -> void:
 	check(crosser.global_position.x < door_left, "closed door blocks echo (no pass-through)")
 	check(crosser.global_position.x < door_left - 10.0, "echo stops at the door surface, not inside it")
 
-	# --- 9. 门开了就能穿过去（碰撞关掉，等价于双板满足后的状态） ---
-	door.get_node("Collision").set_deferred("disabled", true)
+	# --- 9. 门开了就能穿过去（等价于双板满足后的状态） ---
+	# 门现在是「松开任一压板就关」，直接 set opened 会被它自己的 _physics_process
+	# 下一帧关回去。所以先把门的检测停掉，摆成"两块板一起踩着"的静止状态。
+	door.set_physics_process(false)
 	door.set("opened", true)
+	door.get_node("Collision").set_deferred("disabled", true)
 	await frames(4)
 	for i in 60:
 		crosser.advance(1.0 / 60.0)
 	await frames(2)
 	check(crosser.global_position.x > door_right, "open door lets echo through")
+	door.set_physics_process(true)
 
 	# --- 9. 实心墙走的是同一条判定（不是只有门才挡） ---
 	# 门和墙都是 layer 1 的 StaticBody2D，理论上一致；这里实测一次，防止以后
@@ -143,7 +150,7 @@ func run() -> void:
 		"solid wall has a collision shape")
 	var wall_path := PackedVector2Array()
 	for f in 60:
-		wall_path.append(Vector2(380.0 + f * 5.0, 538.0))
+		wall_path.append(Vector2(380.0 + f * 5.0, 576.0 - body_size.y))
 	var into_wall := ECHO.instantiate()
 	room.add_child(into_wall)
 	into_wall.setup(wall_path)
@@ -155,7 +162,7 @@ func run() -> void:
 	check(into_wall.global_position.x > 455.0, "echo stops at the wall surface, not far away")
 
 	# --- 10. 播完进入 1.3s 淡出的"尸体"仍然压得住板；彻底消失后释放 ---
-	var corpse := place_echo(Vector2(area.position.x + 10.0, foot_y - 38.0))
+	var corpse := place_echo(Vector2(area.position.x + 10.0, foot_y - body_size.y))
 	corpse.setup(PackedVector2Array([
 		corpse.global_position,
 		corpse.global_position + Vector2(1, 0),

@@ -15,10 +15,9 @@ block_size = Vector2(1280, 64)
 position = Vector2(352, 632)
 block_size = Vector2(64, 8)
 
-[node name="Door" parent="Mechanisms" node_paths=PackedStringArray("safety_player") instance=ExtResource("door")]
+[node name="Door" parent="Mechanisms" instance=ExtResource("door")]
 position = Vector2(608, 512)
 block_size = Vector2(64, 128)
-safety_player = NodePath("../../Player")
 plate_paths = Array[NodePath]([NodePath("../PlateA")])
 
 [node name="Ledge2" parent="Terrain" instance=ExtResource("terrain")]
