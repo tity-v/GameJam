@@ -3,7 +3,7 @@ extends Node2D
 ## 碰撞调试可视化。纯绘制，不参与物理，不影响任何手感。
 ##
 ## 玩家（shape_path = ../Collision，feet_line = true）
-##   黄色框      = 完整碰撞体（28×38）
+##   黄色框      = 完整碰撞体（32×44）
 ##   橙色粗线    = 脚底线，这条线才是真正踩地的地方
 ##
 ## 虚影（shape_path = ../Top，stand_line = true）

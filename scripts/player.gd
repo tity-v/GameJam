@@ -98,7 +98,8 @@ func _ready() -> void:
 		push_warning("Player: 关卡里没有 respawn_point 组的标记，退回自身初始位置作为重生点")
 
 
-## 让贴图跟着碰撞体走：角色改尺寸时，白方块和死亡叉号一起缩放，不用重画素材。
+## 让外观跟着碰撞体走：人物走 character_portrait.fit_to_body（48 高、底部对齐），
+## 死亡叉号按 碰撞尺寸 / design_size 缩放，不用重画素材。
 func _fit_visuals() -> void:
 	var body := design_size
 	var col := get_node_or_null("Collision") as CollisionShape2D

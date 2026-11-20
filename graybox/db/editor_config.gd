@@ -9,5 +9,4 @@ extends Resource
 @export var spawn_warning: String
 @export var player_warning: String
 @export var plate_warning: String
-@export var safety_player_warning: String
 @export var exit_warning: String

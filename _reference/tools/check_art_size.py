@@ -5,9 +5,10 @@
     python _reference/tools/check_art_size.py
 
 规则分四类（详细说明见 README「3.4 角色可画范围」）：
-  actor  主角。Sprite 按**原尺寸 1:1** 绘制（只再乘「碰撞体 / design_size」），
-         所以画布必须正好 28x38：画成 56x76 就会显示成两倍大。
-  echo   虚影。会被缩放到 body_size（默认 28x38），**任意尺寸都能用**；
+  portrait 人物帧（idle / blink）。运行时按「外观高 48」等比缩放，**任意尺寸都能用**；
+            只有画布比例变了才会让角色变胖/变瘦（提示，不算错）。
+  actor  旧版 28x38 的主角贴图（已不参与渲染，留作参考）；尺寸不对会提示。
+  echo   旧版 28x38 的虚影贴图（已不参与渲染，留作参考）；
          只是比例不是 14:19 时会被拉歪（提示，不算错）。
   block  物块。九宫格源图，**尺寸必须完全一致**，否则四边固定的像素宽度会错。
   ui     按钮/图标。按 1:1 像素摆放，尺寸必须一致。
@@ -29,6 +30,8 @@ SPEC = {
     "assets/actors/player_death_cross.png": (28, 38, "actor"),
     "assets/echo/echo_body.png": (28, 38, "echo"),
     "assets/echo/echo_cross.png": (28, 38, "echo"),
+    "assets/actors/office_character/idle.png": (380, 400, "portrait"),
+    "assets/actors/office_character/blink.png": (380, 400, "portrait"),
     "assets/blocks/solid_ground.png": (32, 32, "block"),
     "assets/blocks/solid_wall.png": (32, 32, "block"),
     "assets/blocks/plate_off.png": (8, 8, "block"),
@@ -77,6 +80,12 @@ def main() -> int:
                 print(f"{BAD} {rel:42s} {w}x{h}（宽高必须是 32 的整数倍，否则相邻瓦片会错位）")
                 problems += 1
             warns += 1 if w % 32 == 0 and h % 32 == 0 else 0
+        elif kind == "portrait":
+            # 人物帧：任意尺寸，按「外观高 48」等比缩放；比例变了才会变胖变瘦
+            same_ratio = abs(w / h - ew / eh) < 0.01
+            note = "等比，会被缩放到 48 高" if same_ratio else f"比例和 {ew}x{eh} 不同，人物会变胖/变瘦"
+            print(f"{WARN} {rel:42s} {w}x{h}（{note}）")
+            warns += 1
         elif kind == "echo":
             # 虚影按 body_size 缩放，尺寸本身不影响玩法；只有比例歪了才提示
             same_ratio = abs(w / h - ew / eh) < 0.01

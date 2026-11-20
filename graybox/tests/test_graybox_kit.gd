@@ -56,7 +56,6 @@ func run() -> void:
 	check(not door._get_configuration_warnings().is_empty(), "门未配置时有提示")
 	check(not exit_piece._get_configuration_warnings().is_empty(), "出口未配置时有提示")
 	door.plate_paths.assign([NodePath("../PlateA")])
-	door.safety_player = room.get_node("Player")
 	exit_piece.door_path = NodePath("../Door")
 	var scene := PackedScene.new()
 	var scratch_path := ProjectSettings.globalize_path("res://build/graybox-kit-%d.tscn" % OS.get_process_id())

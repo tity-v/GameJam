@@ -4,9 +4,6 @@ extends "res://scripts/puzzle_door.gd"
 const PressurePlate = preload("res://scripts/pressure_plate.gd")
 const Config = preload("res://graybox/db/editor.tres")
 
-@export var safety_player: CharacterBody2D
-
-
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
 	if not _has_valid_plates():

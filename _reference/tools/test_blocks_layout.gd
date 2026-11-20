@@ -59,7 +59,14 @@ func _run() -> void:
 	_check("DeathMark 存在", player.get_node_or_null("DeathMark") != null)
 	var mark: Sprite2D = player.get_node("DeathMark")
 	_check("初始不可见", not mark.visible)
-	_check("初始 scale=1", mark.scale == Vector2.ONE, str(mark.scale))
+	# 叉号是「碰撞框」的标记，按 碰撞尺寸 / design_size 缩放。
+	# 人物外观走 character_portrait（48 高、底部对齐），和叉号差 4px 是有意的：
+	# 叉号标的是"死在哪块判定矩形上"，不是人物剪影。
+	var pc0: CollisionShape2D = player.get_node("Collision")
+	var design: Vector2 = player.design_size
+	var body0: Vector2 = (pc0.shape as RectangleShape2D).size
+	_check("叉号按碰撞尺寸缩放",
+		mark.scale.is_equal_approx(Vector2(body0.x / design.x, body0.y / design.y)), str(mark.scale))
 	player.die()
 	_check("死亡时出现", mark.visible)
 	var spr: Sprite2D = player.get_node("Sprite")
@@ -67,14 +74,19 @@ func _run() -> void:
 	player.respawn()
 	_check("复活后隐藏", not mark.visible)
 
-	# 模拟策划把角色放大一倍：只改碰撞体尺寸，贴图应自动跟上
+	# 模拟策划把角色放大一倍：只改碰撞体尺寸，外观应自动跟上
 	var pc: CollisionShape2D = player.get_node("Collision")
 	(pc.shape as RectangleShape2D).size = Vector2(56, 76)
 	player.call("_fit_visuals")
-	_check("叉号缩放 2x", mark.scale == Vector2(2, 2), str(mark.scale))
-	_check("方块缩放 2x", spr.scale == Vector2(2, 2), str(spr.scale))
+	_check("叉号跟着放大", mark.scale.is_equal_approx(Vector2(56.0 / design.x, 76.0 / design.y)), str(mark.scale))
+	# 人物外观现在由 character_portrait 定规则：高 = 碰撞高 × 外观比例，宽按贴图长宽比
+	var ratio: float = float(spr.get("visual_height_ratio"))
+	var drawn: Vector2 = spr.texture.get_size() * spr.scale
+	_check("人物外观跟着放大", is_equal_approx(drawn.y, 76.0 * ratio), str(drawn))
+	_check("放大后保持原图长宽比",
+		is_equal_approx(drawn.x / drawn.y, spr.texture.get_size().x / spr.texture.get_size().y), str(drawn))
 	# 改回去，别影响后续截图/回归
-	(pc.shape as RectangleShape2D).size = Vector2(28, 38)
+	(pc.shape as RectangleShape2D).size = body0
 	player.call("_fit_visuals")
 
 	print("=== 暂停按钮：贴图驱动 ===")
