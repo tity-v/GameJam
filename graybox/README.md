@@ -1,21 +1,20 @@
 # 关卡灰盒搭建套件
 
-**新建房间**　点 Godot 顶栏「项目 → 工具 → 新建灰盒房间」。工具自动选下一空位、放好玩家、出生点、地板和出口，并打开新场景。拖组件搭关后按 F6 单测，按 F5 走章节流程。交付时一起提交新场景和 frontend/db/catalog.tres。
+**新建房间**　点「项目 → 工具 → 新建灰盒房间」，输入草稿名。场景保存到 scenes/levels/drafts，可直接 F6 单测。定稿后用「将当前房间接入章节」选择槽位。
 
 
 使用 Godot 4.7.2。模板和机关扩展都在 `res://graybox/`，使用项目现有的玩家、Echo、物理层和全局输入。按 **F5** 从主菜单运行整个游戏。要单测房间，打开房间场景按 **F6**。双压板示例在 `res://scenes/levels/complete_room.tscn`。
 
 ## 搭一间新房
 
-1. 打开 `graybox/base_level.tscn`，使用 **场景 → 场景另存为**，在自己的关卡目录保存副本。保留根脚本以及 `RespawnPoint`、`Player`、`EchoManager` 和 `UI/Win/Replay` 的接线。
-2. 在 `Terrain` 下拖入 `scenes/blocks/solid_ground.tscn` 或 `solid_wall.tscn`，在每个关卡实例上用 **Block Size** 调宽高。地面块也可以用作静态平台。装饰放在 `Decor`，通过 `Camera2D` 的位置和 **Limit** 调整画面。
+1. 新建草稿，或打开已有教程房间。
+2. 选 World，在底部 TileMap 面板选砖。画笔画单格，矩形工具一次铺整片，右键擦除。第一行前三块有实体碰撞，第四块是单向砖。装饰画在 Decor。
 3. 移动 `RespawnPoint` 的十字标记，首次出生和复活都用这个位置。标记是玩家碰撞框的左上角，例如 38px 高的玩家站在 Y=576 的地板上时，标记可以放在 Y=538。替换标记或玩家实例后，在根节点 Inspector 重新指定 **Spawn Point** 和 **Player**。
 4. 把压板、门、出口和尖刺拖到 `Mechanisms`，在 Inspector 里配置。选节点时打开字段旁的节点选择器。
 5. 保存并按 **F6**。按 **E** 主动死亡，重生后留下 Echo。关卡内按 **R** 清除 Echo、回到出生点并复位压力板并关闭门。通关后点 **再玩一次** 完整复位房间。保存后重新打开场景，核对布局和关联仍然有效。
 
 | 零件 | Inspector 配置 |
 | --- | --- |
-| `scenes/blocks/solid_ground.tscn`、`scenes/blocks/solid_wall.tscn` | 拖到 Terrain，用 **Block Size** 调整平台或墙的尺寸。 |
 | `scenes/blocks/spike_tile.tscn` | 拖到 Mechanisms，放在地面上，用 **Block Size** 调整尖刺范围。 |
 | `graybox/respawn_point.tscn` | 模板自带。需要补回时放在房间根节点下，命名为 `RespawnPoint`。 |
 | `graybox/pressure_plate.tscn` | **Block Size** 决定宽高，**Accepts Player** 和 **Accepts Echo** 决定触发对象。黄色边框标出接受脚底的位置范围，压板下方应有地面。 |
@@ -27,7 +26,7 @@
 ## 程序对接与验收
 
 - 复用共享的 `player`、`echo`、`respawn_point` 组和 `EchoManager.player_path`。灰盒房间调用玩家现有的出生点接口，结算与完整重载仍由房间控制器提供。
-- 用两块板验证同时踩住才开门，松开任意一块即关门。验证移动出生点、修改两个地形实例、Echo 足部踩板、玩家可过门、Echo 可以通关，以及「再玩一次」完整复位。
+- 用两块板验证同时踩住才开门，松开任意一块即关门。验证移动出生点、绘制并保存地形砖、Echo 足部踩板、玩家可过门、Echo 可以通关，以及「再玩一次」完整复位。
 
 `db/` 保存灰盒编辑器预览参数和配置提示。`glue/` 通过场景中序列化的引用接入共享玩家、机关和房间接口。`view/` 只依据边框参数和零件显示尺寸绘制编辑器检测范围。模块沿用既有物理优先级。
 
@@ -38,7 +37,6 @@ godot --headless --path . --fixed-fps 60 --script res://_reference/tools/test_co
 
 ## 地形与房间文字
 
-将 `terrain.tscn` 拖到房间的 Terrain 节点下，用 Block Size 调整尺寸，在 Collision Mode 中选择全向实体或单向顶面。两种碰撞共用同一地形组件。
 将 `room_text.tscn` 拖到 Decor 下，在 Inspector 的 Text 中填写提示，可直接移动、复制并设置字体大小和颜色。
 房间出口使用 `exit.tscn`，始终开放。
 
