@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/blocks/exit.tscn" id="base"]
+[ext_resource type="Script" path="res://graybox/glue/open_exit.gd" id="open"]
+
+[node name="OpenExit" instance=ExtResource("base")]
+script = ExtResource("open")

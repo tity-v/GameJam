@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://scenes/blocks/solid_ground.tscn" id="base"]
+[ext_resource type="Script" path="res://graybox/glue/terrain.gd" id="terrain"]
+
+[node name="TerrainBlock" instance=ExtResource("base")]
+script = ExtResource("terrain")

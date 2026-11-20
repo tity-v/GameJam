@@ -1,87 +1,87 @@
-[gd_resource type="Resource" load_steps=2 format=3]
+[gd_resource type="Resource" format=3 uid="uid://bhaodggei38xw"]
 
-[ext_resource type="Script" path="res://frontend/db/catalog.gd" id="1"]
+[ext_resource type="Script" uid="uid://wvun2cap4u74" path="res://frontend/db/catalog.gd" id="1_cmda0"]
 
 [resource]
-script = ExtResource("1")
+script = ExtResource("1_cmda0")
 levels = Array[Dictionary]([{
 "id": "level_01",
-"title": "第 1 章 · 房间 1/5",
-"scene": "res://scenes/levels/chapter_01_room_01.tscn"
+"scene": "res://scenes/levels/chapter_01_room_01.tscn",
+"title": "第 1 章 · 房间 1/5"
 }, {
 "id": "level_02",
-"title": "第 1 章 · 房间 2/5",
-"scene": "res://scenes/levels/chapter_01_room_02.tscn"
+"scene": "res://scenes/levels/chapter_01_room_02.tscn",
+"title": "第 1 章 · 房间 2/5"
 }, {
 "id": "level_03",
-"title": "第 1 章 · 房间 3/5",
-"scene": "res://scenes/levels/chapter_01_room_03.tscn"
+"scene": "res://scenes/levels/chapter_01_room_03.tscn",
+"title": "第 1 章 · 房间 3/5"
 }, {
 "id": "level_04",
-"title": "第 1 章 · 房间 4/5",
-"scene": "res://scenes/levels/chapter_01_room_04.tscn"
+"scene": "res://scenes/levels/chapter_01_room_04.tscn",
+"title": "第 1 章 · 房间 4/5"
 }, {
 "id": "level_05",
-"title": "第 1 章 · 房间 5/5",
-"scene": "res://scenes/levels/chapter_01_room_05.tscn"
+"scene": "res://scenes/levels/chapter_01_room_05.tscn",
+"title": "第 1 章 · 房间 5/5"
 }, {
 "id": "level_06",
-"title": "第 2 章 · 房间 1/5",
-"scene": ""
+"scene": "",
+"title": "第 2 章 · 房间 1/5"
 }, {
 "id": "level_07",
-"title": "第 2 章 · 房间 2/5",
-"scene": ""
+"scene": "",
+"title": "第 2 章 · 房间 2/5"
 }, {
 "id": "level_08",
-"title": "第 2 章 · 房间 3/5",
-"scene": ""
+"scene": "",
+"title": "第 2 章 · 房间 3/5"
 }, {
 "id": "level_09",
-"title": "第 2 章 · 房间 4/5",
-"scene": ""
+"scene": "",
+"title": "第 2 章 · 房间 4/5"
 }, {
 "id": "level_10",
-"title": "第 2 章 · 房间 5/5",
-"scene": ""
+"scene": "",
+"title": "第 2 章 · 房间 5/5"
 }, {
 "id": "level_11",
-"title": "第 3 章 · 房间 1/5",
-"scene": ""
+"scene": "",
+"title": "第 3 章 · 房间 1/5"
 }, {
 "id": "level_12",
-"title": "第 3 章 · 房间 2/5",
-"scene": ""
+"scene": "",
+"title": "第 3 章 · 房间 2/5"
 }, {
 "id": "level_13",
-"title": "第 3 章 · 房间 3/5",
-"scene": ""
+"scene": "",
+"title": "第 3 章 · 房间 3/5"
 }, {
 "id": "level_14",
-"title": "第 3 章 · 房间 4/5",
-"scene": ""
+"scene": "",
+"title": "第 3 章 · 房间 4/5"
 }, {
 "id": "level_15",
-"title": "第 3 章 · 房间 5/5",
-"scene": ""
+"scene": "",
+"title": "第 3 章 · 房间 5/5"
 }, {
 "id": "level_16",
-"title": "第 4 章 · 房间 1/5",
-"scene": ""
+"scene": "",
+"title": "第 4 章 · 房间 1/5"
 }, {
 "id": "level_17",
-"title": "第 4 章 · 房间 2/5",
-"scene": ""
+"scene": "",
+"title": "第 4 章 · 房间 2/5"
 }, {
 "id": "level_18",
-"title": "第 4 章 · 房间 3/5",
-"scene": ""
+"scene": "",
+"title": "第 4 章 · 房间 3/5"
 }, {
 "id": "level_19",
-"title": "第 4 章 · 房间 4/5",
-"scene": ""
+"scene": "",
+"title": "第 4 章 · 房间 4/5"
 }, {
 "id": "level_20",
-"title": "第 4 章 · 房间 5/5",
-"scene": ""
+"scene": "",
+"title": "第 4 章 · 房间 5/5"
 }])

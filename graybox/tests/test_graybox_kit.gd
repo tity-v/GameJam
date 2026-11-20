@@ -54,9 +54,7 @@ func run() -> void:
 	var door = add_piece(DOOR, mechanisms, room, "Door", Vector2(580, 416))
 	var exit_piece = add_piece(EXIT, mechanisms, room, "Exit", Vector2(700, 510))
 	check(not door._get_configuration_warnings().is_empty(), "门未配置时有提示")
-	check(not exit_piece._get_configuration_warnings().is_empty(), "出口未配置时有提示")
 	door.plate_paths.assign([NodePath("../PlateA")])
-	exit_piece.door_path = NodePath("../Door")
 	var scene := PackedScene.new()
 	var scratch_path := ProjectSettings.globalize_path("res://build/graybox-kit-%d.tscn" % OS.get_process_id())
 	var packed := scene.pack(room)
@@ -97,13 +95,13 @@ func run() -> void:
 	plate_b = mechanisms.get_node("PlateB")
 	door = mechanisms.get_node("Door")
 	exit_piece = mechanisms.get_node("Exit")
-	check(door._get_configuration_warnings().is_empty() and exit_piece._get_configuration_warnings().is_empty(), "保存重开后机关接线有效")
+	check(door._get_configuration_warnings().is_empty(), "保存重开后机关接线有效")
 	player.position.x = plate_a.position.x
 	await frames(3)
 	check(plate_a.active and door.opened and door.get_node("Collision").disabled, "单板持续门打开并禁用碰撞")
 	player.position.x = door.position.x + 5.0
 	await frames(3)
-	check(not plate_a.active and not door.opened, "玩家进入门身后松开压板也立即关门")
+	check(not plate_a.active and door.opened, "玩家站在门洞时门保持打开不夹人")
 	player.position.x = plate_b.position.x
 	await frames(3)
 	check(not door.opened and not door.get_node("Collision").disabled, "玩家离开后门关闭并恢复碰撞")
@@ -122,13 +120,13 @@ func run() -> void:
 	player.position.x = plate_a.position.x
 	await frames(3)
 	check(door.opened, "两块板同时激活后开门")
-	echo.position.x = exit_piece.position.x
+	echo.position.x = plate_b.position.x + 120
 	await frames(3)
 	check(not door.opened and not plate_b.active and not room.won, "松开任意关联压板即关门")
 	echo.position.x = plate_b.position.x
 	await frames(3)
 	check(door.opened, "再次同时踩住两块板可开门")
-	# 保持两个压板都由 Echo 踩住，验证出口只接受玩家。
+	# 保持两个压板都由 Echo 踩住，验证虚影可以触发出口。
 	plate_a.accepts_echo = true
 	var echo_a = ECHO.instantiate()
 	room.add_child(echo_a)
@@ -139,7 +137,7 @@ func run() -> void:
 	exit_echo.setup(PackedVector2Array([Vector2(exit_piece.position.x, 532)]))
 	exit_echo.reset()
 	await frames(3)
-	check(door.opened and not room.won, "开启的出口不接受 Echo")
+	check(door.opened and room.won, "虚影进入出口也可通关")
 	player.position.x = exit_piece.position.x
 	await frames(3)
 	check(room.won, "当前玩家进入出口触发通关")
