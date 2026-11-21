@@ -31,6 +31,15 @@ extends StaticBody2D
 ## 虚影会撞在门上停住，而不是穿过去。
 ## 硬编码用坐标瞬移（`global_position = frames[next]`）会隧穿过薄墙，
 ## 这就是必须走扫描的原因。
+##
+## **扫描必须和玩家用同一套规则**（这条是踩过坑的）：
+## 原来用 `direct_space_state.cast_motion()`，它是纯形状查询，**不认 one_way**，
+## 会把单向台面的底面当成实心天花板。于是「玩家踩着虚影跳上单向台」这段轨迹，
+## 重放时虚影爬到一半就被台面底面顶住（实测头顶死卡在台面底面 y=520），
+## 整条轨迹卡在那里再也不动 —— 观感就是「虚影过不去、玩家却能过去」。
+## 现在改成借一个不参与碰撞的隐形 CharacterBody2D 做 `move_and_collide(test_only)`，
+## 底层就是玩家 `move_and_slide` 用的 `body_test_motion`，单向台面、安全边距、
+## 贴墙滑动的判定全部同源，不会再出现两套规则打架。
 
 ## 轨迹播完后的「死亡」时长。刻意等于主角的 death_duration（1.3s）：
 ## 虚影和玩家走的是同一条时间轴 —— 玩家活 T 秒再死 1.3 秒，
@@ -75,6 +84,9 @@ const PROBE_INSET := 1.0
 
 var _probe: RectangleShape2D
 var _probe_offset := Vector2(14, 19)
+## 隐形的「影子身体」：只为借它的 motion test（见文件头最后一段）。
+## 不参与任何碰撞：layer 0 谁都查不到它，mask 只开世界层。
+var _probe_body: CharacterBody2D
 
 ## 唯一的「是否参与游戏」状态：
 ##   false → 不显示、无碰撞、advance() 不推进、机关看不见
@@ -90,6 +102,7 @@ func _ready() -> void:
 	# 头顶薄片由场景里的 CollisionShape2D 提供（one_way_collision）
 	fit_visuals()
 	_build_probe()
+	_ensure_probe_body()
 	_set_active(false)
 
 
@@ -210,10 +223,35 @@ func _build_probe() -> void:
 	_probe = RectangleShape2D.new()
 	_probe.size = (body_size - Vector2(PROBE_INSET, PROBE_INSET) * 2.0).max(Vector2(2, 2))
 	_probe_offset = body_size * 0.5
+	# 换尺寸时影子身体的碰撞形状跟着换，否则扫描还是老体积
+	if _probe_body != null:
+		var cs: CollisionShape2D = _probe_body.get_node_or_null("Shape")
+		if cs != null:
+			cs.shape = _probe
+
+
+## 建那个隐形的影子身体。放在 _ready 里建好，不在物理帧中途插节点。
+func _ensure_probe_body() -> void:
+	if _probe_body != null or not is_inside_tree():
+		return
+	if _probe == null:
+		_build_probe()
+	_probe_body = CharacterBody2D.new()
+	_probe_body.name = "MotionProbe"
+	# layer 0：玩家、压力板、别的虚影都查不到它，等于不存在
+	_probe_body.collision_layer = 0
+	_probe_body.collision_mask = WORLD_LAYER
+	_probe_body.set_physics_process(false)
+	var cs := CollisionShape2D.new()
+	cs.name = "Shape"
+	cs.shape = _probe
+	_probe_body.add_child(cs)
+	add_child(_probe_body)
 
 
 ## 把这一帧的位移按世界碰撞截短：撞上就只走到接触点。
-## 用 cast_motion（形状扫描）而不是"目标点是否重叠"，因为后者会漏掉隧穿。
+## 不用"目标点是否重叠"（会漏掉隧穿），也不用 cast_motion（不认 one_way）。
+## 走影子身体的 move_and_collide(test_only)：和玩家同一条 body_test_motion。
 func _clip_motion(motion: Vector2) -> Vector2:
 	# 分轴扫描，落地只截断竖直位移，贴墙只截断水平位移。
 	# 整个向量按同一比例截短会丢掉沿地面或墙面的轨迹，误差会逐帧累积。
@@ -225,21 +263,16 @@ func _clip_motion(motion: Vector2) -> Vector2:
 func _cast_motion(motion: Vector2, start: Vector2) -> Vector2:
 	if motion == Vector2.ZERO:
 		return Vector2.ZERO
-	if _probe == null:
-		_build_probe()
-	var space := get_world_2d().direct_space_state
-	if space == null:
+	_ensure_probe_body()
+	if _probe_body == null:
 		return motion
-	var params := PhysicsShapeQueryParameters2D.new()
-	params.shape = _probe
-	params.transform = Transform2D(0.0, start + _probe_offset)
-	params.motion = motion
-	params.collision_mask = WORLD_LAYER
-	params.exclude = [get_rid()]
-	var hit := space.cast_motion(params)
-	if hit.size() < 2:
+	# 影子身体挪到扫描起点（形状以原点为中心，所以要加 _probe_offset）
+	_probe_body.global_position = start + _probe_offset
+	# test_only = true：只问「能走多远」，不真的移动这个探针
+	var hit := _probe_body.move_and_collide(motion, true)
+	if hit == null:
 		return motion
-	return motion * clampf(hit[0], 0.0, 1.0)
+	return hit.get_travel()
 
 
 ## 本帧位移：站在它头上的玩家靠这个被带着走

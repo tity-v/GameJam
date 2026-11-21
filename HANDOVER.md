@@ -27,7 +27,7 @@
 | 渲染 | `gl_compatibility`（兼容模式，老显卡/笔记本也能跑） |
 | 视口 | 1280 × 704（= 40 × 22 个 32px 瓦片），`canvas_items` 拉伸 |
 | 主场景 | `res://frontend/entry.tscn`（主菜单 → 选章 → 关卡）；单房间调试打开房间按 **F6** |
-| 代码规模 | `scripts/` 17 个脚本约 1333 行，另有 `frontend/`（10 个）与 `graybox/`（6 个）；23 个回归测试 + 前端 2 套 + 灰盒 2 套 |
+| 代码规模 | `scripts/` 17 个脚本约 1333 行，另有 `frontend/`（10 个）与 `graybox/`（6 个）；24 个回归测试 + 前端 2 套 + 灰盒 2 套 |
 
 打开方式：Godot 项目管理器 → 导入 → 选仓库根目录（`project.godot` 在根）。
 
@@ -69,6 +69,7 @@
 | **出口结算 / 通关** | 完成 | `scripts/level_exit.gd`、`scenes/levels/complete_room.tscn` |
 | **尖刺伤害判定** | 完成（**只杀玩家**，虚影无感；尖刺块本身无碰撞体） | `scripts/spike_hazard.gd` |
 | **虚影对环境有体积**（压力板认、墙和关着的门挡得住、尖刺不杀、出口不认） | 完成 | `scripts/actor_bounds.gd`、`echo.gd` 的 `_clip_motion()`；断言见 `test_echo_environment.gd` |
+| **虚影的位移扫描与玩家同源**（单向台面能从下往上穿、实心墙/关着的门照样挡） | 完成 | `echo.gd` 的 `_cast_motion()`：隐形 `CharacterBody2D` + `move_and_collide(test_only)`；断言见 `test_echo_oneway.gd` |
 | **虚影判定体积与贴图解耦**（`body_size`，换皮不改谜题） | 完成 | `echo.gd` 的 `body_rect()` / `fit_visuals()`；断言见 `test_echo_contract.gd` |
 | **虚影单一激活状态**（回放 / 碰撞 / 机关同源，不会“看不见却挡人”） | 完成 | `echo.gd` 的 `_active`、`setup()` / `reset()`；断言见 `test_echo_contract.gd` |
 | **房间整体重置（通关面板 Replay → 重载场景）** | 完成 | `scripts/room_controller.gd` |
@@ -119,7 +120,7 @@ Level01 (Node2D)
 |---|---|---|---|
 | `player.gd` | 307 | 移动/跳跃手感、死亡淡出、重生、被虚影带着走 | `player.tscn` |
 | `echo_manager.gd` | 179 | 录轨迹（滚动窗口上限）、生成虚影、FIFO 上限、R 重置（人回起点 → 机关复位 → 清虚影） | 关卡内节点 |
-| `echo.gd` | 244 | 逐帧重放轨迹、世界阻挡（`cast_motion`）、单向碰撞、尸体淡出；`body_size`（判定体积）、`_active`（唯一激活状态） | `echo.tscn` |
+| `echo.gd` | 288 | 逐帧重放轨迹、世界阻挡（隐形 `CharacterBody2D` 的 `move_and_collide(test_only)`，与玩家同源）、单向碰撞、尸体淡出；`body_size`（判定体积）、`_active`（唯一激活状态） | `echo.tscn` |
 | `hitbox_debug.gd` | 95 | 碰撞框可视化（纯 `_draw`，不参与物理；`@tool` + F1 开关） | 玩家/虚影的 `HitboxDebug` 子节点 |
 | `hud.gd` | 57 | 刷新「回声 n/5」、闪现提示淡出 | autoload `Hud` |
 | `camera_follow.gd` | 48 | 水平跟随 + 边界夹取 + 瞬移归位 | 关卡内 `Camera2D` |
@@ -538,7 +539,8 @@ if not satisfied and _player_in_doorway():
 | 角色看着比碰撞框大一圈 / 隔空停住 / 脚陷进地里 | 角色有两套尺寸：判定 32×44（碰撞体 / `body_size`），外观固定 **48 高**、画布底边对齐脚底；四周留透明边会显得"没碰到就停住" | 判定只认黄框/橙线（§3.5）；外观只由 `character_portrait.fit_to_body()` 决定，画布比例只影响胖瘦（§3.4） |
 | 把新角色图拖到 `Sprite.texture` 上，游戏里没反应 | `character_portrait` 过去每帧硬写 `texture = 常量`，下一帧就把你的图顶回去了 | 现在睁眼帧就是场景里给的贴图，直接换即可；运行时换皮用 `set_art(睁眼, 闭眼)`，再调一次 `fit_visuals()` |
 | 门关在玩家身上，人横向完全推不动 | 门是「松开任一板就关」，如果关的瞬间玩家在门洞里，`CharacterBody2D` 被 `StaticBody2D` 包住就出不来（实测 x 不变、y 抖动） | `puzzle_door._player_in_doorway()` 会等门口空出来再关（§4.8）；**别把这个守卫删掉**，断言 `test_door_safety.gd` |
-| 虚影被门挡住，没走到压力板上 | **不是 bug**：虚影每帧做 `cast_motion`，撞上就停在接触点，而帧号继续走。录的时候门开着、重放时门关着就会这样 | 关卡设计上避免「关键路线依赖一扇之后会关的门」；要放开就查 `echo.gd` 的 `_clip_motion`（README §6.1） |
+| 虚影被门挡住，没走到压力板上 | **不是 bug**：虚影每帧做位移扫描，撞上就停在接触点，而帧号继续走。录的时候门开着、重放时门关着就会这样 | 关卡设计上避免「关键路线依赖一扇之后会关的门」；要放开就查 `echo.gd` 的 `_clip_motion`（README §6.1） |
+| 玩家踩着虚影能跳上单向台面，**虚影重放同一段轨迹却卡在台面底下**（头顶死贴台面底面，之后一动不动） | 原来用 `direct_space_state.cast_motion()`，它是纯形状查询，**不认 `one_way`**，把单向台面当成实心天花板；玩家走的是 `body_test_motion`，认 | 扫描改走隐形 `CharacterBody2D` 的 `move_and_collide(test_only)`，和玩家同一条底层路径（`echo.gd` 的 `_cast_motion`）；断言 `test_echo_oneway.gd`（穿得上去 + 落得下 + 门还挡得住，三条一起守） |
 | 按 `R` 之后门又关上了，以为「开门白解了」 | **设计如此**：R 是「回到本关初始状态」，虚影与机关一起复位 | 想保留开门进度就别按 R；整关重来（含节点重建）仍是通关面板的 Replay |
 | 按 `R` 之后门看着关了，人却能穿过去 | `puzzle_door.reset_mechanism()` 里只开了碰撞、没先把 `opened` 置 false，下一帧 `_physics_process` 判「状态没变」直接 return | 顺序必须是 `opened = false` → `$Collision.set_deferred("disabled", false)`；断言见 `test_complete_room` |
 | 新加的机关按 `R` 不复位，其它机关正常 | 忘了登记 `mechanism` 组，或没写 `reset_mechanism()` | 照 §3.2「新增机关的接入契约」两条做 |
@@ -675,8 +677,8 @@ done
 
 ### 9.2 哪些进仓库，哪些不进
 
-一共 293 个文件会入库：`scripts/` 34（17 个 `.gd` + 17 个 `.uid`）、`assets/` 49、
-`scenes/` 24、`docs/` 17、`_reference/` 73、`graybox/` 56、`frontend/` 30、`addons/` 5、根目录 5。
+一共 294 个文件会入库：`scripts/` 34（17 个 `.gd` + 17 个 `.uid`）、`assets/` 49、
+`scenes/` 24、`docs/` 17、`_reference/` 74、`graybox/` 56、`frontend/` 30、`addons/` 5、根目录 5。
 （数字会随开发变，以 `git ls-files | wc -l` 为准；结构稳定的是「哪些该进、哪些不该进」。）
 
 | 内容 | 进仓库 | 说明 |
@@ -686,7 +688,7 @@ done
 | `*.gd.uid` | ✅ | Godot 4.4+ 的资源 UID，**必须提交**，保证跨机器引用不乱 |
 | `README.md` `HANDOVER.md` | ✅ 根目录 | GitHub 会自动渲染根目录 `README.md` |
 | `.gitignore` `.gitattributes` | ✅ | 后者管换行与二进制，缺了 `.tscn` 会整片 diff |
-| `_reference/tools/` | ✅（Private） | 里面有 **23 个 `test_*.gd` 回归测试**，团队要能跑；`make_*.py` 已冻结 |
+| `_reference/tools/` | ✅（Private） | 里面有 **24 个 `test_*.gd` 回归测试**，团队要能跑；`make_*.py` 已冻结 |
 | `graybox/` | ✅ | 另一位同学交付的**灰盒搭建套件**（模板场景 + 机关 + 编辑器预览）。第一章五间房都是用它的块拼法搭的（`solid_ground.tscn`），和 40×22 瓦片网格并行，取舍见 §13 |
 | `frontend/` | ✅ | 另一位同学交付的**游戏前端**：主菜单 / 选关 / 暂停 / 设置 / 结算 / 全通 + 存档（`user://frontend/*.cfg`）。按 `db/catalog.tres` 的 20 关目录换场景 |
 | `_reference/preview_*.png` | ✅（Private） | 我们自己构建版本的截图，作为视觉基线；网格房间的两张见 `preview_grid_room*.png` |
@@ -772,7 +774,7 @@ git push -u origin main
 **第 4 步：验证别人能跑**
 
 自己另找一台机器（或删掉 `.godot/` 后再打开）克隆一份，用 Godot 导入根目录，
-确认：F5 能进主菜单并打开第一章第一间、按 `F1` 有碰撞框、23 个测试脚本能跑。
+确认：F5 能进主菜单并打开第一章第一间、按 `F1` 有碰撞框、24 个测试脚本能跑。
 `.godot/` 不在仓库里是**正常**的，第一次打开会重建（约十几秒）。
 
 **这一步已经实测过**：把仓库克隆到干净目录（无 `.godot/`）后
