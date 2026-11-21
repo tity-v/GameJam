@@ -37,4 +37,4 @@ block_size = Vector2(64, 128)
 position = Vector2(56, 596)
 
 [node name="Player" parent="." index="6"]
-position = Vector2(1040, 854)
+position = Vector2(56, 596)

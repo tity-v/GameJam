@@ -7,6 +7,8 @@ Godot 4.7.2。打开 `frontend/entry.tscn`，按 F6 验收。选章页展示四�
 - 在 Inspector 打开 `db/pixel_theme.tres` 更改字体、颜色、边框和间距。各页继承 `view/page.tscn`，可分别调整面板尺寸。
 - 在 `db/copy.tres` 修改文案和操作说明。
 - 在 `db/catalog.tres` 按顺序设置关卡。每一项填写 `id`、`title` 和 `scene`。保留 ID 可以继承原存档；空路径显示待接入。每五项为一章。每个场景由关卡作者设置固定取景，按一个屏幕布置谜题。前端只负责换场。
+- 换场分两种：同章顺序推进时画面朝出口对侧滑走、下一间从对侧推入（0.24s）；跨章、重试、选关跳转一律 0.10s 黑出 + 0.10s 黑入。滑动的方向由出口在屏幕哪一侧决定，所以**关卡必须把 `RespawnPoint` 摆在出口的对边**，否则滑完人会从中间冒出来。这条由 `tests/test_transition_space.gd` 逐对检查。
+- 需要强制时可以在目录项里加 `link`：`"cut"` 一律切黑、`"h"` 横滑、`"v"` 纵滑。不写就按出口位置推断。
 - 关卡根节点提供布尔完成状态，现有接口为 `won`。旧结算面板路径默认为 `UI/Win`。与现有约定不同的项目，在目录资源里修改适配字段。已有 HUD 和暂停入口的节点路径也集中于该资源。
 
 ## 安装和拆卸
@@ -21,6 +23,7 @@ Godot 4.7.2。打开 `frontend/entry.tscn`，按 F6 验收。选章页展示四�
 
 ```powershell
 godot --headless --path . --fixed-fps 60 --script res://frontend/tests/test_frontend.gd
+godot --headless --path . --fixed-fps 60 --script res://frontend/tests/test_transition_space.gd
 godot --headless --path . --fixed-fps 60 --script res://_reference/tools/test_complete_room.gd
 godot --headless --path . --fixed-fps 60 --script res://graybox/tests/test_graybox_kit.gd
 ```

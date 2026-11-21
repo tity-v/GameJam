@@ -27,7 +27,7 @@
 | 渲染 | `gl_compatibility`（兼容模式，老显卡/笔记本也能跑） |
 | 视口 | 1280 × 704（= 40 × 22 个 32px 瓦片），`canvas_items` 拉伸 |
 | 主场景 | `res://frontend/entry.tscn`（主菜单 → 选章 → 关卡）；单房间调试打开房间按 **F6** |
-| 代码规模 | `scripts/` 17 个脚本约 1333 行，另有 `frontend/`（10 个）与 `graybox/`（6 个）；21 个回归测试 |
+| 代码规模 | `scripts/` 17 个脚本约 1333 行，另有 `frontend/`（10 个）与 `graybox/`（6 个）；22 个回归测试 + 前端 2 套 + 灰盒 2 套 |
 
 打开方式：Godot 项目管理器 → 导入 → 选仓库根目录（`project.godot` 在根）。
 
@@ -488,6 +488,37 @@ if not satisfied and _player_in_doorway():
 这个守卫原来写在 `graybox/glue/door.gd` 的 `safety_player` 字段上（需要手动接线）。现在收进核心脚本，
 自动扫 `player` 组，`safety_player` 字段和相关提示已删除。
 
+### 4.9 换场只有两种，且方向必须和出生位置配对
+
+房间正好一屏（40×22 格 = 1280×704），所以换场是「整屏替换」，不是卷轴。语法只有两条：
+
+| 情况 | 转场 | 语义 |
+|---|---|---|
+| 同章、顺序推进（刚打完这间、自动进下一间） | 旧截图朝出口对侧移出，新房间从同侧推入，**0.24s** | 并列的房间 |
+| 跨章 / 重试 / 选关跳转 / 继续游戏 | 黑出 0.10s → 换场景 → 黑入 0.10s | 空间上没有关系 |
+| 死亡复活 | 原地淡出，不加遮罩 | 同一空间，只是时间重置 |
+
+判定点只有一个：`session.transition_kind(from, to)`，纯函数。
+`launch()` 的第三个参数 `auto_advance` 只有自动推进那条路传 `true`——
+选关、重试、章节跳转一律切黑，因为它们没有「空间连续」可言。
+
+**核心契约**：`exit_edge(i) == opposite(enter_edge(i+1))`。
+从右边出去就必须从左边进来。现在五间房满足（出口 x=1088/1184 全在右半，
+`RespawnPoint` x=56/248/420 全在左半），但**没有任何东西天然保证以后也满足**——
+队友加房间时把出生点摆中间，效果就破了，而且滑动本身还在，不会立刻发现。
+
+所以 `frontend/tests/test_transition_space.gd` 锁死它：逐对房间读 `Exit` 中心与
+`RespawnPoint`，断言边配对；并断言跨章 / 跳关 / 重试一律 cut、时长 0.24 与 0.10。
+
+两条容易踩的：
+
+1. **滑动那 0.24s 必须锁玩家输入**（`player.lock_input(0.24)`）。滑入时人已经站在新房间里，
+   只是被旧截图盖着；按着方向键 0.24s 能跑 65px，画面露出来人就偏了。
+   锁用的是「到期自动解除」，不是布尔开关——前端中途被释放也不会永久锁死。
+2. **目录里可以写 `"link"` 覆盖推断**：`"cut"` 强制切黑、`"h"` 横滑、`"v"` 纵滑。
+   第二章真做「上楼」时才用得上 `"v"`；现在没有任何一关的出口在上下半区，
+   纵滑分支属于「已实现、未使用」。
+
 ## 5. 已知坑（都踩过，别再踩）
 
 | 现象 | 原因 | 解法 |
@@ -590,6 +621,7 @@ done
 | `test_character_portrait` | 两帧眨眼与暂停冻结、外观高 48 与脚底对齐、换图不改判定 |
 | `test_air_drag` / `test_air_turn` / `test_jump_curve` / `test_speed_curve` | 手感曲线（逐帧数值，见 `docs/手感调参.md`） |
 | `graybox/tests/test_graybox_kit` | 灰盒套件自己的验收（模板搭建、保存重开、单板/双板门、出口）。在 `.gdignore` 目录里，要显式 `--script res://graybox/tests/test_graybox_kit.gd` |
+| `frontend/tests/test_transition_space` | **换场语法**：逐对房间的出口边 == 下一间进入边的对侧、跨章/跳关/重试一律切黑、滑动 0.24s 与切黑 0.10s、玩家转场锁能自动解除 |
 
 **这些测试是回归网，改完物理或虚影相关代码务必全跑一遍。**
 
@@ -643,8 +675,8 @@ done
 
 ### 9.2 哪些进仓库，哪些不进
 
-一共 236 个文件会入库：`scripts/` 34（17 个 `.gd` + 17 个 `.uid`）、`assets/` 49、
-`scenes/` 24、`docs/` 13、`_reference/` 64、`graybox/` 19、`frontend/` 28、根目录 5。
+一共 292 个文件会入库：`scripts/` 34（17 个 `.gd` + 17 个 `.uid`）、`assets/` 49、
+`scenes/` 24、`docs/` 17、`_reference/` 72、`graybox/` 56、`frontend/` 30、`addons/` 5、根目录 5。
 （数字会随开发变，以 `git ls-files | wc -l` 为准；结构稳定的是「哪些该进、哪些不该进」。）
 
 | 内容 | 进仓库 | 说明 |
@@ -654,7 +686,7 @@ done
 | `*.gd.uid` | ✅ | Godot 4.4+ 的资源 UID，**必须提交**，保证跨机器引用不乱 |
 | `README.md` `HANDOVER.md` | ✅ 根目录 | GitHub 会自动渲染根目录 `README.md` |
 | `.gitignore` `.gitattributes` | ✅ | 后者管换行与二进制，缺了 `.tscn` 会整片 diff |
-| `_reference/tools/` | ✅（Private） | 里面有 **21 个 `test_*.gd` 回归测试**，团队要能跑；`make_*.py` 已冻结 |
+| `_reference/tools/` | ✅（Private） | 里面有 **22 个 `test_*.gd` 回归测试**，团队要能跑；`make_*.py` 已冻结 |
 | `graybox/` | ✅ | 另一位同学交付的**灰盒搭建套件**（模板场景 + 机关 + 编辑器预览）。第一章五间房都是用它的块拼法搭的（`solid_ground.tscn`），和 40×22 瓦片网格并行，取舍见 §13 |
 | `frontend/` | ✅ | 另一位同学交付的**游戏前端**：主菜单 / 选关 / 暂停 / 设置 / 结算 / 全通 + 存档（`user://frontend/*.cfg`）。按 `db/catalog.tres` 的 20 关目录换场景 |
 | `_reference/preview_*.png` | ✅（Private） | 我们自己构建版本的截图，作为视觉基线；网格房间的两张见 `preview_grid_room*.png` |
@@ -740,7 +772,7 @@ git push -u origin main
 **第 4 步：验证别人能跑**
 
 自己另找一台机器（或删掉 `.godot/` 后再打开）克隆一份，用 Godot 导入根目录，
-确认：F5 能进主菜单并打开第一章第一间、按 `F1` 有碰撞框、21 个测试脚本能跑。
+确认：F5 能进主菜单并打开第一章第一间、按 `F1` 有碰撞框、22 个测试脚本能跑。
 `.godot/` 不在仓库里是**正常**的，第一次打开会重建（约十几秒）。
 
 **这一步已经实测过**：把仓库克隆到干净目录（无 `.godot/`）后
