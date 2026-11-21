@@ -6,11 +6,11 @@
 script = ExtResource("1_cmda0")
 levels = Array[Dictionary]([{
 "id": "level_01",
-"scene": "res://scenes/levels/tutorial_relay.tscn",
+"scene": "res://scenes/levels/chapter_01_room_01.tscn",
 "title": "第 1 章 · 房间 1/5"
 }, {
 "id": "level_02",
-"scene": "res://scenes/levels/tutorial_steps.tscn",
+"scene": "res://scenes/levels/chapter_01_room_02.tscn",
 "title": "第 1 章 · 房间 2/5"
 }, {
 "id": "level_03",
@@ -26,24 +26,24 @@ levels = Array[Dictionary]([{
 "title": "第 1 章 · 房间 5/5"
 }, {
 "id": "level_06",
-"scene": "",
-"title": "第 2 章 · 房间 1/5"
+"scene": "res://scenes/levels/chapter_02_room_01.tscn",
+"title": "第 2 章 · 错过 · 过站"
 }, {
 "id": "level_07",
-"scene": "",
-"title": "第 2 章 · 房间 2/5"
+"scene": "res://scenes/levels/chapter_02_room_02.tscn",
+"title": "第 2 章 · 错过 · 接你一程"
 }, {
 "id": "level_08",
-"scene": "",
-"title": "第 2 章 · 房间 3/5"
+"scene": "res://scenes/levels/chapter_02_room_03.tscn",
+"title": "第 2 章 · 错过 · 货留下，人改道"
 }, {
 "id": "level_09",
-"scene": "",
-"title": "第 2 章 · 房间 4/5"
+"scene": "res://scenes/levels/chapter_02_room_04.tscn",
+"title": "第 2 章 · 错过 · 借来的升程"
 }, {
 "id": "level_10",
-"scene": "",
-"title": "第 2 章 · 房间 5/5"
+"scene": "res://scenes/levels/chapter_02_room_05.tscn",
+"title": "第 2 章 · 错过 · 错车大厅"
 }, {
 "id": "level_11",
 "scene": "",

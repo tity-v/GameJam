@@ -1,34 +1,35 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene format=3 uid="uid://bxllq2aw52ehd"]
 
-[ext_resource type="Script" path="res://scripts/player.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/actors/office_character/idle.png" id="2_tex"]
-[ext_resource type="Texture2D" path="res://assets/actors/player_death_cross.png" id="3_cross"]
-[ext_resource type="Script" path="res://scripts/hitbox_debug.gd" id="4_debug"]
-[ext_resource type="Script" path="res://scripts/character_portrait.gd" id="5_portrait"]
+[ext_resource type="Script" uid="uid://bc3wi7k3bsfcn" path="res://scripts/player.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://b4txsivms5tdi" path="res://assets/actors/office_character/idle.png" id="2_tex"]
+[ext_resource type="Texture2D" uid="uid://bj4wjs1olvodg" path="res://assets/actors/player_death_cross.png" id="3_cross"]
+[ext_resource type="Script" uid="uid://bmgqunxedhigt" path="res://scripts/hitbox_debug.gd" id="4_debug"]
+[ext_resource type="Script" uid="uid://bbmnuo4jrtv8j" path="res://scripts/character_portrait.gd" id="5_portrait"]
 
 [sub_resource type="RectangleShape2D" id="1_shape"]
 size = Vector2(32, 44)
 
-[node name="Player" type="CharacterBody2D" groups=["player"]]
+[node name="Player" type="CharacterBody2D" unique_id=121617714 groups=["player"]]
 collision_layer = 2
 collision_mask = 5
 script = ExtResource("1_script")
 
-[node name="Sprite" type="Sprite2D" parent="."]
+[node name="Sprite" type="Sprite2D" parent="." unique_id=261257263]
+position = Vector2(-6.8, -4)
+scale = Vector2(0.12, 0.12)
 texture = ExtResource("2_tex")
 centered = false
 script = ExtResource("5_portrait")
 
-[node name="DeathMark" type="Sprite2D" parent="."]
+[node name="DeathMark" type="Sprite2D" parent="." unique_id=368107100]
 visible = false
 texture = ExtResource("3_cross")
 centered = false
 
-[node name="Collision" type="CollisionShape2D" parent="."]
+[node name="Collision" type="CollisionShape2D" parent="." unique_id=1900255582]
 position = Vector2(16, 22)
 shape = SubResource("1_shape")
 
-[node name="HitboxDebug" type="Node2D" parent="."]
+[node name="HitboxDebug" type="Node2D" parent="." unique_id=427385533]
 script = ExtResource("4_debug")
-shape_path = NodePath("../Collision")
 feet_line = true

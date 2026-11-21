@@ -13,6 +13,9 @@ func _ready() -> void:
 		player.set("respawn_position", spawn_point.global_position)
 		player.call("reset_to_spawn")
 	super._ready()
+	var markers := Node2D.new()
+	markers.set_script(preload("res://graybox/view/link_markers.gd"))
+	add_child(markers)
 
 
 func _get_configuration_warnings() -> PackedStringArray:

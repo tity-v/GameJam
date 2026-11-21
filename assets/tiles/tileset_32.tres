@@ -1,8 +1,11 @@
-[gd_resource type="TileSet" format=3]
+[gd_resource type="TileSet" format=3 uid="uid://bkn24i5gh2dd7"]
 
-[ext_resource type="Texture2D" path="res://assets/tiles/placeholder_32.png" id="1_atlas"]
+[ext_resource type="Texture2D" uid="uid://c6yivnabmkrty" path="res://assets/tiles/placeholder_32.png" id="1_atlas"]
+[ext_resource type="PackedScene" path="res://graybox/checkpoint.tscn" id="checkpoint"]
+[ext_resource type="PackedScene" path="res://graybox/spike_cell.tscn" id="spike"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_grid"]
+resource_name = "原始图集"
 texture = ExtResource("1_atlas")
 texture_region_size = Vector2i(32, 32)
 0:0/0 = 0
@@ -18,7 +21,43 @@ texture_region_size = Vector2i(32, 32)
 1:1/0 = 0
 2:1/0 = 0
 
+[sub_resource type="TileSetAtlasSource" id="Floor"]
+resource_name = "地板"
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+0:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
+1:0/0 = 0
+1:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
+3:0/0 = 0
+3:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-16, -16, 16, -16, 16, -8, -16, -8)
+3:0/0/physics_layer_0/polygon_0/one_way = true
+
+[sub_resource type="TileSetAtlasSource" id="Wall"]
+resource_name = "墙壁"
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(32, 32)
+2:0/0 = 0
+2:0/0/physics_layer_0/polygon_0/points = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
+
+[sub_resource type="TileSetScenesCollectionSource" id="Parts"]
+resource_name = "方块组件"
+scenes/1/scene = ExtResource("spike")
+scenes/2/scene = ExtResource("checkpoint")
+
+[sub_resource type="TileSetAtlasSource" id="Background"]
+resource_name = "背景板"
+texture = ExtResource("1_atlas")
+texture_region_size = Vector2i(32, 32)
+0:1/0 = 0
+1:1/0 = 0
+2:1/0 = 0
+
 [resource]
 tile_size = Vector2i(32, 32)
 physics_layer_0/collision_layer = 1
 sources/0 = SubResource("TileSetAtlasSource_grid")
+sources/1 = SubResource("Floor")
+sources/2 = SubResource("Wall")
+sources/3 = SubResource("Parts")
+sources/4 = SubResource("Background")
