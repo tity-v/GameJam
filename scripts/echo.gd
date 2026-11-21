@@ -237,6 +237,23 @@ func _cast_motion(motion: Vector2, start: Vector2) -> Vector2:
 	params.collision_mask = WORLD_LAYER
 	params.exclude = [get_rid()]
 	var hit := space.cast_motion(params)
+	# TileMap 的单向平台允许从下方穿过，形状查询自身不会处理单向规则。
+	while hit.size() >= 2 and hit[0] < 1.0 and motion.y <= 0.0:
+		params.transform.origin = start + _probe_offset + motion * hit[1]
+		params.margin = 0.05
+		var contact := space.get_rest_info(params)
+		if contact.is_empty():
+			break
+		var layer := instance_from_id(contact.collider_id) as TileMapLayer
+		if layer == null:
+			break
+		var cell := layer.local_to_map(layer.to_local(contact.point - contact.normal * PROBE_INSET))
+		var tile := layer.get_cell_tile_data(cell)
+		if tile == null or tile.get_collision_polygons_count(0) != 1 or not tile.is_collision_polygon_one_way(0, 0):
+			break
+		params.exclude = params.exclude + [contact.rid]
+		params.transform.origin = start + _probe_offset
+		hit = space.cast_motion(params)
 	if hit.size() < 2:
 		return motion
 	return motion * clampf(hit[0], 0.0, 1.0)

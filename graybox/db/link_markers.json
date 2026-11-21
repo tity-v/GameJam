@@ -1,0 +1,7 @@
+{
+  "colors": ["#ffcc33", "#42c9f5", "#ee78bc", "#82df70", "#b395ff", "#ff9860", "#ff5a5f", "#5578ff"],
+  "size": 6,
+  "gap": 3,
+  "offset": 4,
+  "outline": "#20232b"
+}

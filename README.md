@@ -32,8 +32,7 @@ scenes/
   player/player.tscn    主角
   echo/echo.tscn        虚影
   levels/complete_room.tscn  机制示例房间（40×22 网格，不在关卡目录里）
-  levels/tutorial_relay.tscn、tutorial_steps.tscn  第一章前两间
-  levels/chapter_01_room_03..05.tscn  第一章第三至第五间
+  levels/chapter_01_room_01..05.tscn  第一章正式五间，与选关菜单一致
   levels/drafts/        工具生成的独立关卡草稿
   levels/level_01.tscn       旧版块状关卡（历史对照，别再往里加东西）
   ui/                   hud / pause_menu / key_hint / keycap

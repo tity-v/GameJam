@@ -23,7 +23,7 @@ PauseMenu="*res://scenes/ui/pause_menu.tscn"
 
 window/size/viewport_width=1280
 window/size/viewport_height=704
-window/stretch/mode="canvas_items"
+window/stretch/mode="viewport"
 
 [editor_plugins]
 
@@ -72,4 +72,6 @@ reset_echoes={
 
 [rendering]
 
+textures/canvas_textures/default_texture_filter=0
 renderer/rendering_method="gl_compatibility"
+2d/snap/snap_2d_transforms_to_pixel=true
