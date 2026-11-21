@@ -27,7 +27,7 @@
 | 渲染 | `gl_compatibility`（兼容模式，老显卡/笔记本也能跑） |
 | 视口 | 1280 × 704（= 40 × 22 个 32px 瓦片），`canvas_items` 拉伸 |
 | 主场景 | `res://frontend/entry.tscn`（主菜单 → 选章 → 关卡）；单房间调试打开房间按 **F6** |
-| 代码规模 | `scripts/` 17 个脚本约 1333 行，另有 `frontend/`（10 个）与 `graybox/`（6 个）；22 个回归测试 + 前端 2 套 + 灰盒 2 套 |
+| 代码规模 | `scripts/` 17 个脚本约 1333 行，另有 `frontend/`（10 个）与 `graybox/`（6 个）；23 个回归测试 + 前端 2 套 + 灰盒 2 套 |
 
 打开方式：Godot 项目管理器 → 导入 → 选仓库根目录（`project.godot` 在根）。
 
@@ -675,8 +675,8 @@ done
 
 ### 9.2 哪些进仓库，哪些不进
 
-一共 292 个文件会入库：`scripts/` 34（17 个 `.gd` + 17 个 `.uid`）、`assets/` 49、
-`scenes/` 24、`docs/` 17、`_reference/` 72、`graybox/` 56、`frontend/` 30、`addons/` 5、根目录 5。
+一共 293 个文件会入库：`scripts/` 34（17 个 `.gd` + 17 个 `.uid`）、`assets/` 49、
+`scenes/` 24、`docs/` 17、`_reference/` 73、`graybox/` 56、`frontend/` 30、`addons/` 5、根目录 5。
 （数字会随开发变，以 `git ls-files | wc -l` 为准；结构稳定的是「哪些该进、哪些不该进」。）
 
 | 内容 | 进仓库 | 说明 |
@@ -686,7 +686,7 @@ done
 | `*.gd.uid` | ✅ | Godot 4.4+ 的资源 UID，**必须提交**，保证跨机器引用不乱 |
 | `README.md` `HANDOVER.md` | ✅ 根目录 | GitHub 会自动渲染根目录 `README.md` |
 | `.gitignore` `.gitattributes` | ✅ | 后者管换行与二进制，缺了 `.tscn` 会整片 diff |
-| `_reference/tools/` | ✅（Private） | 里面有 **22 个 `test_*.gd` 回归测试**，团队要能跑；`make_*.py` 已冻结 |
+| `_reference/tools/` | ✅（Private） | 里面有 **23 个 `test_*.gd` 回归测试**，团队要能跑；`make_*.py` 已冻结 |
 | `graybox/` | ✅ | 另一位同学交付的**灰盒搭建套件**（模板场景 + 机关 + 编辑器预览）。第一章五间房都是用它的块拼法搭的（`solid_ground.tscn`），和 40×22 瓦片网格并行，取舍见 §13 |
 | `frontend/` | ✅ | 另一位同学交付的**游戏前端**：主菜单 / 选关 / 暂停 / 设置 / 结算 / 全通 + 存档（`user://frontend/*.cfg`）。按 `db/catalog.tres` 的 20 关目录换场景 |
 | `_reference/preview_*.png` | ✅（Private） | 我们自己构建版本的截图，作为视觉基线；网格房间的两张见 `preview_grid_room*.png` |
@@ -772,7 +772,7 @@ git push -u origin main
 **第 4 步：验证别人能跑**
 
 自己另找一台机器（或删掉 `.godot/` 后再打开）克隆一份，用 Godot 导入根目录，
-确认：F5 能进主菜单并打开第一章第一间、按 `F1` 有碰撞框、22 个测试脚本能跑。
+确认：F5 能进主菜单并打开第一章第一间、按 `F1` 有碰撞框、23 个测试脚本能跑。
 `.godot/` 不在仓库里是**正常**的，第一次打开会重建（约十几秒）。
 
 **这一步已经实测过**：把仓库克隆到干净目录（无 `.godot/`）后
