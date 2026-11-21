@@ -29,19 +29,52 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		state.angular_velocity = 0
 		resetting = false
 		return
-	for i in state.get_contact_count():
-		var actor := state.get_contact_collider_object(i)
-		if actor is CharacterBody2D and actor.is_in_group("player"):
-			var axis := Input.get_axis("move_left","move_right")
-			if axis * (global_position.x - actor.global_position.x) > 0 and absf(state.get_contact_local_normal(i).x) > 0.5:
-				state.apply_central_force(Vector2.RIGHT * axis * CFG.push_force)
-				break
 	var body := Rect2(state.transform.origin - box_size / 2, box_size)
-	for echo in get_tree().get_nodes_in_group("echo"):
-		if not Bounds.available(echo): continue
-		var other := Bounds.rect(echo)
+	var push_dir := 0.0
+	var pushed_by_player := false
+	# 玩家推动：不能用接触事件——CharacterBody2D 的 safe_margin 让玩家停在
+	# 箱子表面 ~0.08px 处，持久接触从未建立，接触回调里读不到玩家。
+	# 与虚影分支一致，用包围盒侧面间隙检测。
+	for actor in get_tree().get_nodes_in_group("player"):
+		if not Bounds.available(actor): continue
+		var other := Bounds.rect(actor)
 		if other.end.y <= body.position.y or other.position.y >= body.end.y: continue
-		var axis := signf(Motion.horizontal(echo,state.step))
-		var gap := body.position.x-other.end.x if axis > 0 else other.position.x-body.end.x
-		if gap >= -1 and gap <= 2 and axis != 0:
-			state.apply_central_force(Vector2.RIGHT * axis * CFG.push_force)
+		var axis := Input.get_axis("move_left", "move_right")
+		var dir := signf(body.get_center().x - other.get_center().x)
+		var gap := body.position.x - other.end.x if dir > 0 else other.position.x - body.end.x
+		if axis * dir > 0 and gap >= -1 and gap <= CFG.push_gap:
+			push_dir = dir
+			pushed_by_player = true
+			break
+	# 虚影推动：保留原逻辑，玩家未推时才生效（两侧同时发力会互相抵消）。
+	if push_dir == 0.0:
+		for echo in get_tree().get_nodes_in_group("echo"):
+			if not Bounds.available(echo): continue
+			var other := Bounds.rect(echo)
+			if other.end.y <= body.position.y or other.position.y >= body.end.y: continue
+			var axis := signf(Motion.horizontal(echo,state.step))
+			var gap := body.position.x-other.end.x if axis > 0 else other.position.x-body.end.x
+			if gap >= -1 and gap <= 2 and axis != 0:
+				push_dir = axis
+				break
+	if pushed_by_player:
+		# 玩家推动直接控制速度：恒定目标速度，不与撞击的接触求解讨价还价，
+		# 否则稳态速度会被压在玩家弹停循环的平衡点上。
+		state.linear_velocity.x = push_dir * CFG.push_speed
+	elif push_dir != 0.0:
+		# 虚影推动保持力模式：由物理决定加速过程，手感与原版一致。
+		state.apply_central_force(Vector2.RIGHT * push_dir * CFG.push_force)
+	elif not _on_moving_support(state):
+		# 松手后的水平阻尼：短滑即停。站在移动平台上时不阻尼，
+		# 交给平台带动（虚影平台能承载箱子的特性不能破坏）。
+		state.linear_velocity.x = move_toward(state.linear_velocity.x, 0.0, CFG.push_damp * state.step)
+
+## 箱子是否站在移动平台（AnimatableBody2D）上。
+func _on_moving_support(state: PhysicsDirectBodyState2D) -> bool:
+	for i in state.get_contact_count():
+		# 竖直方向的接触（支撑/压顶）才可能是平台；法线方向随引擎约定，取绝对值。
+		if absf(state.get_contact_local_normal(i).y) > 0.5:
+			var obj := state.get_contact_collider_object(i)
+			if obj is AnimatableBody2D:
+				return true
+	return false
