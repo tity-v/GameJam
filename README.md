@@ -314,7 +314,7 @@ HUD 是 autoload（`project.godot` → `[autoload]` → `Hud`），**所有关�
 | 数值 | 位置 | 当前值 |
 |---|---|---|
 | 移动速度 / 加速度 / 摩擦 | `player.gd` 的 `@export` | 273 / 2730 / 5460 |
-| 跳跃初速 / 重力 / 短跳系数 | `player.gd` 的 `@export` | -680 / 1550 / 0.45 |
+| 跳跃初速 / 重力 / 短跳系数 | `player.gd` 的 `@export` | -610 / 1550 / 0.65 |
 | 死亡动画时长 | `player.gd` 的 `death_duration` | 1.3s |
 | 虚影死亡（尸体）时长 | `echo.gd` 的 `fade_duration` | 1.3s |
 | 虚影上限 | `echo_manager.gd` 的 `MAX_ECHOES` | 5 |
