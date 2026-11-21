@@ -3,11 +3,12 @@ extends SceneTree
 ##
 ## 结论先写在这：
 ##   机关（压力板）→ 认虚影**完整身体矩形**，踩上去就响应
-##   墙 / 关着的门 → **挡得住**，撞上停在接触点（每帧 cast_motion，不隧穿）
+##   墙 / 关着的门 → **挡得住**，撞上停在接触点（每帧位移扫描，不隧穿）
 ##   出口 / 尖刺   → 只认玩家，虚影不触发、不会被杀
 ##
 ## 挡住这件事是"截短位移"实现的，不是给 echo 加 collision_mask ——
 ## 加 mask 会让引擎自己去推它，和喂进来的坐标打架。
+## 扫描方向和 one_way 的判定见 test_echo_oneway.gd：那也是一条曾经踩过的坑。
 
 const ECHO := preload("res://scenes/echo/echo.tscn")
 

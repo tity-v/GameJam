@@ -36,14 +36,14 @@ signal respawned
 @export_group("跳跃")
 ## 原 GRAVITY 1400。现在 1550：到顶约 0.39s，整段约 0.78s（下落再乘 1.1）。
 @export var gravity: float = 1550.0
-## 原 JUMP -510。配合 gravity=1550，按住不放跃起约 115px（高度不变，只是更快）。
+## 恢复同步前的起跳速度；配合 gravity=1550，长按跃起约 115px。
 @export var jump_velocity: float = -610.0
 ## 下落时的重力倍率：上升用 100%，下落用 110%，落地更干脆，顶点也会偏前。
 @export var fall_gravity_mult: float = 1.1
 ## 新增：上升途中松开跳跃键，上升速度乘以该系数。
-## 0.65 对应「轻点一帧约 37px，按住约 93px」，高度差 2.5 倍，肉眼一眼能分辨。
+## 恢复同步前的松键截断系数。
 @export var jump_cut: float = 0.65
-## 原 COYOTE。离开平台边缘后仍可起跳的宽限，0.1s。
+## 离开平台边缘后仍可起跳的宽限。
 @export var coyote_time: float = 0.1
 ## 原 BUFFER。落地前一瞬间预按跳跃也算数，0.12s。
 @export var jump_buffer: float = 0.12
@@ -85,6 +85,12 @@ var _ramp_dur := 0.0
 var _ramp_time := 0.0
 var _ramp_on := false
 
+## 转场滑入期间由前端置 true：不做水平输入、不起跳。
+## 为什么需要：滑动时玩家其实已经站在新房间里（只是被旧截图盖着），
+## 这 0.24s 里按着方向键能跑 65px，画面露出来时人就偏出出生点了。
+var input_locked := false
+var _lock_left := 0.0
+
 
 func _ready() -> void:
 	_sprite = get_node_or_null("Sprite") as Sprite2D
@@ -117,9 +123,24 @@ func _fit_visuals() -> void:
 		_mark.scale = k
 
 
+## 锁住操作一段时间（秒）。自动解锁，不依赖调用方再调一次——
+## 前端就算中途被释放，玩家也不会永久卡在锁死状态。
+func lock_input(seconds: float) -> void:
+	if seconds <= 0.0:
+		input_locked = false
+		_lock_left = 0.0
+		return
+	input_locked = true
+	_lock_left = seconds
+
+
 func _physics_process(delta: float) -> void:
+	if _lock_left > 0.0:
+		_lock_left = maxf(0.0, _lock_left - delta)
+		if _lock_left <= 0.0:
+			input_locked = false
 	# E 键自杀：随时可用，死亡中按无效
-	if Input.is_action_just_pressed("die"):
+	if not input_locked and Input.is_action_just_pressed("die"):
 		die()
 
 	if is_dead:
@@ -138,6 +159,8 @@ func _move(delta: float) -> void:
 	_carry()
 
 	var axis := Input.get_axis("move_left", "move_right")
+	if input_locked:
+		axis = 0.0
 	var on_ground := is_on_floor()
 	var target := axis * max_speed
 	var rate := accel if on_ground else air_accel
@@ -162,7 +185,7 @@ func _move(delta: float) -> void:
 		_coyote = maxf(0.0, _coyote - delta)
 
 	# 跳跃缓冲：落地前提前按也算
-	if Input.is_action_just_pressed("jump"):
+	if not input_locked and Input.is_action_just_pressed("jump"):
 		_buffer = jump_buffer
 	else:
 		_buffer = maxf(0.0, _buffer - delta)

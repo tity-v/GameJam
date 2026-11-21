@@ -5,6 +5,11 @@ const Flow = preload("res://frontend/systems/flow.gd")
 const Store = preload("res://frontend/glue/store.gd")
 const DEFAULT_CATALOG = preload("res://frontend/db/catalog.tres")
 const THEME = preload("res://frontend/db/pixel_theme.tres")
+## 转场时长。0.24s 是实测「被读成有意设计」的下限（<0.15s 等于没发生）。
+const SLIDE_TIME := 0.24
+## 切黑半程时长：黑出 0.10 + 黑入 0.10。
+const CUT_FADE := 0.10
+const CUT_MASK := Color(0.043, 0.055, 0.078, 1.0)
 const PAGES := {
 	"home": preload("res://frontend/view/home.tscn"),
 	"levels": preload("res://frontend/view/levels.tscn"),
@@ -96,12 +101,12 @@ func _process(_delta: float) -> void:
 		save_progress()
 		var following := flow.current + 1
 		if flow.playable(following) and flow.chapter_of(following) == flow.chapter_of(flow.current):
-			if DisplayServer.get_name() != "headless":
-				slide_direction = exit_direction(room)
+			if DisplayServer.get_name() != "headless" and transition_kind(flow.current, following) == "slide":
+				slide_direction = slide_axis(flow.current)
 				var frame := get_viewport().get_texture().get_image()
 				if frame != null and not frame.is_empty():
 					outgoing_frame = ImageTexture.create_from_image(frame)
-			launch(following)
+			launch(following, false, true)
 			if switching:
 				return
 			outgoing_frame = null
@@ -187,7 +192,10 @@ func restore_dialog_focus() -> void:
 	if not dialog.visible and is_instance_valid(dialog_focus):
 		dialog_focus.grab_focus.call_deferred()
 
-func launch(index: int, clear_first := false) -> void:
+## `auto_advance` 只有「刚打完一间、顺序进下一间」这一条路会传 true。
+## 其余入口（选关、重试、章节跳转、继续游戏）一律切黑——它们没有「空间连续」可言，
+## 硬套滑动会变成「从右边走出去却从中间冒出来」，玩家会读成 bug。
+func launch(index: int, clear_first := false, auto_advance := false) -> void:
 	if not flow.playable(index):
 		show_notice("load_failed")
 		return
@@ -203,6 +211,14 @@ func launch(index: int, clear_first := false) -> void:
 		show_notice("load_failed")
 		return
 	var previous_page := flow.page
+	var kind := transition_kind(flow.current, index) if auto_advance else "cut"
+	if kind == "slide":
+		swap_room(room, index, clear_first, previous_page)
+	else:
+		cut_into_room(room, index, clear_first, previous_page)
+
+## 真正换场景。解暂停放在这里，切黑的那 0.20s 里旧房间仍保持暂停/静止。
+func swap_room(room: Node, index: int, clear_first: bool, previous_page: String) -> void:
 	apply_pause(false)
 	if get_tree().change_scene_to_node(room) != OK:
 		room.free()
@@ -246,6 +262,7 @@ func scene_arrived() -> void:
 		var panel := room.get_node_or_null(catalog.legacy_result_panel) as CanvasItem
 		if panel != null:
 			panel.modulate.a = 0.0
+		lock_player(0.0)
 		if outgoing_frame != null:
 			slide_into_room()
 		target_index = -1
@@ -256,7 +273,63 @@ func scene_arrived() -> void:
 		target_page = ""
 	redraw()
 
+## 黑场切：0.10s 黑出 → 换场景 → 0.10s 黑入。跨章、重试、选关跳转都走这条。
+## 无头模式不做动画，直接换——测试不需要等 0.2s，也不会因为 tween 掉帧而假红。
+func cut_into_room(room: Node, index: int, clear_first: bool, previous_page: String) -> void:
+	if DisplayServer.get_name() == "headless":
+		swap_room(room, index, clear_first, previous_page)
+		return
+	switching = true
+	var mask := ColorRect.new()
+	mask.color = Color(CUT_MASK, 0.0)
+	mask.position = Vector2.ZERO
+	mask.size = get_viewport().get_visible_rect().size
+	mask.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(mask)
+	var fade := create_tween()
+	fade.tween_property(mask, "color:a", 1.0, CUT_FADE)
+	fade.tween_callback(swap_room.bind(room, index, clear_first, previous_page))
+	fade.tween_property(mask, "color:a", 0.0, CUT_FADE)
+	fade.tween_callback(mask.queue_free)
+
+## 转场语法的唯一判定点：只有「同一章、顺序推进」才滑动，其余一律切黑。
+## 纯函数、不看场景，方便在 `frontend/tests/` 里直接断言。
+func transition_kind(from_index: int, to_index: int) -> String:
+	if from_index < 0 or to_index != from_index + 1:
+		return "cut"
+	if not flow.exists_at(from_index) or not flow.exists_at(to_index):
+		return "cut"
+	if flow.chapter_of(from_index) != flow.chapter_of(to_index):
+		return "cut"
+	if str(flow.levels[from_index].get("link", "")) == "cut":
+		return "cut"
+	return "slide"
+
+func transition_plan(from_index: int, to_index: int) -> Dictionary:
+	if transition_kind(from_index, to_index) == "cut":
+		return {"kind": "cut", "dir": Vector2.RIGHT, "time": CUT_FADE * 2.0}
+	return {"kind": "slide", "dir": slide_axis(from_index), "time": SLIDE_TIME}
+
+## 滑动方向由「出口在哪一侧」决定。目录里给某关写 `"link": "h"` / `"v"` 可以强制轴。
+func slide_axis(from_index: int) -> Vector2:
+	var scene: Node = get_tree().current_scene if is_inside_tree() else null
+	var dir := exit_direction(scene)
+	var link := str(flow.levels[from_index].get("link", "")) if flow.exists_at(from_index) else ""
+	if link == "h":
+		return Vector2.RIGHT if dir.x >= 0.0 else Vector2.LEFT
+	if link == "v":
+		return Vector2.DOWN if dir.y >= 0.0 else Vector2.UP
+	return dir
+
+## 滑动那 0.24s 锁住玩家：此时人已经站在新房间里，只是被旧截图盖着。
+func lock_player(seconds: float) -> void:
+	var player := get_tree().get_first_node_in_group("player")
+	if player != null and player.has_method("lock_input"):
+		player.call("lock_input", seconds)
+
 func exit_direction(room: Node) -> Vector2:
+	if room == null:
+		return Vector2.RIGHT
 	var player := get_tree().get_first_node_in_group("player") as Node2D
 	if player == null:
 		return Vector2.RIGHT
@@ -288,12 +361,13 @@ func slide_into_room() -> void:
 	var camera := get_viewport().get_camera_2d()
 	var slide := create_tween().set_parallel(true).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	var travel := previous.size * slide_direction
-	slide.tween_property(previous, "position", -travel, 0.20)
+	slide.tween_property(previous, "position", -travel, SLIDE_TIME)
 	if camera != null:
 		var resting_offset := camera.offset
 		camera.offset -= travel / camera.zoom
-		slide.tween_property(camera, "offset", resting_offset, 0.20)
+		slide.tween_property(camera, "offset", resting_offset, SLIDE_TIME)
 	slide.chain().tween_callback(previous.queue_free)
+	lock_player(SLIDE_TIME)
 
 func tr_copy(key: String) -> String:
 	return str(copy.get(key, key))

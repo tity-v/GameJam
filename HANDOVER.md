@@ -27,7 +27,7 @@
 | 渲染 | `gl_compatibility`（兼容模式，老显卡/笔记本也能跑） |
 | 视口 | 1280 × 704（= 40 × 22 个 32px 瓦片），`canvas_items` 拉伸 |
 | 主场景 | `res://frontend/entry.tscn`（主菜单 → 选章 → 关卡）；单房间调试打开房间按 **F6** |
-| 代码规模 | `scripts/` 17 个脚本约 1333 行，另有 `frontend/`（10 个）与 `graybox/`（6 个）；21 个回归测试 |
+| 代码规模 | `scripts/` 17 个脚本约 1333 行，另有 `frontend/`（10 个）与 `graybox/`（6 个）；24 个回归测试 + 前端 2 套 + 灰盒 2 套 |
 
 打开方式：Godot 项目管理器 → 导入 → 选仓库根目录（`project.godot` 在根）。
 
@@ -69,6 +69,7 @@
 | **出口结算 / 通关** | 完成 | `scripts/level_exit.gd`、`scenes/levels/complete_room.tscn` |
 | **尖刺伤害判定** | 完成（**只杀玩家**，虚影无感；尖刺块本身无碰撞体） | `scripts/spike_hazard.gd` |
 | **虚影对环境有体积**（压力板认、墙和关着的门挡得住、尖刺不杀、出口不认） | 完成 | `scripts/actor_bounds.gd`、`echo.gd` 的 `_clip_motion()`；断言见 `test_echo_environment.gd` |
+| **虚影的位移扫描与玩家同源**（单向台面能从下往上穿、实心墙/关着的门照样挡） | 完成 | `echo.gd` 的 `_cast_motion()`：隐形 `CharacterBody2D` + `move_and_collide(test_only)`；断言见 `test_echo_oneway.gd` |
 | **虚影判定体积与贴图解耦**（`body_size`，换皮不改谜题） | 完成 | `echo.gd` 的 `body_rect()` / `fit_visuals()`；断言见 `test_echo_contract.gd` |
 | **虚影单一激活状态**（回放 / 碰撞 / 机关同源，不会“看不见却挡人”） | 完成 | `echo.gd` 的 `_active`、`setup()` / `reset()`；断言见 `test_echo_contract.gd` |
 | **房间整体重置（通关面板 Replay → 重载场景）** | 完成 | `scripts/room_controller.gd` |
@@ -119,7 +120,7 @@ Level01 (Node2D)
 |---|---|---|---|
 | `player.gd` | 307 | 移动/跳跃手感、死亡淡出、重生、被虚影带着走 | `player.tscn` |
 | `echo_manager.gd` | 179 | 录轨迹（滚动窗口上限）、生成虚影、FIFO 上限、R 重置（人回起点 → 机关复位 → 清虚影） | 关卡内节点 |
-| `echo.gd` | 244 | 逐帧重放轨迹、世界阻挡（`cast_motion`）、单向碰撞、尸体淡出；`body_size`（判定体积）、`_active`（唯一激活状态） | `echo.tscn` |
+| `echo.gd` | 288 | 逐帧重放轨迹、世界阻挡（隐形 `CharacterBody2D` 的 `move_and_collide(test_only)`，与玩家同源）、单向碰撞、尸体淡出；`body_size`（判定体积）、`_active`（唯一激活状态） | `echo.tscn` |
 | `hitbox_debug.gd` | 95 | 碰撞框可视化（纯 `_draw`，不参与物理；`@tool` + F1 开关） | 玩家/虚影的 `HitboxDebug` 子节点 |
 | `hud.gd` | 57 | 刷新「回声 n/5」、闪现提示淡出 | autoload `Hud` |
 | `camera_follow.gd` | 48 | 水平跟随 + 边界夹取 + 瞬移归位 | 关卡内 `Camera2D` |
@@ -488,6 +489,37 @@ if not satisfied and _player_in_doorway():
 这个守卫原来写在 `graybox/glue/door.gd` 的 `safety_player` 字段上（需要手动接线）。现在收进核心脚本，
 自动扫 `player` 组，`safety_player` 字段和相关提示已删除。
 
+### 4.9 换场只有两种，且方向必须和出生位置配对
+
+房间正好一屏（40×22 格 = 1280×704），所以换场是「整屏替换」，不是卷轴。语法只有两条：
+
+| 情况 | 转场 | 语义 |
+|---|---|---|
+| 同章、顺序推进（刚打完这间、自动进下一间） | 旧截图朝出口对侧移出，新房间从同侧推入，**0.24s** | 并列的房间 |
+| 跨章 / 重试 / 选关跳转 / 继续游戏 | 黑出 0.10s → 换场景 → 黑入 0.10s | 空间上没有关系 |
+| 死亡复活 | 原地淡出，不加遮罩 | 同一空间，只是时间重置 |
+
+判定点只有一个：`session.transition_kind(from, to)`，纯函数。
+`launch()` 的第三个参数 `auto_advance` 只有自动推进那条路传 `true`——
+选关、重试、章节跳转一律切黑，因为它们没有「空间连续」可言。
+
+**核心契约**：`exit_edge(i) == opposite(enter_edge(i+1))`。
+从右边出去就必须从左边进来。现在五间房满足（出口 x=1088/1184 全在右半，
+`RespawnPoint` x=56/248/420 全在左半），但**没有任何东西天然保证以后也满足**——
+队友加房间时把出生点摆中间，效果就破了，而且滑动本身还在，不会立刻发现。
+
+所以 `frontend/tests/test_transition_space.gd` 锁死它：逐对房间读 `Exit` 中心与
+`RespawnPoint`，断言边配对；并断言跨章 / 跳关 / 重试一律 cut、时长 0.24 与 0.10。
+
+两条容易踩的：
+
+1. **滑动那 0.24s 必须锁玩家输入**（`player.lock_input(0.24)`）。滑入时人已经站在新房间里，
+   只是被旧截图盖着；按着方向键 0.24s 能跑 65px，画面露出来人就偏了。
+   锁用的是「到期自动解除」，不是布尔开关——前端中途被释放也不会永久锁死。
+2. **目录里可以写 `"link"` 覆盖推断**：`"cut"` 强制切黑、`"h"` 横滑、`"v"` 纵滑。
+   第二章真做「上楼」时才用得上 `"v"`；现在没有任何一关的出口在上下半区，
+   纵滑分支属于「已实现、未使用」。
+
 ## 5. 已知坑（都踩过，别再踩）
 
 | 现象 | 原因 | 解法 |
@@ -507,7 +539,8 @@ if not satisfied and _player_in_doorway():
 | 角色看着比碰撞框大一圈 / 隔空停住 / 脚陷进地里 | 角色有两套尺寸：判定 32×44（碰撞体 / `body_size`），外观固定 **48 高**、画布底边对齐脚底；四周留透明边会显得"没碰到就停住" | 判定只认黄框/橙线（§3.5）；外观只由 `character_portrait.fit_to_body()` 决定，画布比例只影响胖瘦（§3.4） |
 | 把新角色图拖到 `Sprite.texture` 上，游戏里没反应 | `character_portrait` 过去每帧硬写 `texture = 常量`，下一帧就把你的图顶回去了 | 现在睁眼帧就是场景里给的贴图，直接换即可；运行时换皮用 `set_art(睁眼, 闭眼)`，再调一次 `fit_visuals()` |
 | 门关在玩家身上，人横向完全推不动 | 门是「松开任一板就关」，如果关的瞬间玩家在门洞里，`CharacterBody2D` 被 `StaticBody2D` 包住就出不来（实测 x 不变、y 抖动） | `puzzle_door._player_in_doorway()` 会等门口空出来再关（§4.8）；**别把这个守卫删掉**，断言 `test_door_safety.gd` |
-| 虚影被门挡住，没走到压力板上 | **不是 bug**：虚影每帧做 `cast_motion`，撞上就停在接触点，而帧号继续走。录的时候门开着、重放时门关着就会这样 | 关卡设计上避免「关键路线依赖一扇之后会关的门」；要放开就查 `echo.gd` 的 `_clip_motion`（README §6.1） |
+| 虚影被门挡住，没走到压力板上 | **不是 bug**：虚影每帧做位移扫描，撞上就停在接触点，而帧号继续走。录的时候门开着、重放时门关着就会这样 | 关卡设计上避免「关键路线依赖一扇之后会关的门」；要放开就查 `echo.gd` 的 `_clip_motion`（README §6.1） |
+| 玩家踩着虚影能跳上单向台面，**虚影重放同一段轨迹却卡在台面底下**（头顶死贴台面底面，之后一动不动） | 原来用 `direct_space_state.cast_motion()`，它是纯形状查询，**不认 `one_way`**，把单向台面当成实心天花板；玩家走的是 `body_test_motion`，认 | 扫描改走隐形 `CharacterBody2D` 的 `move_and_collide(test_only)`，和玩家同一条底层路径（`echo.gd` 的 `_cast_motion`）；断言 `test_echo_oneway.gd`（穿得上去 + 落得下 + 门还挡得住，三条一起守） |
 | 按 `R` 之后门又关上了，以为「开门白解了」 | **设计如此**：R 是「回到本关初始状态」，虚影与机关一起复位 | 想保留开门进度就别按 R；整关重来（含节点重建）仍是通关面板的 Replay |
 | 按 `R` 之后门看着关了，人却能穿过去 | `puzzle_door.reset_mechanism()` 里只开了碰撞、没先把 `opened` 置 false，下一帧 `_physics_process` 判「状态没变」直接 return | 顺序必须是 `opened = false` → `$Collision.set_deferred("disabled", false)`；断言见 `test_complete_room` |
 | 新加的机关按 `R` 不复位，其它机关正常 | 忘了登记 `mechanism` 组，或没写 `reset_mechanism()` | 照 §3.2「新增机关的接入契约」两条做 |
@@ -590,6 +623,7 @@ done
 | `test_character_portrait` | 两帧眨眼与暂停冻结、外观高 48 与脚底对齐、换图不改判定 |
 | `test_air_drag` / `test_air_turn` / `test_jump_curve` / `test_speed_curve` | 手感曲线（逐帧数值，见 `docs/手感调参.md`） |
 | `graybox/tests/test_graybox_kit` | 灰盒套件自己的验收（模板搭建、保存重开、单板/双板门、出口）。在 `.gdignore` 目录里，要显式 `--script res://graybox/tests/test_graybox_kit.gd` |
+| `frontend/tests/test_transition_space` | **换场语法**：逐对房间的出口边 == 下一间进入边的对侧、跨章/跳关/重试一律切黑、滑动 0.24s 与切黑 0.10s、玩家转场锁能自动解除 |
 
 **这些测试是回归网，改完物理或虚影相关代码务必全跑一遍。**
 
@@ -643,8 +677,8 @@ done
 
 ### 9.2 哪些进仓库，哪些不进
 
-一共 236 个文件会入库：`scripts/` 34（17 个 `.gd` + 17 个 `.uid`）、`assets/` 49、
-`scenes/` 24、`docs/` 13、`_reference/` 64、`graybox/` 19、`frontend/` 28、根目录 5。
+一共 294 个文件会入库：`scripts/` 34（17 个 `.gd` + 17 个 `.uid`）、`assets/` 49、
+`scenes/` 24、`docs/` 17、`_reference/` 74、`graybox/` 56、`frontend/` 30、`addons/` 5、根目录 5。
 （数字会随开发变，以 `git ls-files | wc -l` 为准；结构稳定的是「哪些该进、哪些不该进」。）
 
 | 内容 | 进仓库 | 说明 |
@@ -654,7 +688,7 @@ done
 | `*.gd.uid` | ✅ | Godot 4.4+ 的资源 UID，**必须提交**，保证跨机器引用不乱 |
 | `README.md` `HANDOVER.md` | ✅ 根目录 | GitHub 会自动渲染根目录 `README.md` |
 | `.gitignore` `.gitattributes` | ✅ | 后者管换行与二进制，缺了 `.tscn` 会整片 diff |
-| `_reference/tools/` | ✅（Private） | 里面有 **21 个 `test_*.gd` 回归测试**，团队要能跑；`make_*.py` 已冻结 |
+| `_reference/tools/` | ✅（Private） | 里面有 **24 个 `test_*.gd` 回归测试**，团队要能跑；`make_*.py` 已冻结 |
 | `graybox/` | ✅ | 另一位同学交付的**灰盒搭建套件**（模板场景 + 机关 + 编辑器预览）。第一章五间房都是用它的块拼法搭的（`solid_ground.tscn`），和 40×22 瓦片网格并行，取舍见 §13 |
 | `frontend/` | ✅ | 另一位同学交付的**游戏前端**：主菜单 / 选关 / 暂停 / 设置 / 结算 / 全通 + 存档（`user://frontend/*.cfg`）。按 `db/catalog.tres` 的 20 关目录换场景 |
 | `_reference/preview_*.png` | ✅（Private） | 我们自己构建版本的截图，作为视觉基线；网格房间的两张见 `preview_grid_room*.png` |
@@ -740,7 +774,7 @@ git push -u origin main
 **第 4 步：验证别人能跑**
 
 自己另找一台机器（或删掉 `.godot/` 后再打开）克隆一份，用 Godot 导入根目录，
-确认：F5 能进主菜单并打开第一章第一间、按 `F1` 有碰撞框、21 个测试脚本能跑。
+确认：F5 能进主菜单并打开第一章第一间、按 `F1` 有碰撞框、24 个测试脚本能跑。
 `.godot/` 不在仓库里是**正常**的，第一次打开会重建（约十几秒）。
 
 **这一步已经实测过**：把仓库克隆到干净目录（无 `.godot/`）后
@@ -812,7 +846,7 @@ python _reference/tools/make_art_templates.py
 3. 游戏内所有视觉都是贴图，**脚本里只剩调试层还有 `_draw`**（`hitbox_debug.gd` 画黄框和橙线）。
    想改角色/物块外观，改 `assets/` 里的图；看到画面上的黄框橙线不是 bug，是按了 `F1` 或节点没隐藏。
 4. 虚影系统比原版「宽容」：满 5 条还能死、R 可以随时清场。这两处是刻意偏离原版的，理由在 §8.5。
-5. 数值手感原来照抄原版 `actor.gd`，**2026-11-19 起已整体重调**（满速 273、凹形起停、跳跃 115px/0.78s、下落 ×1.1、空中惯性与反向急停）。现值、逐帧实测和调参公式见 **`docs/手感调参.md`**；别再拿 `actor.gd` 的数字当预期值。
+5. 数值手感原来照抄原版 `actor.gd`，**2026-11-19 起已整体重调**（满速 273、凹形起停、跳跃 115.1px/0.78s、下落 ×1.1、空中惯性与反向急停）。现值、逐帧实测和调参公式见 **`docs/手感调参.md`**；别再拿 `actor.gd` 的数字当预期值。
 6. 交美术前先教他按 `F1`：改尺寸时只看橙线，不要拿贴图像素边缘当碰撞——这是这个项目最容易反复沟通的一件事（§3.5）。
 7. 给美术交付尺寸，别口头说"大概 48 高"——直接给 `README.md` §3.4 的四条硬规则 + 一句
    `python _reference/tools/check_art_size.py`。规格与原因见 §3.6，美术版在 `README.md` §3.4。
@@ -834,13 +868,20 @@ python _reference/tools/make_art_templates.py
 | 空中起步 | 1300 线性，10 帧 | **2355 直线，7 帧** |
 | 空中松手 | 跟随地面摩擦，3 帧停 | **400 阻力，0.68s / 93px 滑停** |
 | 空中反向 | 约 0.32s | **2 帧归零 + 7 帧反向** |
-| 跳跃 | 89px / 44 帧 | **115px / 47 帧** |
+| 跳跃 | 89px / 44 帧 | **115.1px / 47 帧**（2026-11-21 从 143.6px 回退到此值） |
 | 下落重力 | 与上升相同 | **×1.1** |
 
 新增验证脚本：`_reference/tools/test_speed_curve.gd`、`test_air_turn.gd`、`test_air_drag.gd`、`test_jump_curve.gd`；
 画图脚本在 `_reference/tools/charts/`（Python + Pillow，字体路径写死 Windows）。
 
-副作用：满速跳距从 154px 涨到约 213px；跳高 115px，低于 115px 的天花板会撞头。关卡沟距若按旧速度摆的，需要复核。
+副作用：满速跳距从 154px 涨到约 213px（6.66 格）；跳高 115.1px（3.60 格），低于 115.1px 的天花板会撞头。
+关卡沟距若按旧速度摆的，需要复核。**跳高上限是 -718**（示例房间门高 160px，-712 实测仍被挡、-720 直接跳过门）。
+将来若要抬高度，别越过这条线，而且必须同步压 `jump_cut`——否则任何一次点按都至少 2 格，1 格小跳会消失。
+
+> **2026-11-21 回退记录**：曾于 11-20 改成 `-680 / cut 0.45`（满跳 143.6px），
+> 目的是够到第一章离地 128px 的台子并修掉「轻点踩在 2 格线上」。
+> 团队决定回到 `-610 / 0.65 / coyote 0.10`，本表与上文已按现值修正。
+> 代价是这两个问题重新存在，成因与可选处理见 `docs/跳跃卡手分析.md`。
 
 ---
 
