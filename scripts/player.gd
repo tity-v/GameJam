@@ -36,21 +36,15 @@ signal respawned
 @export_group("跳跃")
 ## 原 GRAVITY 1400。现在 1550：到顶约 0.39s，整段约 0.78s（下落再乘 1.1）。
 @export var gravity: float = 1550.0
-## 原 JUMP -510。配合 gravity=1550，按住不放跃起约 143.6px（4.49 格）。
-## 为什么是 -680 而不是 -610：第一章有离地 128px（4 整格）的台子，-610 只跳 115px，
-## 差 13px 够不到，玩家会当成 bug。4.49 格是「半格值」，128 的台子好上，
-## 160 以上仍需虚影垫脚（实测 160 差 16px）。上限是 -718：示例房间的门高 160px，再高就能跳过门破关。
-@export var jump_velocity: float = -680.0
+## 恢复同步前的起跳速度；配合 gravity=1550，长按跃起约 115px。
+@export var jump_velocity: float = -610.0
 ## 下落时的重力倍率：上升用 100%，下落用 110%，落地更干脆，顶点也会偏前。
 @export var fall_gravity_mult: float = 1.1
 ## 新增：上升途中松开跳跃键，上升速度乘以该系数。
-## 0.45 对应「轻点一帧约 36.5px（1.14 格），按 3 帧约 53px（1.66 格），按住约 143.6px」。
-## 原来的 0.65 配合 -610 时，按 3 帧正好 63.8px，离 2 格（64px）只差 0.2px——
-## 人手一次自然轻点约 50ms（3 帧），于是同一操作有时过有时不过，这就是「卡手」。
-@export var jump_cut: float = 0.45
-## 原 COYOTE。离开平台边缘后仍可起跳的宽限。
-## 实测 0.10 只兑现 5 帧（83ms），比理论少 1 帧；0.12 实测 6 帧（100ms），边缘起跳不再靠运气。
-@export var coyote_time: float = 0.12
+## 恢复同步前的松键截断系数。
+@export var jump_cut: float = 0.65
+## 离开平台边缘后仍可起跳的宽限。
+@export var coyote_time: float = 0.1
 ## 原 BUFFER。落地前一瞬间预按跳跃也算数，0.12s。
 @export var jump_buffer: float = 0.12
 ## 原下落终速。
