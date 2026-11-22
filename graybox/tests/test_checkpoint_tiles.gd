@@ -26,12 +26,12 @@ func run() -> void:
 	Input.action_release("move_right")
 	var saved: Vector2 = actor.respawn_position
 	assert(actor.is_dead and saved.x > initial.x and saved.x < 256)
-	assert(manager.echo_count() == 1 and manager._echoes[0].frames[0] == saved)
+	assert(manager.echo_count() == 1 and manager._echoes[0]._origin == saved)
 	await actor.respawned
 	assert(actor.global_position == saved and manager._echoes[0].global_position == saved)
 	await frames(8)
 	actor.die()
-	assert(manager.echo_count() == 2 and manager._echoes[1].frames[0] == saved)
+	assert(manager.echo_count() == 2 and manager._echoes[1]._origin == saved)
 	manager.reset_all()
 	assert(actor.global_position == initial and manager.echo_count() == 0)
 	print("PASS 瓦片存档、尖刺死亡、两次虚影起点、R 复位")

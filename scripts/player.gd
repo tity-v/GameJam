@@ -7,6 +7,7 @@ extends CharacterBody2D
 ## 死亡流程照抄原版：按住不动 → 1.3s 内淡出并画叉 → 回到重生点。
 
 ## 死亡瞬间发一次（echo_manager 靠它收尾本次录制）
+signal movement_input(axis: float, jump_pressed: bool, jump_released: bool)
 signal died
 ## 复活那一刻发一次（echo_manager 靠它把所有虚影倒回第 0 帧）
 signal respawned
@@ -92,6 +93,7 @@ var _lock_left := 0.0
 
 
 func _ready() -> void:
+	set_collision_mask_value(preload("res://scripts/replay_rules.gd").WALL_LAYER, true)
 	_sprite = get_node_or_null("Sprite") as Sprite2D
 	_mark = get_node_or_null("DeathMark") as Sprite2D
 	_fit_visuals()
@@ -146,20 +148,21 @@ func _physics_process(delta: float) -> void:
 		_tick_death(delta)
 		return
 
-	_move(delta)
+	var axis := Input.get_axis("move_left", "move_right") if not input_locked else 0.0
+	var pressed := not input_locked and Input.is_action_just_pressed("jump")
+	var released := not input_locked and Input.is_action_just_released("jump")
+	movement_input.emit(axis, pressed, released)
+	move_with_input(delta, axis, pressed, released)
 
 	# 掉出地图也算死亡（原版同样处理，第一关地面铺满所以一般触发不到）
 	if global_position.y > kill_y:
 		die()
 
 
-func _move(delta: float) -> void:
+func move_with_input(delta: float, axis: float, jump_pressed: bool, jump_released: bool) -> void:
 	# 先补上脚下虚影本帧的位移，否则站在移动的虚影头上会被"抽走"地面
 	_carry()
 
-	var axis := Input.get_axis("move_left", "move_right")
-	if input_locked:
-		axis = 0.0
 	var on_ground := is_on_floor()
 	var target := axis * max_speed
 	var rate := accel if on_ground else air_accel
@@ -184,7 +187,7 @@ func _move(delta: float) -> void:
 		_coyote = maxf(0.0, _coyote - delta)
 
 	# 跳跃缓冲：落地前提前按也算
-	if not input_locked and Input.is_action_just_pressed("jump"):
+	if jump_pressed:
 		_buffer = jump_buffer
 	else:
 		_buffer = maxf(0.0, _buffer - delta)
@@ -195,7 +198,7 @@ func _move(delta: float) -> void:
 		_coyote = 0.0
 
 	# 长按/短按的高度差：只在上升中生效，下落时松键不影响
-	if Input.is_action_just_released("jump") and velocity.y < 0.0:
+	if jump_released and velocity.y < 0.0:
 		velocity.y *= jump_cut
 
 	velocity.y = minf(velocity.y + _gravity_now() * delta, max_fall_speed)
@@ -203,7 +206,11 @@ func _move(delta: float) -> void:
 	_refresh_support()
 
 
-## 上升用基础重力，下落乘 fall_gravity_mult（默认 1.1），所以落地比起跳更快。
+## 录制起点的短时运动状态。
+func capture_motion() -> PackedFloat32Array:
+	return PackedFloat32Array([coyote_time if is_on_floor() else _coyote, _buffer, _ramp_from, _ramp_to,
+		_ramp_rate, _ramp_power, _ramp_dur, _ramp_time, float(_ramp_on)])
+
 func _gravity_now() -> float:
 	return gravity * (fall_gravity_mult if velocity.y > 0.0 else 1.0)
 
@@ -244,11 +251,11 @@ func _shape(u: float, rising: bool, p: float) -> float:
 func _carry() -> void:
 	if _support == null:
 		return
-	if not is_instance_valid(_support) or (has_method("is_gone") and _support.is_gone()):
+	if not is_instance_valid(_support) or (_support.has_method("is_gone") and _support.is_gone()):
 		_support = null
 		return
 	if _support.has_method("get_frame_delta"):
-		global_position += _support.get_frame_delta()
+		move_and_collide(_support.get_frame_delta())
 
 
 ## 记录下一帧要跟着谁走：只有「站在头上」（碰撞法线朝上）且对方是虚影才算
@@ -285,10 +292,7 @@ func die() -> void:
 func _tick_death(delta: float) -> void:
 	_death_time += delta
 
-	# 原版：死亡中 x 方向只有摩擦，y 方向继续受重力，所以会顺着惯性滑一小段再落下
-	velocity.x = move_toward(velocity.x, 0.0, friction * delta)
-	velocity.y = minf(velocity.y + _gravity_now() * delta, max_fall_speed)
-	move_and_slide()
+	move_after_death(delta)
 
 	if _sprite != null:
 		var t := clampf(_death_time / death_duration, 0.0, 1.0)
@@ -296,6 +300,12 @@ func _tick_death(delta: float) -> void:
 
 	if _death_time >= death_duration:
 		respawn()
+
+
+func move_after_death(delta: float) -> void:
+	velocity.x = move_toward(velocity.x, 0.0, friction * delta)
+	velocity.y = minf(velocity.y + _gravity_now() * delta, max_fall_speed)
+	move_and_slide()
 
 
 func respawn() -> void:

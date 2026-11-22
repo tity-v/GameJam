@@ -90,4 +90,12 @@ func _physics_process(_dt: float) -> void:
 		var target := Vector2.ZERO
 		if usable and source.destination: target = source.destination.global_position
 		var state := [visual.get_transform(), signal_on, shape != null and not shape.disabled, usable, target]
-		samples.record(source.global_transform, texture, color, state)
+		var velocity := Vector2.ZERO
+		var phase := 0.0
+		if source is RigidBody2D:
+			state.append(source.push_action)
+			velocity = source.linear_velocity
+		elif source.has_method("route_start"):
+			state.append_array([source.route_start(), source.route_end(), source.speed()])
+			phase = source.distance
+		samples.record(source.global_transform, velocity, phase, texture, color, state)

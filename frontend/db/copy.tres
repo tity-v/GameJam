@@ -30,7 +30,7 @@ strings = {
   "mute": "静音",
   "fullscreen": "全屏",
   "controls": "操作说明",
-  "keys": "A / D 或方向键　移动\n空格　跳跃　　E　主动死亡\nR　复位本关　　Esc　暂停 / 继续",
+  "keys": "A / D 或方向键　移动\n空格　跳跃　　E　主动死亡\nR　复位本关　　P　暂停 / 继续\nEsc　暂停菜单",
   "clear": "重置进度",
   "cancel": "取消",
   "confirm": "确认",

@@ -9,12 +9,14 @@ const CFG = preload("res://graybox/db/mechanisms.tres")
 		if is_node_ready(): resize()
 var initial := Transform2D.IDENTITY
 var resetting := false
+var push_action := 0.0
 func resize() -> void:
 	$Collision.shape.size = box_size
 	var half := box_size / 2
 	$Face.polygon = PackedVector2Array([-half, Vector2(half.x,-half.y), half, Vector2(-half.x,half.y)])
 	mass = box_size.x * box_size.y * CFG.box_density
 func _ready() -> void:
+	set_collision_mask_value(preload("res://scripts/replay_rules.gd").WALL_LAYER, true)
 	resize()
 	initial = global_transform
 	if not Engine.is_editor_hint(): add_to_group("mechanism")
@@ -27,6 +29,7 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 		state.transform = initial
 		state.linear_velocity = Vector2.ZERO
 		state.angular_velocity = 0
+		push_action = 0
 		resetting = false
 		return
 	var body := Rect2(state.transform.origin - box_size / 2, box_size)
@@ -57,16 +60,18 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 			if gap >= -1 and gap <= 2 and axis != 0:
 				push_dir = axis
 				break
+	push_action = push_dir
 	if pushed_by_player:
-		# 玩家推动直接控制速度：恒定目标速度，不与撞击的接触求解讨价还价，
-		# 否则稳态速度会被压在玩家弹停循环的平衡点上。
 		state.linear_velocity.x = push_dir * CFG.push_speed
 	elif push_dir != 0.0:
-		# 虚影推动保持力模式：由物理决定加速过程，手感与原版一致。
 		state.apply_central_force(Vector2.RIGHT * push_dir * CFG.push_force)
 	elif not _on_moving_support(state):
-		# 松手后的水平阻尼：短滑即停。站在移动平台上时不阻尼，
-		# 交给平台带动（虚影平台能承载箱子的特性不能破坏）。
+		state.linear_velocity.x = move_toward(state.linear_velocity.x, 0.0, CFG.push_damp * state.step)
+
+func apply_push(state: PhysicsDirectBodyState2D, axis: float) -> void:
+	if axis != 0:
+		state.linear_velocity.x = axis * CFG.push_speed
+	elif not _on_moving_support(state):
 		state.linear_velocity.x = move_toward(state.linear_velocity.x, 0.0, CFG.push_damp * state.step)
 
 ## 箱子是否站在移动平台（AnimatableBody2D）上。

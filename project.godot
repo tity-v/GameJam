@@ -16,6 +16,7 @@ config/features=PackedStringArray("4.7")
 
 [autoload]
 
+ObservationPause="*res://frontend/glue/observation_pause.gd"
 Hud="*res://scenes/ui/hud.tscn"
 PauseMenu="*res://scenes/ui/pause_menu.tscn"
 
@@ -69,6 +70,7 @@ reset_echoes={
 2d_physics/layer_1="World"
 2d_physics/layer_2="Player"
 2d_physics/layer_3="Echo"
+2d_physics/layer_4="EchoWall"
 
 [rendering]
 

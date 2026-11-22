@@ -64,6 +64,7 @@ func add_settings(model: Dictionary) -> void:
 	first_button = slider
 	add_toggle(model.mute_label, "mute", model.muted)
 	add_toggle(model.fullscreen_label, "fullscreen", model.fullscreen)
+	add_toggle("开局暂停", "start_paused", model.start_paused)
 	var guide := Label.new()
 	guide.text = model.keys
 	guide.theme_type_variation = "Detail"

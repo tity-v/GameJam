@@ -99,7 +99,7 @@ func run() -> void:
 
 	var echo = ECHO.instantiate()
 	room.add_child(echo)
-	echo.setup(PackedVector2Array([Vector2(plate_a.position.x, 532)]))
+	echo.setup_actions(PackedVector2Array([Vector2.ZERO]), Vector2(plate_a.position.x, 532), Vector2.ZERO, player)
 	echo.reset()  # 虚影只认 reset() 这一个登场入口：setup 只载入轨迹，不激活（HANDOVER §4.7）
 	await frames(3)
 	check(not plate_a.active, "仅玩家压力板拒绝 Echo")
@@ -116,18 +116,18 @@ func run() -> void:
 	echo.position.x = plate_b.position.x
 	await frames(3)
 	check(door.opened, "再次同时踩住两块板可开门")
-	# 保持两个压板都由 Echo 踩住，验证虚影可以触发出口。
+	# 保持两个压板都由 Echo 踩住，验证虚影不触发出口。
 	plate_a.accepts_echo = true
 	var echo_a = ECHO.instantiate()
 	room.add_child(echo_a)
-	echo_a.setup(PackedVector2Array([Vector2(plate_a.position.x, 532)]))
+	echo_a.setup_actions(PackedVector2Array([Vector2.ZERO]), Vector2(plate_a.position.x, 532), Vector2.ZERO, player)
 	echo_a.reset()
 	var exit_echo = ECHO.instantiate()
 	room.add_child(exit_echo)
-	exit_echo.setup(PackedVector2Array([Vector2(exit_piece.position.x, 532)]))
+	exit_echo.setup_actions(PackedVector2Array([Vector2.ZERO]), Vector2(exit_piece.position.x, 532), Vector2.ZERO, player)
 	exit_echo.reset()
 	await frames(3)
-	check(door.opened and room.won, "虚影进入出口也可通关")
+	check(door.opened and not room.won, "虚影进入出口不触发通关")
 	player.position.x = exit_piece.position.x
 	await frames(3)
 	check(room.won, "当前玩家进入出口触发通关")

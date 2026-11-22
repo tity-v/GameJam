@@ -47,10 +47,11 @@ godot --headless --path . --fixed-fps 60 --script res://_reference/tools/test_co
 
 | 场景 | 设置 |
 |---|---|
+| echo_wall.tscn | 半透明紫砖，Cells 设置宽高格数，左上角对齐网格。阻挡本体、实体箱子和移动平台。玩家虚影和组件虚影可穿过。 |
 | platform.tscn | 放下即从当前位置水平往返 160 像素。调 End Offset 可改为竖直或斜向；黄线实点是起点，空心圈是终点。需要复用标记时仍可绑定 Start Point、End Point。Speed Override 可按房间设置像素/秒，0 使用数据库默认值。 |
 | lever.tscn | Initially Right 控制初始朝向。向右偏时从右侧向左推，向左偏时反向推。拖到门的 Plate Paths 或传送门的 Switch Source。 |
 | portal.tscn | Destination 可选标记或另一扇门。Close After Use 控制一次性关闭。可选 Switch Source 控制启用条件。关闭后角色直接穿过。 |
 | box.tscn | Box Size 同步外观、碰撞和质量。压力板的 Accepts Boxes 可独立设置。 |
-| color_recorder.tscn | 拖成移动平台、箱子、门、传送门、压板或拉杆的子节点。Tint 设置编辑配色和回放颜色。死亡保留本轮记录，复活后原组件复位，组件虚影按记录重放位置、碰撞和开关状态。虚影箱子可压板，虚影平台能承载，虚影拉杆和压板能驱动绑定的门，虚影传送门按录制时的开关状态传送角色。R 清除记录。 |
+| color_recorder.tscn | 拖成移动平台、箱子、门、传送门、压板或拉杆的子节点。Tint 设置编辑配色和回放颜色。死亡保留本轮记录，复活后原组件复位，组件虚影重做已记录的推动、往返运动及碰撞与开关状态切换。虚影箱子可压板，虚影平台能承载，虚影拉杆和压板能驱动绑定的门，虚影传送门按录制时的开关状态传送角色。R 清除记录。 |
 
-速度、密度、推力、拨杆行程和影像透明度集中在 db/mechanisms.tres。新房间使用 base_level.tscn 的 EchoManager，传送后的虚影会继续按原来的移动增量行走，并根据它当时遇到的传送门状态决定是否传送。
+速度、密度、推力、拨杆行程和影像透明度集中在 db/mechanisms.tres。新房间使用 base_level.tscn 的 EchoManager，虚影逐帧重做方向输入、起跳和松键。它会在当前房间重新碰撞、受重力并乘坐实际接触的平台，并根据它当时遇到的传送门状态决定是否传送。

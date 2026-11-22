@@ -33,6 +33,9 @@ func route_end() -> Vector2:
 	var origin := route_start()
 	return parent.to_global(parent.to_local(origin) + end_offset) if parent else origin + end_offset
 
+func speed() -> float:
+	return speed_override if speed_override > 0 else CFG.platform_speed
+
 func reset_mechanism() -> void:
 	distance = 0.0
 	global_position = route_start()
@@ -45,9 +48,17 @@ func _physics_process(dt: float) -> void:
 	var length := a.distance_to(b)
 	if is_zero_approx(length):
 		return
-	var speed: float = speed_override if speed_override > 0 else CFG.platform_speed
-	distance = fposmod(distance + speed * dt, length * 2)
-	global_position = a.lerp(b, pingpong(distance, length) / length)
+	distance = fposmod(distance + speed() * dt, length * 2)
+	var next := a.lerp(b, pingpong(distance, length) / length)
+	if get_tree().has_group("echo_wall"):
+		var sweep := PhysicsShapeQueryParameters2D.new()
+		sweep.shape = $Collision.shape
+		sweep.transform = $Collision.global_transform
+		sweep.collision_mask = preload("res://scripts/replay_rules.gd").WALL_MASK
+		sweep.motion = next - global_position
+		var fraction := get_world_2d().direct_space_state.cast_motion(sweep)
+		next = global_position.lerp(next, fraction[0])
+	global_position = next
 
 func invalid_marker(marker: Node2D) -> bool:
 	return marker != null and (marker == self or is_ancestor_of(marker))

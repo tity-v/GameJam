@@ -1,7 +1,10 @@
 extends AnimatableBody2D
-## 运动与开关取自轨迹；物理世界只读取回放结果。
 var active := false
 var box_size := Vector2.ZERO
+const ReplayBox = preload("res://graybox/glue/replay_box.gd")
+var crate: ReplayBox
+var platform := false
+var phase := 0.0
 var original: Node2D
 var appearance: CanvasItem
 var hit: CollisionShape2D
@@ -25,7 +28,9 @@ static func switch_on(source: Node) -> bool:
 	return false
 
 func setup(source: Node2D, face: CanvasItem, history) -> void:
+	preload("res://scripts/replay_rules.gd").mark_ghost(self)
 	original = source
+	platform = source.has_method("route_start")
 	track = history
 	sync_to_physics = false
 	collision_layer = 0
@@ -41,7 +46,21 @@ func setup(source: Node2D, face: CanvasItem, history) -> void:
 		if shape:
 			hit = shape.duplicate(0)
 			add_child(hit)
-	if source.is_in_group("graybox_box"): box_size = source.box_size
+	if source.is_in_group("graybox_box"):
+		crate = ReplayBox.new()
+		crate.box_size = source.box_size
+		crate.freeze = true
+		crate.lock_rotation = true
+		crate.can_sleep = false
+		crate.contact_monitor = true
+		crate.max_contacts_reported = 8
+		crate.physics_material_override = source.physics_material_override
+		crate.gravity_scale = source.gravity_scale
+		crate.collision_layer = 0
+		crate.add_collision_exception_with(source)
+		hit.reparent(crate, false)
+		hit = null
+		add_child(crate)
 	if "active" in source:
 		var echoes: Array = source.get_meta(&"graybox_switch_echoes", [])
 		echoes.append(self)
@@ -49,7 +68,10 @@ func setup(source: Node2D, face: CanvasItem, history) -> void:
 	appearance = face.duplicate(0)
 	appearance.set_script(null)
 	if appearance is Control: appearance.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(appearance)
+	if crate:
+		crate.add_child(appearance)
+	else:
+		add_child(appearance)
 	hide()
 	process_physics_priority = -20
 
@@ -64,26 +86,44 @@ func restart() -> void:
 	cursor = 0
 	occupied.clear()
 	playing = true
-	if box_size != Vector2.ZERO and not is_in_group("graybox_box"): add_to_group("graybox_box")
+	global_transform = track.origin
+	if platform:
+		phase = track.phase
+	if crate:
+		crate.global_transform = track.origin
+		crate.freeze = false
+		crate.linear_velocity = track.velocity
+		crate.collision_layer = layer
+		if not crate.is_in_group("graybox_box"):
+			crate.add_to_group("graybox_box")
 	show()
 	apply_frame()
 
 func apply_frame() -> void:
 	cursor = track.cursor_at(cursor, elapsed)
-	var key: Array = track.key(cursor)
-	var state: Array = key[4]
-	global_transform = key[1]
+	var key: Array = track.keys[cursor]
+	var state: Array = key[3]
+	if crate:
+		crate.push_action = state[5] if elapsed < track.length else 0.0
 	if appearance is Node2D: appearance.transform = state[0]
-	if appearance is NinePatchRect: appearance.texture = key[2]
-	appearance.modulate = key[3] * Color(1,1,1,CFG.ghost_alpha)
+	if appearance is NinePatchRect: appearance.texture = key[1]
+	appearance.modulate = key[2] * Color(1,1,1,CFG.ghost_alpha)
 	active = state[1]
-	collision_layer = layer if state[2] else 0
+	collision_layer = layer if state[2] and not crate else 0
 	portal_open = state[3]
 	recorded_target = state[4]
 
-func _physics_process(_dt: float) -> void:
+func _physics_process(dt: float) -> void:
 	if not playing: return
 	apply_frame()
+	if platform and elapsed < track.length:
+		var route: Array = track.keys[cursor][3]
+		var a: Vector2 = route[5]
+		var b: Vector2 = route[6]
+		var length := a.distance_to(b)
+		if length > 0:
+			global_position = a.lerp(b, pingpong(phase,length)/length)
+			phase += float(route[7])*dt
 	if portal:
 		PortalActions.transfer(self, portal_open, recorded_target, original.destination, occupied, false)
 	elapsed += 1

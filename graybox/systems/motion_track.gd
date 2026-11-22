@@ -1,31 +1,45 @@
 extends RefCounted
-## 固定容量的变化帧环形缓冲。持续移动也不需要搬移整个数组。
-var keys: Array = []
-var head := 0
-var count := 0
+## 连续相同操作只存一次；滚动时裁掉旧操作。
+var keys: Array[Array] = []
+var count: int:
+	get: return keys.size()
 var length := 0
 var capacity: int
+var origin := Transform2D.IDENTITY
+var velocity := Vector2.ZERO
+var phase := 0.0
+var _mid_origin := Transform2D.IDENTITY
+var _mid_velocity := Vector2.ZERO
+var _mid_phase := 0.0
+var _mid_key := 0
+
 func _init(limit: int) -> void:
 	capacity = maxi(2, limit)
-func key(index: int) -> Array:
-	return keys[(head + index) % capacity]
-func record(pose: Transform2D, texture: Texture2D, color: Color, state: Array) -> void:
-	var oldest := maxi(0, length - capacity + 1)
-	while count > 1 and key(1)[0] <= oldest:
-		head = (head + 1) % capacity
-		count -= 1
-	var last := key(count - 1) if count else []
-	if last.is_empty() or last[1] != pose or last[2] != texture or last[3] != color or last[4] != state:
-		var sample := [length, pose, texture, color, state]
-		var slot := (head + count) % capacity
-		if slot == keys.size():
-			keys.append(sample)
-		else:
-			keys[slot] = sample
-		count += 1
+
+func record(pose: Transform2D, speed: Vector2, route_phase: float, texture: Texture2D, color: Color, state: Array) -> void:
+	var cut := ceili(capacity * 0.5)
+	if length == capacity:
+		keys = keys.slice(_mid_key)
+		for key in keys: key[0] -= cut
+		length -= cut
+		origin = _mid_origin
+		velocity = _mid_velocity
+		phase = _mid_phase
+	if length == 0:
+		origin = pose
+		velocity = speed
+		phase = route_phase
+	if length == cut:
+		_mid_origin = pose
+		_mid_velocity = speed
+		_mid_phase = route_phase
+		_mid_key = count
+	var last := keys.back() as Array if count else []
+	if length == cut or last.is_empty() or last[1] != texture or last[2] != color or last[3] != state:
+		keys.append([length, texture, color, state])
 	length += 1
+
 func cursor_at(cursor: int, elapsed: int) -> int:
-	var time := elapsed + maxi(0, length - capacity)
-	while cursor + 1 < count and key(cursor + 1)[0] <= time:
+	while cursor + 1 < count and keys[cursor+1][0] <= elapsed:
 		cursor += 1
 	return cursor

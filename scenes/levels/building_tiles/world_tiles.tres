@@ -1,6 +1,7 @@
 [gd_resource type="TileSet" format=3 uid="uid://cpeif7avociva"]
 
 [ext_resource type="Texture2D" uid="uid://c6yivnabmkrty" path="res://assets/tiles/placeholder_32.png" id="1_atlas"]
+[ext_resource type="PackedScene" path="res://graybox/echo_wall_cell.tscn" id="4_8wvg1"]
 [ext_resource type="PackedScene" path="res://graybox/checkpoint.tscn" id="checkpoint"]
 [ext_resource type="PackedScene" path="res://graybox/spike_cell.tscn" id="spike"]
 [ext_resource type="Texture2D" uid="uid://da2qrsj2arkh3" path="res://scenes/levels/building_tiles/concrete_tiles.png" id="structure"]
@@ -45,6 +46,7 @@ texture_region_size = Vector2i(32, 32)
 resource_name = "方块组件"
 scenes/1/scene = ExtResource("spike")
 scenes/2/scene = ExtResource("checkpoint")
+scenes/4/scene = ExtResource("4_8wvg1")
 
 [sub_resource type="TileSetAtlasSource" id="Background"]
 resource_name = "背景板"

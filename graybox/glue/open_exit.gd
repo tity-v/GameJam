@@ -13,6 +13,6 @@ func _physics_process(_delta: float) -> void:
 	if not active:
 		return
 	var area := global_transform * Rect2(Vector2.ZERO, block_size)
-	for actor in Bounds.actors(get_tree()):
+	for actor in get_tree().get_nodes_in_group("player"):
 		if Bounds.available(actor) and area.intersects(Bounds.rect(actor)):
 			get_tree().current_scene.complete()
