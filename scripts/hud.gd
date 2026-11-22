@@ -11,10 +11,12 @@ extends Control
 ## 不用每关手动摆一遍，也不会出现"某一关忘了写提示"。
 
 const FLASH_DURATION := 1.5
+const ECHO_ICON = preload("res://assets/actors/office_character/idle.png")
 
 var _flash_time := 0.0
 var _echo_total := -1
 var _echo_max := 5
+var _icons: Array[TextureRect] = []
 
 @onready var _count: Label = $Count
 @onready var _flash: Label = $Flash
@@ -26,6 +28,29 @@ func _ready() -> void:
 	# 暂停时自己也停，免得提示文字在暂停画面背后继续淡出
 	process_mode = Node.PROCESS_MODE_PAUSABLE
 	_flash.modulate.a = 0.0
+	$BarBg.hide()
+	$Hints.hide()
+	_count.hide()
+	_flash.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_flash.position = Vector2(get_viewport_rect().size.x - 360, 68)
+	var icons := HBoxContainer.new()
+	icons.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	icons.offset_left = -190
+	icons.offset_top = 25
+	icons.offset_right = -28
+	icons.offset_bottom = 59
+	icons.add_theme_constant_override("separation", 7)
+	add_child(icons)
+	for index in _echo_max:
+		var icon := TextureRect.new()
+		icon.texture = ECHO_ICON
+		icon.custom_minimum_size = Vector2(25, 28)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icons.add_child(icon)
+		_icons.append(icon)
+	update_icons(0)
 
 
 func _process(delta: float) -> void:
@@ -38,7 +63,11 @@ func _process(delta: float) -> void:
 	var total := _count_echoes()
 	if total != _echo_total:
 		_echo_total = total
-		_count.text = "回声 %d / %d" % [maxi(total, 0), _echo_max]
+		update_icons(total)
+
+func update_icons(total: int) -> void:
+	for index in _icons.size():
+		_icons[index].modulate = Color(0.57, 0.79, 0.76, 0.85) if index < total else Color(0.58, 0.65, 0.67, 0.22)
 
 
 ## 条上方居中闪一行提示（虚影重置 / 满员替换）
