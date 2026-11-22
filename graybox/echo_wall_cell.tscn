@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://graybox/echo_wall.tscn" id="wall"]
+
+[node name="EchoWallCell" type="Node2D"]
+
+[node name="Wall" parent="." instance=ExtResource("wall")]
+position = Vector2(-16,-16)

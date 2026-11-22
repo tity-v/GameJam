@@ -7,7 +7,6 @@ const Bounds = preload("res://scripts/actor_bounds.gd")
 var active := false
 var travel := 0.0
 var latched := false
-var trip_time := 0.0
 func _ready() -> void:
 	reset_mechanism()
 	if not Engine.is_editor_hint():
@@ -15,7 +14,6 @@ func _ready() -> void:
 		process_physics_priority = 10
 func reset_mechanism() -> void:
 	active = not initially_right
-	trip_time = 0.0
 	travel = 0
 	latched = false
 	$Collision.set_deferred("disabled",false)
@@ -27,7 +25,6 @@ func _physics_process(dt: float) -> void:
 		return
 	var pressing := false
 	var touching := false
-	var wrong_side := false
 	var side := -1 if active else 1
 	for actor in Bounds.actors(get_tree()):
 		if not Bounds.available(actor):
@@ -38,19 +35,11 @@ func _physics_process(dt: float) -> void:
 			continue
 		touching = true
 		var horizontal: float = Motion.horizontal(actor, dt)
-		var actor_side := signf(body.get_center().x - global_position.x)
-		if actor_side == -side and horizontal * side > 0:
-			wrong_side = true
-		if not latched and actor_side == side and horizontal*side < 0:
+		var actor_side := signf(to_local(body.get_center()).x)
+		var local_motion := to_local(global_position + Vector2(horizontal, 0)).x
+		if not latched and actor_side == side and local_motion * side < 0:
 			travel += absf(horizontal) * dt
 			pressing = true
-	if wrong_side:
-		trip_time += dt
-		if trip_time >= CFG.trip_seconds:
-			$Collision.set_deferred("disabled", true)
-			latched = true
-	else:
-		trip_time = 0.0
 	if not touching:
 		latched = false
 		$Collision.set_deferred("disabled",false)

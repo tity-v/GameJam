@@ -23,7 +23,7 @@ var flow := Flow.new()
 var store := Store.new()
 var catalog = DEFAULT_CATALOG
 var copy: Dictionary = {}
-var settings := {"volume": 100.0, "muted": false, "fullscreen": false}
+var settings := {"volume": 100.0, "muted": false, "fullscreen": false, "start_paused": false}
 var notice := ""
 var view: Control
 var dialog: ConfirmationDialog
@@ -77,6 +77,8 @@ func _exit_tree() -> void:
 		legacy_hud.visible = legacy_hud_visible
 
 func _input(event: InputEvent) -> void:
+	if get_node("/root/ObservationPause").active:
+		return
 	if switching or dialog == null or dialog.visible or not event.is_action_pressed(catalog.pause_action):
 		return
 	if flow.page in ["game", "pause", "levels", "settings", "result", "finished"]:
@@ -161,7 +163,7 @@ func handle(command: String, value: Variant) -> void:
 					leave("home")
 			else:
 				show_notice("save_failed")
-		"volume", "mute", "fullscreen":
+		"volume", "mute", "fullscreen", "start_paused":
 			var key := "muted" if command == "mute" else command
 			settings[key] = value
 			apply_settings()
@@ -464,8 +466,9 @@ func read_settings() -> void:
 	var volume: Variant = data.get("volume", 100.0)
 	var muted: Variant = data.get("muted", false)
 	var fullscreen: Variant = data.get("fullscreen", false)
-	if record.ok and (volume is float or volume is int) and is_finite(float(volume)) and muted is bool and fullscreen is bool:
-		settings = {"volume": clampf(volume, 0, 100), "muted": muted, "fullscreen": fullscreen}
+	var start_paused: Variant = data.get("start_paused", false)
+	if record.ok and (volume is float or volume is int) and is_finite(float(volume)) and muted is bool and fullscreen is bool and start_paused is bool:
+		settings = {"volume": clampf(volume, 0, 100), "muted": muted, "fullscreen": fullscreen, "start_paused": start_paused}
 	else:
 		store.preserve_invalid("settings")
 		notice = tr_copy("read_failed")

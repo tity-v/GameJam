@@ -16,8 +16,6 @@ static func transfer(portal: Node2D, usable: bool, target: Vector2, destination:
 			destination.mark_arrival(id)
 			for ghost in destination.get_meta(&"graybox_portal_echoes", []):
 				if is_instance_valid(ghost): ghost.mark_arrival(id)
-		if actor.is_in_group("player"):
-			portal.get_tree().call_group("graybox_trail_adapter","exclude_jump",displacement)
 		moved = true
 		if one_shot: break
 	return moved

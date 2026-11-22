@@ -62,8 +62,12 @@ keys = PackedStringArray("R")
 desc = "重置本关"
 
 [node name="Pause" parent="Root/Hints" instance=ExtResource("2_hint")]
-keys = PackedStringArray("ESC")
+keys = PackedStringArray("P")
 desc = "暂停"
+
+[node name="PauseMenu" parent="Root/Hints" instance=ExtResource("2_hint")]
+keys = PackedStringArray("ESC")
+desc = "菜单"
 
 [node name="Count" type="Label" parent="Root"]
 anchors_preset = 3

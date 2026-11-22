@@ -1,5 +1,5 @@
 extends Node2D
-## 虚影管理器：录玩家轨迹 → 死亡时留下一条虚影 → 复活时所有虚影同步从头重放。
+## 录玩家操作，死亡时留下虚影，复活时全部重放。
 ##
 ## 站位：本节点在关卡里，process_physics_priority = -10，保证每一帧先推虚影、
 ## 再跑玩家，玩家才能拿到虚影本帧的位移（被带着走）。
@@ -18,6 +18,13 @@ var _player: Node2D
 var _trail := PackedVector2Array()
 var _echoes: Array[Node2D] = []
 var _recording := false
+var _origin := Vector2.ZERO
+var _velocity := Vector2.ZERO
+var _mid_origin := Vector2.ZERO
+var _mid_velocity := Vector2.ZERO
+var _motion := PackedFloat32Array()
+var _mid_motion := PackedFloat32Array()
+var pin_start := false
 
 
 func _ready() -> void:
@@ -26,6 +33,7 @@ func _ready() -> void:
 	if _player == null:
 		push_error("EchoManager: 找不到 player_path=%s" % player_path)
 		return
+	_player.movement_input.connect(_record_input)
 	_player.died.connect(_on_player_died)
 	_player.respawned.connect(_on_player_respawned)
 	_trail = PackedVector2Array()
@@ -38,17 +46,25 @@ func _physics_process(_delta: float) -> void:
 		if is_instance_valid(e):
 			e.advance(_delta)
 
-	if _recording and _player != null:
-		if _trail.size() < max_frames:
-			_trail.append(_player.global_position)
-		else:
-			# 满了就丢掉最旧的一半，保留**最近**这一段（滚动窗口）。
-			# 不能只是停止追加：那样虚影重放的是"这一生最初的 100 秒"，
-			# 尸体落在 100 秒前的位置，和真正的死亡点差出几百像素
-			# （实测把上限调成 1 秒时，虚影末帧比死亡点落后 320px）。
-			# 折半而不是每帧 pop_front：后者是 O(n) 内存搬移，5000 帧时每秒要搬几 MB。
-			_trail = _trail.slice(_trail.size() / 2)
-			_trail.append(_player.global_position)
+func _record_input(axis: float, pressed: bool, released: bool) -> void:
+	if not _recording: return
+	var limit := maxi(2, max_frames)
+	var cut := ceili(limit * 0.5)
+	if _trail.size() >= limit:
+		if pin_start: return
+		_trail = _trail.slice(cut)
+		_origin = _mid_origin
+		_velocity = _mid_velocity
+		_motion = _mid_motion
+	if _trail.is_empty():
+		_origin = _player.global_position
+		_velocity = _player.velocity
+		_motion = _player.capture_motion()
+	if _trail.size() == cut:
+		_mid_origin = _player.global_position
+		_mid_velocity = _player.velocity
+		_mid_motion = _player.capture_motion()
+	_trail.append(Vector2(axis, int(pressed) | (int(released) << 1)))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -143,7 +159,7 @@ func _add_echo(trail: PackedVector2Array) -> void:
 	add_child(echo)
 	# 必须 duplicate：PackedVector2Array 会跟 _trail 共用一个缓冲，
 	# 不复制的话虚影播放的是"当前这轮正在录"的轨迹
-	echo.setup(trail.duplicate())
+	echo.setup_actions(trail.duplicate(), _origin, _velocity, _player, _motion)
 	# setup() 自带"未激活"状态：不显示、无碰撞、不推进、机关不认。
 	# 等玩家复活时 _on_player_respawned() 里的 reset() 才让它登场——
 	# 显示、碰撞、机关判定三件事共用同一个 _active，不会再出现

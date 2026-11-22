@@ -3,7 +3,7 @@ extends SceneTree
 const SCENES = {
  "moving_platform":"platform", "box":"box", "lever":"lever", "portal":"portal",
  "plate":"pressure_plate", "door":"door", "exit":"exit", "open_exit":"open_exit",
- "text":"room_text", "color_recorder":"color_recorder"
+ "echo_wall":"echo_wall", "text":"room_text", "color_recorder":"color_recorder"
 }
 func _initialize() -> void:
  var args := OS.get_cmdline_user_args()
@@ -51,6 +51,7 @@ func _initialize() -> void:
   room.add_child(node);node.owner=room
   node.position=pos
   if kind in ["moving_platform","box","portal"]: node.position+=size/2
+  if kind=="echo_wall":node.set("cells",Vector2i(ceili(o.w),ceili(o.h)))
   if kind=="box":node.set("box_size",size)
   for property in node.get_property_list():
    if property.name=="block_size":node.set("block_size",size)
