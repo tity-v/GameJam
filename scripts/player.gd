@@ -34,10 +34,9 @@ signal respawned
 @export_range(1.0, 3.0, 0.1) var air_curve_power: float = 1.0
 
 @export_group("跳跃")
-## 原 GRAVITY 1400。现在 1550：到顶约 0.39s，整段约 0.78s（下落再乘 1.1）。
-@export var gravity: float = 1550.0
-## 恢复同步前的起跳速度；配合 gravity=1550，长按跃起约 115px。
-@export var jump_velocity: float = -610.0
+## 起跳与重力一起提高，让上升更快；60Hz 下到顶约 0.33s，高度仍约 115px。
+@export var gravity: float = 2210.0
+@export var jump_velocity: float = -732.0
 ## 下落时的重力倍率：上升用 100%，下落用 110%，落地更干脆，顶点也会偏前。
 @export var fall_gravity_mult: float = 1.1
 ## 新增：上升途中松开跳跃键，上升速度乘以该系数。
