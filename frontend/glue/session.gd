@@ -63,7 +63,9 @@ func start(_entry: Node) -> void:
 	dialog.ok_button_text = tr_copy("confirm")
 	dialog.cancel_button_text = tr_copy("cancel")
 	dialog.dialog_close_on_escape = true
-	dialog.confirmed.connect(func(): request(dialog_command))
+	dialog.confirmed.connect(func():
+		get_node("/root/UiSounds").call("play_confirm")
+		request(dialog_command))
 	dialog.visibility_changed.connect(restore_dialog_focus)
 	add_child(dialog)
 	redraw()

@@ -3,8 +3,6 @@ extends "res://frontend/view/page.gd"
 const BACKGROUND = preload("res://frontend/assets/home_background.jpg")
 const FLASH_BACKGROUND = preload("res://frontend/assets/home_flash.jpg")
 const FONT = preload("res://frontend/assets/NotoSansSC-Medium.otf")
-const SELECT_SOUND = preload("res://assets/audio/ui_select.wav")
-const CONFIRM_SOUND = preload("res://assets/audio/ui_confirm.wav")
 const INK := Color("d9e0e3")
 const ACCENT := Color("a5c9c3")
 
@@ -19,18 +17,8 @@ var marker_tween: Tween
 var entry_tween: Tween
 var busy := false
 var selection_initialized := false
-var select_audio: AudioStreamPlayer
-var confirm_audio: AudioStreamPlayer
 
 func present(model: Dictionary) -> void:
-	select_audio = AudioStreamPlayer.new()
-	select_audio.stream = SELECT_SOUND
-	select_audio.volume_db = -14.0
-	add_child(select_audio)
-	confirm_audio = AudioStreamPlayer.new()
-	confirm_audio.stream = CONFIRM_SOUND
-	confirm_audio.volume_db = -11.0
-	add_child(confirm_audio)
 	$Center.hide()
 	$Scrim.hide()
 	canvas = Control.new()
@@ -135,7 +123,7 @@ func make_row(item: Dictionary) -> void:
 
 func select_row(selected: Button) -> void:
 	if selection_initialized and not busy:
-		select_audio.play()
+		get_node("/root/UiSounds").call("play_select")
 	selection_initialized = true
 	for button in rows:
 		if row_tweens.has(button):
@@ -156,7 +144,7 @@ func activate(item: Dictionary) -> void:
 	if busy:
 		return
 	busy = true
-	confirm_audio.play()
+	get_node("/root/UiSounds").call("play_confirm")
 	if entry_tween != null:
 		entry_tween.kill()
 	flash_image.modulate.a = 1.0

@@ -10,6 +10,17 @@ signal requested(command: String, value: Variant)
 @export var scrim: ColorRect
 @export var notice: Label
 var first_button: Control
+var _selection_started := false
+
+
+func play_ui_select() -> void:
+	if _selection_started:
+		get_node("/root/UiSounds").call("play_select")
+	_selection_started = true
+
+
+func play_ui_confirm() -> void:
+	get_node("/root/UiSounds").call("play_confirm")
 
 func present(model: Dictionary) -> void:
 	panel.custom_minimum_size.x = panel_width
@@ -48,7 +59,13 @@ func add_button(parent: Container, item: Dictionary) -> void:
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var command: String = item.command
 	var value: Variant = item.get("value")
-	button.pressed.connect(func(): requested.emit(command, value))
+	button.focus_entered.connect(play_ui_select)
+	button.mouse_entered.connect(func():
+		if not button.disabled:
+			button.grab_focus())
+	button.pressed.connect(func():
+		play_ui_confirm()
+		requested.emit(command, value))
 	parent.add_child(button)
 	if first_button == null and not button.disabled:
 		first_button = button
@@ -59,6 +76,7 @@ func add_settings(model: Dictionary) -> void:
 	content.add_child(volume_label)
 	var slider := HSlider.new()
 	slider.value = model.volume
+	slider.focus_entered.connect(play_ui_select)
 	slider.value_changed.connect(func(value: float): requested.emit("volume", value))
 	content.add_child(slider)
 	first_button = slider
@@ -74,5 +92,8 @@ func add_toggle(label: String, command: String, enabled: bool) -> void:
 	var toggle := CheckButton.new()
 	toggle.text = label
 	toggle.button_pressed = enabled
-	toggle.toggled.connect(func(value: bool): requested.emit(command, value))
+	toggle.focus_entered.connect(play_ui_select)
+	toggle.toggled.connect(func(value: bool):
+		play_ui_confirm()
+		requested.emit(command, value))
 	content.add_child(toggle)

@@ -35,16 +35,16 @@ func _ready() -> void:
 	_flash.position = Vector2(get_viewport_rect().size.x - 360, 68)
 	var icons := HBoxContainer.new()
 	icons.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	icons.offset_left = -190
-	icons.offset_top = 25
-	icons.offset_right = -28
-	icons.offset_bottom = 59
+	icons.offset_left = -220
+	icons.offset_top = 20
+	icons.offset_right = -20
+	icons.offset_bottom = 60
 	icons.add_theme_constant_override("separation", 7)
 	add_child(icons)
 	for index in _echo_max:
 		var icon := TextureRect.new()
 		icon.texture = ECHO_ICON
-		icon.custom_minimum_size = Vector2(25, 28)
+		icon.custom_minimum_size = Vector2(32, 36)
 		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -67,7 +67,7 @@ func _process(delta: float) -> void:
 
 func update_icons(total: int) -> void:
 	for index in _icons.size():
-		_icons[index].modulate = Color(0.57, 0.79, 0.76, 0.85) if index < total else Color(0.58, 0.65, 0.67, 0.22)
+		_icons[index].modulate = Color(0.67, 0.95, 0.90, 1.0) if index < total else Color(0.72, 0.83, 0.85, 0.43)
 
 
 ## 条上方居中闪一行提示（虚影重置 / 满员替换）
