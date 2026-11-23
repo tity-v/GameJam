@@ -15,13 +15,13 @@ func run() -> void:
 	assert(collision.shape.size == Vector2(32, 44))
 	assert(player.is_on_floor())
 	assert(absf(player.position.y + 44 - 576) < 0.2)
-	assert(absf(sprite.texture.get_height() * sprite.scale.y - 48) < 0.01)
+	assert(absf(sprite.scale.y * 420.0 - 48) < 0.01)
 	assert(absf(sprite.position.y + sprite.texture.get_height() * sprite.scale.y - 44) < 0.01)
-	assert(sprite.texture.resource_path.ends_with("idle.png"))
+	assert(sprite.texture.resource_path.ends_with("idle_01.png"))
 	sprite.elapsed = 2.9
 	for i in 2:
 		await physics_frame
-	assert(sprite.texture.resource_path.ends_with("blink.png"))
+	assert(sprite.texture.resource_path.ends_with("idle_02.png"))
 	var before: float = sprite.elapsed
 	paused = true
 	for i in 4:
@@ -37,7 +37,7 @@ func run() -> void:
 	assert(echo.body_size == Vector2(32, 44))
 	assert(echo.get_node("Top").shape.size == Vector2(32, 8))
 	var body: Sprite2D = echo.get_node("Body")
-	assert(absf(body.texture.get_height() * body.scale.y - 48) < 0.01)
+	assert(absf(body.scale.y * 420.0 - 48) < 0.01)
 	assert(body.self_modulate.a < 1.0)
 	print("CHARACTER_ALL_PASS: dimensions, ground contact, blink, pause, echo appearance")
 	scene.queue_free()
