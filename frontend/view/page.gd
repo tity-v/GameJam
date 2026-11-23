@@ -62,6 +62,13 @@ func add_settings(model: Dictionary) -> void:
 	slider.value_changed.connect(func(value: float): requested.emit("volume", value))
 	content.add_child(slider)
 	first_button = slider
+	var sfx_label := Label.new()
+	sfx_label.text = "音效音量"
+	content.add_child(sfx_label)
+	var sfx_slider := HSlider.new()
+	sfx_slider.value = model.sfx_volume
+	sfx_slider.value_changed.connect(func(value: float): requested.emit("sfx_volume", value))
+	content.add_child(sfx_slider)
 	add_toggle(model.mute_label, "mute", model.muted)
 	add_toggle(model.fullscreen_label, "fullscreen", model.fullscreen)
 	add_toggle("开局暂停", "start_paused", model.start_paused)

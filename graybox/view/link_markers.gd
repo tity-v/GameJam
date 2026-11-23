@@ -26,7 +26,8 @@ func _ready() -> void:
 				if not marks.has(endpoint):
 					marks[endpoint] = []
 				marks[endpoint].append(color)
-	z_index = RenderingServer.CANVAS_ITEM_Z_MAX
+	var blackout := get_parent().get_node_or_null("Blackout") as CanvasItem
+	z_index = blackout.z_index - 1 if blackout else RenderingServer.CANVAS_ITEM_Z_MAX
 
 func _process(_delta: float) -> void:
 	queue_redraw()

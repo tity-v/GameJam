@@ -44,7 +44,7 @@ func run() -> void:
 	expect(real.room_state(6) == "locked", "跨章也要前一章打完才解锁")
 	real.completed.append(str(real.levels[0].id))
 	expect(real.room_state(0) == "done" and real.room_state(1) == "ready", "打完解锁下一间")
-	expect(real.room_state(10) == "missing", "空路径显示待接入")
+	expect(real.room_state(15) == "missing", "空路径显示待接入")
 
 	var shell := Node.new()
 	root.add_child(shell)

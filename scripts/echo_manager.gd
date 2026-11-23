@@ -7,6 +7,7 @@ extends Node2D
 const ECHO_SCENE := preload("res://scenes/echo/echo.tscn")
 ## 上限：场上最多 5 条虚影。满了之后新死的一条顶掉最旧的一条（先进先出）。
 const MAX_ECHOES := 5
+@export_range(1, 5) var room_echo_limit := MAX_ECHOES
 ## 单条轨迹最长帧数（60fps 下 100 秒），防止一直不死把内存吃满。
 ## 做成导出而不是 const：测试要把它调小才能验证（`test_echo_recording_cap.gd`），
 ## 特殊关卡也可以按需调大。
@@ -64,7 +65,7 @@ func _record_input(axis: float, pressed: bool, released: bool) -> void:
 		_mid_origin = _player.global_position
 		_mid_velocity = _player.velocity
 		_mid_motion = _player.capture_motion()
-	_trail.append(Vector2(axis, int(pressed) | (int(released) << 1)))
+	_trail.append(Vector2(axis, int(pressed) | (int(released) << 1) | _player.ladder_flags))
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -76,6 +77,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	var level := get_tree().current_scene
 	if level != null and level.get("won") == true:
 		return
+	get_node("/root/GameSfx").play("reset_room")
 	reset_all()
 
 
@@ -141,6 +143,7 @@ func _on_player_respawned() -> void:
 
 
 func _add_echo(trail: PackedVector2Array) -> void:
+	get_node("/root/GameSfx").play("echo_created")
 	# 一出生就死（轨迹太短）不留虚影，没有意义
 	if trail.size() < 2:
 		return
@@ -149,7 +152,7 @@ func _add_echo(trail: PackedVector2Array) -> void:
 	# pop_front 拿到的就是最早；正在"死亡淡出"尚未消失的也算在内，
 	# 否则上限会随尸体滞留在场上而临时超员）。
 	var replaced := false
-	while _echoes.size() >= MAX_ECHOES:
+	while _echoes.size() >= room_echo_limit:
 		var oldest: Node2D = _echoes.pop_front()
 		if is_instance_valid(oldest):
 			oldest.queue_free()
@@ -168,7 +171,7 @@ func _add_echo(trail: PackedVector2Array) -> void:
 
 	# 满员替换要让玩家知道，否则会以为"新死的这次没留下虚影"
 	if replaced:
-		_flash_hud("虚影已满 %d 条，替换最早的一条" % MAX_ECHOES)
+		_flash_hud("虚影已满 %d 条，替换最早的一条" % room_echo_limit)
 
 
 ## 调试/后续关卡会用到
@@ -178,7 +181,7 @@ func echo_count() -> int:
 
 ## HUD 右端「回声 n / max」用
 func max_echoes() -> int:
-	return MAX_ECHOES
+	return room_echo_limit
 
 
 func echo_positions() -> Array:

@@ -24,7 +24,7 @@ var flow := Flow.new()
 var store := Store.new()
 var catalog = DEFAULT_CATALOG
 var copy: Dictionary = {}
-var settings := {"volume": 100.0, "muted": false, "fullscreen": false, "start_paused": false}
+var settings := {"volume": 100.0, "sfx_volume": 100.0, "muted": false, "fullscreen": false, "start_paused": false}
 var notice := ""
 var view: Control
 var dialog: ConfirmationDialog
@@ -177,7 +177,7 @@ func handle(command: String, value: Variant) -> void:
 					leave("home")
 			else:
 				show_notice("save_failed")
-		"volume", "mute", "fullscreen", "start_paused":
+		"volume", "sfx_volume", "mute", "fullscreen", "start_paused":
 			var key := "muted" if command == "mute" else command
 			settings[key] = value
 			apply_settings()
@@ -212,11 +212,16 @@ func confirm(message: String, command: String) -> void:
 	dialog_command = command
 	dialog_focus = get_viewport().gui_get_focus_owner()
 	dialog.dialog_text = tr_copy(message)
+	if is_instance_valid(view):
+		view.process_mode = Node.PROCESS_MODE_DISABLED
 	dialog.popup_centered()
 
 func restore_dialog_focus() -> void:
-	if not dialog.visible and is_instance_valid(dialog_focus):
-		dialog_focus.grab_focus.call_deferred()
+	if not dialog.visible:
+		if is_instance_valid(view):
+			view.process_mode = Node.PROCESS_MODE_INHERIT
+		if is_instance_valid(dialog_focus):
+			dialog_focus.grab_focus.call_deferred()
 
 ## `auto_advance` 只有「刚打完一间、顺序进下一间」这一条路会传 true。
 ## 其余入口（选关、重试、章节跳转、继续游戏）一律切黑——它们没有「空间连续」可言，
@@ -354,6 +359,11 @@ func lock_player(seconds: float) -> void:
 		player.call("lock_input", seconds)
 
 func exit_direction(room: Node) -> Vector2:
+	if room != null:
+		var configured := str(room.get_meta("web_exit_direction",""))
+		var vectors := {"left":Vector2.LEFT,"right":Vector2.RIGHT,"up":Vector2.UP,"down":Vector2.DOWN}
+		if vectors.has(configured):
+			return vectors[configured]
 	if room == null:
 		return Vector2.RIGHT
 	var player := get_tree().get_first_node_in_group("player") as Node2D
@@ -504,17 +514,19 @@ func read_settings() -> void:
 	var record := store.read_record("settings")
 	var data: Dictionary = record.data
 	var volume: Variant = data.get("volume", 100.0)
+	var sfx_volume: Variant = data.get("sfx_volume",100.0)
 	var muted: Variant = data.get("muted", false)
 	var fullscreen: Variant = data.get("fullscreen", false)
 	var start_paused: Variant = data.get("start_paused", false)
-	if record.ok and (volume is float or volume is int) and is_finite(float(volume)) and muted is bool and fullscreen is bool and start_paused is bool:
-		settings = {"volume": clampf(volume, 0, 100), "muted": muted, "fullscreen": fullscreen, "start_paused": start_paused}
+	if record.ok and (sfx_volume is float or sfx_volume is int) and is_finite(float(sfx_volume)) and (volume is float or volume is int) and is_finite(float(volume)) and muted is bool and fullscreen is bool and start_paused is bool:
+		settings = {"sfx_volume": clampf(sfx_volume,0,100), "volume": clampf(volume, 0, 100), "muted": muted, "fullscreen": fullscreen, "start_paused": start_paused}
 	else:
 		store.preserve_invalid("settings")
 		notice = tr_copy("read_failed")
 	apply_settings()
 
 func apply_settings() -> void:
+	get_node("/root/GameSfx").set_level(settings.sfx_volume)
 	var master := AudioServer.get_bus_index(&"Master")
 	if master >= 0:
 		AudioServer.set_bus_volume_linear(master, float(settings.volume) / 100.0)

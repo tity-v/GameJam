@@ -15,7 +15,7 @@ extends SceneTree
 ##   4. 虚影重放同一段能穿过去，且不会把杆误拨回去
 ##   5. R 复位后重新变成实体
 
-const ROOM := "res://scenes/levels/chapter_01_room_03.tscn"
+const ROOM := "res://_reference/tools/fixtures/lever_pass_room.tscn"
 const ECHO := preload("res://scenes/echo/echo.tscn")
 ## room_03 的杆在 (992,573)，地形顶 576；玩家 32×44，脚底贴地时 origin y = 532
 const LEVER_X := 992.0

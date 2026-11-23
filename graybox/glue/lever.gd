@@ -57,6 +57,7 @@ func _physics_process(dt: float) -> void:
 		travel = 0
 	if travel >= CFG.lever_travel:
 		active = not active
+		get_node("/root/GameSfx").play("lever")
 		latched = true
 		$Collision.set_deferred("disabled",true)
 		travel = 0

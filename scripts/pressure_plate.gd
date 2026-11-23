@@ -14,6 +14,7 @@ func _ready() -> void:
 	# 编辑器里不登记：@tool 脚本的 _ready 在编辑器也会跑，避免把组写进场景。
 	if not Engine.is_editor_hint():
 		add_to_group("mechanism")
+		activation_changed.connect(func(_on): get_node("/root/GameSfx").play("plate_%d" % randi_range(1,4)))
 
 func _physics_process(_delta: float) -> void:
 	if Engine.is_editor_hint():

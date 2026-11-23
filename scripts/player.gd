@@ -151,19 +151,28 @@ func _physics_process(delta: float) -> void:
 	var axis := Input.get_axis("move_left", "move_right") if not input_locked else 0.0
 	var pressed := not input_locked and Input.is_action_just_pressed("jump")
 	var released := not input_locked and Input.is_action_just_released("jump")
+	ladder_flags = 0
+	if not input_locked:
+		ladder_flags = int(Input.is_action_pressed("ui_up"))*4 + int(Input.is_action_pressed("ui_down"))*8
+		if Input.is_action_just_pressed("ui_up") or Input.is_action_just_pressed("ui_down"): ladder_flags |= 16
 	movement_input.emit(axis, pressed, released)
-	move_with_input(delta, axis, pressed, released)
+	move_with_input(delta, axis, pressed, released, ladder_flags)
 
 	# 掉出地图也算死亡（原版同样处理，第一关地面铺满所以一般触发不到）
 	if global_position.y > kill_y:
 		die()
 
 
-func move_with_input(delta: float, axis: float, jump_pressed: bool, jump_released: bool) -> void:
+var fall_apex := INF
+
+func move_with_input(delta: float, axis: float, jump_pressed: bool, jump_released: bool, climb_flags := 0) -> void:
+	if climb_step(delta,axis,climb_flags): return
 	# 先补上脚下虚影本帧的位移，否则站在移动的虚影头上会被"抽走"地面
 	_carry()
 
 	var on_ground := is_on_floor()
+	if on_ground: fall_apex = global_position.y
+	fall_apex = minf(fall_apex,global_position.y)
 	var target := axis * max_speed
 	var rate := accel if on_ground else air_accel
 	var power := curve_power if on_ground else air_curve_power
@@ -194,6 +203,7 @@ func move_with_input(delta: float, axis: float, jump_pressed: bool, jump_release
 
 	if _buffer > 0.0 and _coyote > 0.0:
 		velocity.y = jump_velocity
+		if is_in_group("player"): get_node("/root/GameSfx").play("jump")
 		_buffer = 0.0
 		_coyote = 0.0
 
@@ -203,13 +213,60 @@ func move_with_input(delta: float, axis: float, jump_pressed: bool, jump_release
 
 	velocity.y = minf(velocity.y + _gravity_now() * delta, max_fall_speed)
 	move_and_slide()
+	if not on_ground and is_on_floor() and is_in_group("player"):
+		var drop := global_position.y - fall_apex
+		if drop > 1.0:
+			get_node("/root/GameSfx").play("land_high" if drop >= 256.0 else "land")
 	_refresh_support()
 
 
 ## 录制起点的短时运动状态。
+var ladder_flags := 0
+var climbing := false
+@export var climb_speed := 112.0
+
+func climb_step(dt: float, axis: float, flags: int) -> bool:
+	if not climbing and not (flags & 16): return false
+	var map := get_tree().get_first_node_in_group("night_ladders") as TileMapLayer
+	if map == null:
+		climbing = false
+		return false
+	var feet := global_position + Vector2(16,44)
+	var cell := map.local_to_map(map.to_local(feet-Vector2(0,2)))
+	var down := bool(flags & 8)
+	if map.get_cell_source_id(cell)<0 and (down or climbing): cell.y += 1
+	if map.get_cell_source_id(cell)<0:
+		climbing = false
+		return false
+	var center := map.to_global(map.map_to_local(cell))
+	if absf(center.x-feet.x)>16:
+		climbing = false
+		return false
+	var dir := int(down)-int(bool(flags & 4))
+	if axis != 0 and climbing:
+		var side := map.local_to_map(map.to_local(feet+Vector2(0,9)))+Vector2i(int(signf(axis)),0)
+		var world := map.get_parent().get_node("World") as TileMapLayer
+		var edge := world.to_global(world.map_to_local(side)).y-16
+		if world.get_cell_source_id(side)>=0 and absf(feet.y-edge)<10:
+			move_and_collide(Vector2(0,edge-feet.y))
+			move_and_collide(Vector2(signf(axis)*32,0))
+			climbing = false
+			return true
+	climbing = true
+	_buffer = 0
+	_coyote = 0
+	_support = null
+	move_and_collide(Vector2(center.x-feet.x,0))
+	velocity = Vector2(0,dir*climb_speed)
+	if dir<0 and map.get_cell_source_id(cell+Vector2i.UP)<0:
+		velocity.y = maxf(velocity.y,(center.y-16-feet.y)/dt)
+	move_and_slide()
+	if down and is_on_floor(): climbing=false
+	return true
+
 func capture_motion() -> PackedFloat32Array:
 	return PackedFloat32Array([coyote_time if is_on_floor() else _coyote, _buffer, _ramp_from, _ramp_to,
-		_ramp_rate, _ramp_power, _ramp_dur, _ramp_time, float(_ramp_on)])
+		_ramp_rate, _ramp_power, _ramp_dur, _ramp_time, float(_ramp_on), float(climbing)])
 
 func _gravity_now() -> float:
 	return gravity * (fall_gravity_mult if velocity.y > 0.0 else 1.0)
@@ -323,6 +380,8 @@ func reset_to_spawn() -> void:
 
 ## respawn() 与 reset_to_spawn() 共用的落点逻辑：位置、速度、各种计时器、贴图状态、相机。
 func _place_at_spawn() -> void:
+	climbing = false
+	fall_apex = INF
 	is_dead = false
 	_death_time = 0.0
 	velocity = Vector2.ZERO

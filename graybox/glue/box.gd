@@ -9,6 +9,7 @@ const CFG = preload("res://graybox/db/mechanisms.tres")
 		if is_node_ready(): resize()
 var initial := Transform2D.IDENTITY
 var resetting := false
+var falling_speed := 0.0
 var push_action := 0.0
 func resize() -> void:
 	$Collision.shape.size = box_size
@@ -60,6 +61,13 @@ func _integrate_forces(state: PhysicsDirectBodyState2D) -> void:
 			if gap >= -1 and gap <= 2 and axis != 0:
 				push_dir = axis
 				break
+	if push_dir != 0 and push_action != push_dir:
+		get_node("/root/GameSfx").play("crate_push")
+	for i in state.get_contact_count():
+		if falling_speed > 65 and absf(state.get_contact_local_normal(i).y)>0.5:
+			get_node("/root/GameSfx").play("crate_land_%d" % randi_range(1,2))
+			break
+	falling_speed = state.linear_velocity.y
 	push_action = push_dir
 	if pushed_by_player:
 		state.linear_velocity.x = push_dir * CFG.push_speed

@@ -3,6 +3,8 @@
 [ext_resource type="Texture2D" uid="uid://c6yivnabmkrty" path="res://assets/tiles/placeholder_32.png" id="1_atlas"]
 [ext_resource type="PackedScene" path="res://graybox/checkpoint.tscn" id="checkpoint"]
 [ext_resource type="PackedScene" path="res://graybox/echo_wall_cell.tscn" id="echo_wall"]
+[ext_resource type="PackedScene" path="res://graybox/tiles/lever.tscn" id="part_lever"]
+[ext_resource type="PackedScene" path="res://graybox/tiles/respawn_point.tscn" id="part_respawn_point"]
 [ext_resource type="PackedScene" path="res://graybox/spike_cell.tscn" id="spike"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_grid"]
@@ -46,6 +48,8 @@ resource_name = "方块组件"
 scenes/1/scene = ExtResource("spike")
 scenes/2/scene = ExtResource("checkpoint")
 scenes/3/scene = ExtResource("echo_wall")
+scenes/14/scene = ExtResource("part_lever")
+scenes/17/scene = ExtResource("part_respawn_point")
 
 [sub_resource type="TileSetAtlasSource" id="Background"]
 resource_name = "背景板"

@@ -27,6 +27,7 @@ func complete() -> void:
 	if won or resetting:
 		return
 	won = true
+	get_node("/root/GameSfx").play("complete")
 	$Player.set_physics_process(false)
 	$EchoManager.set_physics_process(false)
 	$UI/Win.visible = true

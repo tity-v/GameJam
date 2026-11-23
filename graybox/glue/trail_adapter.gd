@@ -16,6 +16,7 @@ func activate_checkpoint(point: Area2D, actor: Node2D) -> bool:
 		_room_spawn = _player.respawn_position
 	_checkpoint = point
 	point.set_lit(true)
+	get_node("/root/GameSfx").play("checkpoint")
 	# 使用接触旗帜时的实际站位，保留这段轨迹与后续机关的空间对齐。
 	_player.respawn_position = actor.global_position
 	pin_start = true

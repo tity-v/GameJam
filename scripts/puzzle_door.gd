@@ -29,6 +29,7 @@ func _physics_process(_delta: float) -> void:
 	if not satisfied and _player_in_doorway():
 		return
 	opened = satisfied
+	get_node("/root/GameSfx").play("door_open" if opened else "door_close")
 	$Collision.set_deferred("disabled", opened)
 	$Patch.texture = load("res://assets/mechanisms/door_open.png" if opened else "res://assets/mechanisms/door_closed.png")
 
