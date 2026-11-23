@@ -9,6 +9,8 @@ var recent := ""
 var current := -1
 var page := "home"
 var settings_parent := "home"
+## 关卡选择页当前打开的是哪一章（0 起）。
+var chapter := 0
 
 func setup(entries: Array[Dictionary]) -> bool:
 	var ids := {}
@@ -51,6 +53,39 @@ func chapter_card(chapter: int) -> Dictionary:
 		elif entry < 0 and playable(index):
 			entry = index
 	return {"entry": entry if entry >= 0 else replay, "count": count}
+
+## 一章的房间下标。章号越界时返回空数组，界面据此显示空章而不是崩。
+func chapter_rooms(chapter: int) -> Array[int]:
+	var rooms: Array[int] = []
+	for index in range(chapter * ROOMS_PER_CHAPTER, mini((chapter + 1) * ROOMS_PER_CHAPTER, levels.size())):
+		rooms.append(index)
+	return rooms
+
+func chapter_count() -> int:
+	@warning_ignore("integer_division")
+	return (levels.size() + ROOMS_PER_CHAPTER - 1) / ROOMS_PER_CHAPTER
+
+## 关卡选择页每格的状态，取值与 `copy.tres` 的键同名：done / ready / locked / missing。
+func room_state(index: int) -> String:
+	if not available(index):
+		return "missing"
+	if completed.has(str(levels[index].id)):
+		return "done"
+	return "ready" if unlocked(index) else "locked"
+
+## 关卡选择页的短名：目录标题去掉「第 N 章 · 」；「房间 3/5」这类占位名收敛成「房间 3」。
+## 第二章的标题自带场名（「错过 · 过站」），保留下来比「房间 2」好认。
+func room_label(index: int) -> String:
+	if not exists_at(index):
+		return ""
+	var slot := index % ROOMS_PER_CHAPTER + 1
+	var title := str(levels[index].get("title", ""))
+	var prefix := "第 %d 章 · " % (chapter_of(index) + 1)
+	if title.begins_with(prefix):
+		title = title.substr(prefix.length())
+	if title.is_empty() or (title.begins_with("房间 ") and title.ends_with("/%d" % ROOMS_PER_CHAPTER)):
+		title = "房间 %d" % slot
+	return title
 
 func continue_index() -> int:
 	for index in levels.size():

@@ -13,6 +13,7 @@ const CUT_MASK := Color(0.043, 0.055, 0.078, 1.0)
 const PAGES := {
 	"home": preload("res://frontend/view/home.tscn"),
 	"levels": preload("res://frontend/view/levels.tscn"),
+	"chapter": preload("res://frontend/view/chapter.tscn"),
 	"pause": preload("res://frontend/view/pause.tscn"),
 	"settings": preload("res://frontend/view/settings.tscn"),
 	"result": preload("res://frontend/view/result.tscn"),
@@ -81,7 +82,7 @@ func _input(event: InputEvent) -> void:
 		return
 	if switching or dialog == null or dialog.visible or not event.is_action_pressed(catalog.pause_action):
 		return
-	if flow.page in ["game", "pause", "levels", "settings", "result", "finished"]:
+	if flow.page in ["game", "pause", "levels", "chapter", "settings", "result", "finished"]:
 		get_viewport().set_input_as_handled()
 		request("escape")
 
@@ -127,6 +128,7 @@ func handle(command: String, value: Variant) -> void:
 				"game": set_page("pause")
 				"pause": set_page("game")
 				"settings": set_page(flow.settings_parent)
+				"chapter": set_page("levels")
 				"levels": set_page("home")
 				"result", "finished": leave("levels")
 		"new_game":
@@ -138,6 +140,7 @@ func handle(command: String, value: Variant) -> void:
 				launch(0)
 		"start_confirmed": launch(0, true)
 		"continue_game": launch(flow.continue_index())
+		"chapter": open_chapter(int(value))
 		"choose": launch(int(value))
 		"next": launch(flow.current + 1)
 		"retry": launch(flow.current)
@@ -146,7 +149,15 @@ func handle(command: String, value: Variant) -> void:
 			flow.settings_parent = flow.page
 			set_page("settings")
 		"go_back":
-			set_page(flow.settings_parent if flow.page == "settings" else "home")
+			if flow.page == "settings":
+				set_page(flow.settings_parent)
+			elif flow.page == "chapter":
+				set_page("levels")
+			else:
+				set_page("home")
+		# 暂停页的「选择关卡」直接落到当前这一章，不用先回章节目录再点一次。
+		"pause_chapter":
+			confirm("leave_prompt", "leave_chapter")
 		"levels", "home":
 			if flow.page == "pause":
 				confirm("leave_prompt", "leave_" + command)
@@ -154,6 +165,9 @@ func handle(command: String, value: Variant) -> void:
 				leave(command)
 		"leave_levels": leave("levels")
 		"leave_home": leave("home")
+		"leave_chapter":
+			flow.chapter = flow.chapter_of(maxi(flow.current, 0))
+			leave("chapter")
 		"clear":
 			confirm("clear_prompt", "clear_confirmed")
 		"clear_confirmed":
@@ -175,6 +189,16 @@ func set_page(page: String) -> void:
 	flow.page = page
 	apply_pause(page == "pause" or (page == "settings" and flow.settings_parent == "pause"))
 	redraw()
+
+## 章节目录 → 该章的关卡列表。判据与目录卡片一致：没有可进入的房间就进不去，
+## 否则一张 disabled 的卡片背后还藏着一条能走通的路（旧界面、脚本、手滑）。
+func open_chapter(index: int) -> void:
+	if index < 0 or index >= flow.chapter_count():
+		return
+	if int(flow.chapter_card(index).entry) < 0:
+		return
+	flow.chapter = index
+	set_page("chapter")
 
 func apply_pause(enabled: bool) -> void:
 	if enabled and not get_tree().paused:
@@ -425,17 +449,33 @@ func page_model() -> Dictionary:
 			for first in range(0, flow.levels.size(), flow.ROOMS_PER_CHAPTER):
 				var chapter := flow.chapter_of(first)
 				var data := flow.chapter_card(chapter)
-				var card := button("", "choose", data.entry < 0, data.entry)
+				var card := button("", "chapter", data.entry < 0, chapter)
 				var status := tr_copy("chapter_progress") % [data.count, flow.ROOMS_PER_CHAPTER]
 				if card.disabled:
 					status += " · " + tr_copy("locked" if flow.available(first) else "missing")
 				card.text = "%s\n%s" % [tr_copy("chapter") % (chapter + 1), status]
 				model.cards.append(card)
 			footer.append(button("back", "go_back"))
+		"chapter":
+			var opened := flow.chapter_rooms(flow.chapter)
+			var cleared := 0
+			for index in opened:
+				if flow.room_state(index) == "done":
+					cleared += 1
+			model.title = tr_copy("chapter") % (flow.chapter + 1)
+			model.detail = tr_copy("chapter_progress") % [cleared, flow.ROOMS_PER_CHAPTER]
+			model.columns = 1
+			model.cards = []
+			for index in opened:
+				var state := flow.room_state(index)
+				var card := button("", "choose", state == "locked" or state == "missing", index)
+				card.text = "%s\n%s" % [flow.room_label(index), tr_copy(state)]
+				model.cards.append(card)
+			footer.append(button("back", "go_back"))
 		"pause":
 			model.overlay = true
 			model.detail = flow.levels[flow.current].title
-			buttons.append_array([button("resume", "resume"), button("retry", "retry"), button("settings", "open_settings"), button("level_list", "levels"), button("menu", "home")])
+			buttons.append_array([button("resume", "resume"), button("retry", "retry"), button("settings", "open_settings"), button("level_select", "pause_chapter"), button("menu", "home")])
 		"settings":
 			model.overlay = flow.settings_parent == "pause"
 			model.settings = settings.merged({"volume_label": tr_copy("volume"), "mute_label": tr_copy("mute"), "fullscreen_label": tr_copy("fullscreen"), "keys": tr_copy("controls") + "\n" + tr_copy("keys")})
@@ -452,7 +492,7 @@ func page_model() -> Dictionary:
 				model.detail = tr_copy("completed_level") % flow.levels[flow.current].title
 			buttons.append(button(next_label if flow.playable(flow.current + 1) else "missing", "next", not flow.playable(flow.current + 1)))
 			buttons.append(button("retry", "retry"))
-			footer.append_array([button("level_list", "levels"), button("menu", "home")])
+			footer.append_array([button("level_select", "leave_chapter"), button("menu", "home")])
 		"finished":
 			model.detail = tr_copy("finished_detail")
 			buttons.append(button("retry", "retry"))

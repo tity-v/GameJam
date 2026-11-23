@@ -26,6 +26,7 @@ strings = {
   "back": "返回",
   "menu": "主菜单",
   "level_list": "选择章节",
+  "level_select": "选择关卡",
   "volume": "主音量",
   "mute": "静音",
   "fullscreen": "全屏",

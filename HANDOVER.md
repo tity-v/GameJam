@@ -26,7 +26,7 @@
 | 引擎 | **Godot 4.7.2**（`config/features` 写死 4.7，低版本打开会提示） |
 | 渲染 | `gl_compatibility`（兼容模式，老显卡/笔记本也能跑） |
 | 视口 | 1280 × 704（= 40 × 22 个 32px 瓦片），`canvas_items` 拉伸 |
-| 主场景 | `res://frontend/entry.tscn`（主菜单 → 选章 → 关卡）；单房间调试打开房间按 **F6** |
+| 主场景 | `res://frontend/entry.tscn`（主菜单 → 选章 → 章内选关 → 关卡）；单房间调试打开房间按 **F6** |
 | 代码规模 | `scripts/` 17 个脚本约 1333 行，另有 `frontend/`（10 个）与 `graybox/`（6 个）；24 个回归测试 + 前端 2 套 + 灰盒 2 套 |
 
 打开方式：Godot 项目管理器 → 导入 → 选仓库根目录（`project.godot` 在根）。
@@ -70,12 +70,14 @@
 | **尖刺伤害判定** | 完成（**只杀玩家**，虚影无感；尖刺块本身无碰撞体） | `scripts/spike_hazard.gd` |
 | **虚影对环境有体积**（压力板认、墙和关着的门挡得住、尖刺不杀、出口不认） | 完成 | `scripts/actor_bounds.gd`、`echo.gd` 的 `_clip_motion()`；断言见 `test_echo_environment.gd` |
 | **虚影的位移扫描与玩家同源**（单向台面能从下往上穿、实心墙/关着的门照样挡） | 完成 | `echo.gd` 的 `_cast_motion()`：隐形 `CharacterBody2D` + `move_and_collide(test_only)`；断言见 `test_echo_oneway.gd` |
+| **拉杆拨过就不再挡人**（是开关不是门，玩家和虚影都能穿过） | 完成 | `lever.gd` 拨动后碰撞体保持禁用，只有 `reset_mechanism()` 才恢复；断言见 `test_lever_pass.gd` |
 | **虚影判定体积与贴图解耦**（`body_size`，换皮不改谜题） | 完成 | `echo.gd` 的 `body_rect()` / `fit_visuals()`；断言见 `test_echo_contract.gd` |
 | **虚影单一激活状态**（回放 / 碰撞 / 机关同源，不会“看不见却挡人”） | 完成 | `echo.gd` 的 `_active`、`setup()` / `reset()`；断言见 `test_echo_contract.gd` |
 | **房间整体重置（通关面板 Replay → 重载场景）** | 完成 | `scripts/room_controller.gd` |
 | **关卡网格**：整屏 40×22 格 × 32px、空瓦片铺满整张地图、机关全部贴格线 | 完成 | `assets/tiles/`、`_reference/tools/room_grid.py`；断言见 `test_grid_room.gd`，说明见 §3.7 |
+| **楼内布景**：天花板梁 + 墙面色带 + 立管 + 接地阴影 + 踢脚 + 前景立柱，纯画面不参与碰撞 | 完成 | `scenes/levels/old_building/dressing.gd`（挂在 `old_building/base.tscn` 的 `Dressing` z=-3 与 `Foreground` z=1），窗/通风口/地面轮廓自动从兄弟节点推导 |
 | **灰盒搭建套件**（同学交付）：模板场景、机关零件、编辑器预览、独立验收 | 完成 | `graybox/README.md`；验收 `graybox/tests/test_graybox_kit.gd` |
-| **游戏前端**（同学交付）：主菜单 / 选关 / 暂停 / 设置 / 结算 / 全通 / 存档，20 关目录、章内换房 | 完成 | `frontend/README.md`；验收 `frontend/tests/test_frontend.gd` |
+| **游戏前端**（同学交付）：主菜单 / 选章 / **章内选关** / 暂停 / 设置 / 结算 / 全通 / 存档，20 关目录、章内换房 | 完成 | `frontend/README.md`；验收 `frontend/tests/test_frontend.gd` |
 | **第一章五间**（同学交付）：块拼房间，各自一套压板/门/出口 谜题 | 完成 | `scenes/levels/chapter_01_room_0*.tscn` |
 | **人物两帧待机动画**（眨眼），外观与判定解耦 | 完成 | `scripts/character_portrait.gd`；说明 `docs/人物动画与尺寸调整.md`，断言 `test_character_portrait.gd` |
 | 角色脚下/身体边缘判定 | 完成 | `scripts/actor_bounds.gd`（供压力板/出口/尖刺共用） |
@@ -541,6 +543,7 @@ if not satisfied and _player_in_doorway():
 | 门关在玩家身上，人横向完全推不动 | 门是「松开任一板就关」，如果关的瞬间玩家在门洞里，`CharacterBody2D` 被 `StaticBody2D` 包住就出不来（实测 x 不变、y 抖动） | `puzzle_door._player_in_doorway()` 会等门口空出来再关（§4.8）；**别把这个守卫删掉**，断言 `test_door_safety.gd` |
 | 虚影被门挡住，没走到压力板上 | **不是 bug**：虚影每帧做位移扫描，撞上就停在接触点，而帧号继续走。录的时候门开着、重放时门关着就会这样 | 关卡设计上避免「关键路线依赖一扇之后会关的门」；要放开就查 `echo.gd` 的 `_clip_motion`（README §6.1） |
 | 玩家踩着虚影能跳上单向台面，**虚影重放同一段轨迹却卡在台面底下**（头顶死贴台面底面，之后一动不动） | 原来用 `direct_space_state.cast_motion()`，它是纯形状查询，**不认 `one_way`**，把单向台面当成实心天花板；玩家走的是 `body_test_motion`，认 | 扫描改走隐形 `CharacterBody2D` 的 `move_and_collide(test_only)`，和玩家同一条底层路径（`echo.gd` 的 `_cast_motion`）；断言 `test_echo_oneway.gd`（穿得上去 + 落得下 + 门还挡得住，三条一起守） |
+| **主角能过拉杆、虚影过不了**：玩家拨杆穿过去没事，虚影重放同一段却卡在杆前面一动不动（实测停在杆右侧 997） | 玩家拨杆后碰撞体禁用，他趁这几帧穿过去；走远后 `touching` 变 false，杆又恢复实体。玩家已经过去了看不见，虚影是**之后**才重放的，正好撞上恢复后的杆。而且杆已 `active`，side 翻转，虚影连推都推不动 | 拨过就保持禁用，只有 R 复位才恢复（`lever.gd` 文件头注释）；断言 `test_lever_pass.gd`（未拨时是实体 / 拨过不挡人 / 复位后恢复） |
 | 按 `R` 之后门又关上了，以为「开门白解了」 | **设计如此**：R 是「回到本关初始状态」，虚影与机关一起复位 | 想保留开门进度就别按 R；整关重来（含节点重建）仍是通关面板的 Replay |
 | 按 `R` 之后门看着关了，人却能穿过去 | `puzzle_door.reset_mechanism()` 里只开了碰撞、没先把 `opened` 置 false，下一帧 `_physics_process` 判「状态没变」直接 return | 顺序必须是 `opened = false` → `$Collision.set_deferred("disabled", false)`；断言见 `test_complete_room` |
 | 新加的机关按 `R` 不复位，其它机关正常 | 忘了登记 `mechanism` 组，或没写 `reset_mechanism()` | 照 §3.2「新增机关的接入契约」两条做 |
@@ -677,8 +680,8 @@ done
 
 ### 9.2 哪些进仓库，哪些不进
 
-一共 294 个文件会入库：`scripts/` 34（17 个 `.gd` + 17 个 `.uid`）、`assets/` 49、
-`scenes/` 24、`docs/` 17、`_reference/` 74、`graybox/` 56、`frontend/` 30、`addons/` 5、根目录 5。
+一共 396 个文件会入库：`scripts/` 40、`assets/` 74、`scenes/` 57、`docs/` 17、
+`_reference/` 74、`graybox/` 77、`frontend/` 47、`addons/` 5、根目录 5。
 （数字会随开发变，以 `git ls-files | wc -l` 为准；结构稳定的是「哪些该进、哪些不该进」。）
 
 | 内容 | 进仓库 | 说明 |
