@@ -26,7 +26,7 @@
 | 引擎 | **Godot 4.7.2**（`config/features` 写死 4.7，低版本打开会提示） |
 | 渲染 | `gl_compatibility`（兼容模式，老显卡/笔记本也能跑） |
 | 视口 | 1280 × 704（= 40 × 22 个 32px 瓦片），`canvas_items` 拉伸 |
-| 主场景 | `res://frontend/entry.tscn`（主菜单 → 选章 → 关卡）；单房间调试打开房间按 **F6** |
+| 主场景 | `res://frontend/entry.tscn`（主菜单 → 选章 → 章内选关 → 关卡）；单房间调试打开房间按 **F6** |
 | 代码规模 | `scripts/` 17 个脚本约 1333 行，另有 `frontend/`（10 个）与 `graybox/`（6 个）；24 个回归测试 + 前端 2 套 + 灰盒 2 套 |
 
 打开方式：Godot 项目管理器 → 导入 → 选仓库根目录（`project.godot` 在根）。
@@ -76,7 +76,7 @@
 | **房间整体重置（通关面板 Replay → 重载场景）** | 完成 | `scripts/room_controller.gd` |
 | **关卡网格**：整屏 40×22 格 × 32px、空瓦片铺满整张地图、机关全部贴格线 | 完成 | `assets/tiles/`、`_reference/tools/room_grid.py`；断言见 `test_grid_room.gd`，说明见 §3.7 |
 | **灰盒搭建套件**（同学交付）：模板场景、机关零件、编辑器预览、独立验收 | 完成 | `graybox/README.md`；验收 `graybox/tests/test_graybox_kit.gd` |
-| **游戏前端**（同学交付）：主菜单 / 选关 / 暂停 / 设置 / 结算 / 全通 / 存档，20 关目录、章内换房 | 完成 | `frontend/README.md`；验收 `frontend/tests/test_frontend.gd` |
+| **游戏前端**（同学交付）：主菜单 / 选章 / **章内选关** / 暂停 / 设置 / 结算 / 全通 / 存档，20 关目录、章内换房 | 完成 | `frontend/README.md`；验收 `frontend/tests/test_frontend.gd` |
 | **第一章五间**（同学交付）：块拼房间，各自一套压板/门/出口 谜题 | 完成 | `scenes/levels/chapter_01_room_0*.tscn` |
 | **人物两帧待机动画**（眨眼），外观与判定解耦 | 完成 | `scripts/character_portrait.gd`；说明 `docs/人物动画与尺寸调整.md`，断言 `test_character_portrait.gd` |
 | 角色脚下/身体边缘判定 | 完成 | `scripts/actor_bounds.gd`（供压力板/出口/尖刺共用） |
