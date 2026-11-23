@@ -3,6 +3,7 @@
 [ext_resource type="PackedScene" path="res://graybox/base_level.tscn" id="base"]
 [ext_resource type="Script" path="res://scenes/levels/old_building/interior.gd" id="interior"]
 [ext_resource type="Script" path="res://scenes/levels/old_building/dressing.gd" id="dressing"]
+[ext_resource type="Script" path="res://scenes/levels/old_building/catwalk.gd" id="catwalk"]
 [ext_resource type="Shader" path="res://scenes/levels/building_tiles/concrete.gdshader" id="concrete"]
 
 [ext_resource type="TileSet" path="res://scenes/levels/building_tiles/world_tiles.tres" id="world_tiles"]
@@ -45,3 +46,7 @@ script = ExtResource("dressing")
 z_index = 1
 script = ExtResource("dressing")
 part = 1
+
+[node name="Catwalk" type="Node2D" parent="."]
+z_index = -1
+script = ExtResource("catwalk")
