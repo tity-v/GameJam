@@ -75,6 +75,7 @@
 | **虚影单一激活状态**（回放 / 碰撞 / 机关同源，不会“看不见却挡人”） | 完成 | `echo.gd` 的 `_active`、`setup()` / `reset()`；断言见 `test_echo_contract.gd` |
 | **房间整体重置（通关面板 Replay → 重载场景）** | 完成 | `scripts/room_controller.gd` |
 | **关卡网格**：整屏 40×22 格 × 32px、空瓦片铺满整张地图、机关全部贴格线 | 完成 | `assets/tiles/`、`_reference/tools/room_grid.py`；断言见 `test_grid_room.gd`，说明见 §3.7 |
+| **楼内布景**：天花板梁 + 墙面色带 + 立管 + 接地阴影 + 踢脚 + 前景立柱，纯画面不参与碰撞 | 完成 | `scenes/levels/old_building/dressing.gd`（挂在 `old_building/base.tscn` 的 `Dressing` z=-3 与 `Foreground` z=1），窗/通风口/地面轮廓自动从兄弟节点推导 |
 | **灰盒搭建套件**（同学交付）：模板场景、机关零件、编辑器预览、独立验收 | 完成 | `graybox/README.md`；验收 `graybox/tests/test_graybox_kit.gd` |
 | **游戏前端**（同学交付）：主菜单 / 选章 / **章内选关** / 暂停 / 设置 / 结算 / 全通 / 存档，20 关目录、章内换房 | 完成 | `frontend/README.md`；验收 `frontend/tests/test_frontend.gd` |
 | **第一章五间**（同学交付）：块拼房间，各自一套压板/门/出口 谜题 | 完成 | `scenes/levels/chapter_01_room_0*.tscn` |
