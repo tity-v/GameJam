@@ -3,7 +3,7 @@ extends SceneTree
 const SCENES = {
  "moving_platform":"platform", "box":"box", "lever":"lever", "portal":"portal",
  "plate":"pressure_plate", "door":"door", "exit":"exit", "open_exit":"open_exit",
- "echo_wall":"echo_wall", "text":"room_text", "color_recorder":"color_recorder"
+ "echo_wall":"echo_wall", "text":"room_text", "color_recorder":"color_recorder", "checkpoint":"checkpoint"
 }
 func _initialize() -> void:
  var args := OS.get_cmdline_user_args()
@@ -51,8 +51,9 @@ func _initialize() -> void:
   room.add_child(node);node.owner=room
   node.position=pos
   if kind in ["moving_platform","box","portal"]: node.position+=size/2
-  if kind=="echo_wall":node.set("cells",Vector2i(ceili(o.w),ceili(o.h)))
+  if kind=="echo_wall":node.set("cells",Vector2i(maxi(1,ceili(o.w)),maxi(1,ceili(o.h))))
   if kind=="box":node.set("box_size",size)
+  if kind=="checkpoint":node.position+=Vector2(16,16)
   for property in node.get_property_list():
    if property.name=="block_size":node.set("block_size",size)
   var props: Dictionary=o.get("props",{})
@@ -60,7 +61,7 @@ func _initialize() -> void:
    if props.has(key):node.set(key,props[key])
   if kind=="text":node.set("text",props.get("text",o.get("name","")))
   if kind=="color_recorder":node.set("tint",Color(props.get("tint","#87ceeb")))
-  if o.get("asset","")!="":
+  if o.get("asset") is String and not o.asset.is_empty():
    var uri: String=data.get("assets",{}).get(o.asset,"")
    var image:=Image.new()
    if image.load_png_from_buffer(Marshalls.base64_to_raw(uri.get_slice(",",1)))!=OK:

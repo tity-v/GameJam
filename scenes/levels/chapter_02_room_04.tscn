@@ -69,7 +69,8 @@ close_after_use = false
 
 [node name="B" parent="Mechanisms" index="11" unique_id=1561540567 instance=ExtResource("plate")]
 process_physics_priority = 10
-position = Vector2(992, 416)
+position = Vector2(1037.9999, 399)
+scale = Vector2(0.56648976, 3.9937239)
 accepts_boxes = false
 block_size = Vector2(160, 4)
 
