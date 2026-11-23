@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://graybox/base_level.tscn" id="base"]
+
+
+
+[ext_resource type="TileSet" path="res://scenes/levels/building_tiles/world_tiles.tres" id="world_tiles"]
+[ext_resource type="TileSet" path="res://scenes/levels/night_station/wall_tiles.tres" id="back_tiles"]
+
+[ext_resource type="Shader" path="res://scenes/levels/dark_building/floor.gdshader" id="surface"]
+
+[sub_resource type="ShaderMaterial" id="slabs"]
+shader = ExtResource("surface")
+
+
+[sub_resource type="Shader" id="patina"]
+code = "shader_type canvas_item;
+uniform vec3 shade = vec3(0.015,0.033,0.036);
+uniform vec3 highlight = vec3(0.28,0.36,0.31);
+void fragment(){
+ vec4 tile = texture(TEXTURE,UV);
+ float l = dot(tile.rgb,vec3(0.30,0.59,0.11));
+ COLOR = vec4(mix(shade,highlight,l),tile.a);
+}"
+[sub_resource type="ShaderMaterial" id="walls"]
+shader = SubResource("patina")
+
+[node name="DarkBuilding" instance=ExtResource("base")]
+
+[node name="Background" parent="." index="0"]
+z_index = -5
+color = Color(0.031, 0.055, 0.059, 1)
+
+[node name="Map_Placeholder" parent="." index="1"]
+visible = false
+
+[node name="World" parent="." index="2"]
+tile_set = ExtResource("world_tiles")
+material = SubResource("slabs")
+
+[node name="BackWall" type="TileMapLayer" parent="."]
+z_index = -4
+material = SubResource("walls")
+tile_set = ExtResource("back_tiles")
+collision_enabled = false
+navigation_enabled = false

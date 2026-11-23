@@ -70,7 +70,7 @@ func advance(dt: float) -> void:
 		var action := frames[frame_index]
 		input_axis = action.x
 		var flags := int(action.y)
-		_motor.move_with_input(dt, input_axis, bool(flags & 1), bool(flags & 2))
+		_motor.move_with_input(dt, input_axis, bool(flags & 1), bool(flags & 2), flags)
 		frame_index += 1
 	else:
 		input_axis = 0

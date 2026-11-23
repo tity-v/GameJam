@@ -1,0 +1,4 @@
+[gd_scene format=3]
+[ext_resource type="Script" path="res://graybox/tiles/spawn_cell.gd" id="script"]
+[node name="SpawnCell" type="Marker2D"]
+script = ExtResource("script")

@@ -1,0 +1,12 @@
+[gd_resource type="TileSet" format=3]
+[ext_resource type="Texture2D" path="res://scenes/levels/dark_building/night_parts.svg" id="art"]
+[sub_resource type="TileSetAtlasSource" id="atlas"]
+resource_name = "黑暗 · 梯子 · 火把"
+texture = ExtResource("art")
+texture_region_size = Vector2i(32,32)
+0:0/0 = 0
+1:0/0 = 0
+2:0/0 = 0
+[resource]
+tile_size = Vector2i(32,32)
+sources/0 = SubResource("atlas")

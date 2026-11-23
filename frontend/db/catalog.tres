@@ -46,24 +46,24 @@ levels = Array[Dictionary]([{
 "title": "第 2 章 · 错过 · 错车大厅"
 }, {
 "id": "level_11",
-"scene": "",
-"title": "第 3 章 · 房间 1/5"
+"scene": "res://scenes/levels/chapter_03_room_01.tscn",
+"title": "第 3 章 · 卷帘门背后"
 }, {
 "id": "level_12",
-"scene": "",
-"title": "第 3 章 · 房间 2/5"
+"scene": "res://scenes/levels/chapter_03_room_02.tscn",
+"title": "第 3 章 · 手轮井"
 }, {
 "id": "level_13",
-"scene": "",
-"title": "第 3 章 · 房间 3/5"
+"scene": "res://scenes/levels/chapter_03_room_03.tscn",
+"title": "第 3 章 · 双卷扬"
 }, {
 "id": "level_14",
-"scene": "",
-"title": "第 3 章 · 房间 4/5"
+"scene": "res://scenes/levels/chapter_03_room_04.tscn",
+"title": "第 3 章 · 配电柜夹层"
 }, {
 "id": "level_15",
-"scene": "",
-"title": "第 3 章 · 房间 5/5"
+"scene": "res://scenes/levels/chapter_03_room_05.tscn",
+"title": "第 3 章 · 桥吊最后一班"
 }, {
 "id": "level_16",
 "scene": "",

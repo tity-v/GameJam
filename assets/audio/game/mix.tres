@@ -1,0 +1,49 @@
+[gd_resource type="Resource" format=3]
+[ext_resource type="Script" path="res://assets/audio/game/mix.gd" id="script"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/home_chosen.wav" id="home_chosen"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/other_click.wav" id="other_click"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/home_hover.wav" id="home_hover"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/jump.mp3" id="jump"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/land.wav" id="land"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/land_high.wav" id="land_high"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/crate_land_1.wav" id="crate_land_1"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/crate_land_2.wav" id="crate_land_2"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/crate_push.wav" id="crate_push"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/ghost_wall.wav" id="ghost_wall"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/plate_1.wav" id="plate_1"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/plate_2.wav" id="plate_2"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/plate_3.wav" id="plate_3"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/plate_4.wav" id="plate_4"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/lever.wav" id="lever"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/door_open.wav" id="door_open"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/door_close.wav" id="door_close"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/checkpoint.wav" id="checkpoint"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/echo_created.wav" id="echo_created"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/reset_room.wav" id="reset_room"]
+[ext_resource type="AudioStream" path="res://assets/audio/game/complete.wav" id="complete"]
+
+[resource]
+script = ExtResource("script")
+sounds = {
+"home_chosen": {"stream": ExtResource("home_chosen"), "db": -8.0},
+"other_click": {"stream": ExtResource("other_click"), "db": -8.0},
+"home_hover": {"stream": ExtResource("home_hover"), "db": -18.0},
+"jump": {"stream": ExtResource("jump"), "db": -8.0},
+"land": {"stream": ExtResource("land"), "db": -8.0},
+"land_high": {"stream": ExtResource("land_high"), "db": -8.0},
+"crate_land_1": {"stream": ExtResource("crate_land_1"), "db": -8.0},
+"crate_land_2": {"stream": ExtResource("crate_land_2"), "db": -8.0},
+"crate_push": {"stream": ExtResource("crate_push"), "db": -8.0},
+"ghost_wall": {"stream": ExtResource("ghost_wall"), "db": -8.0},
+"plate_1": {"stream": ExtResource("plate_1"), "db": -8.0},
+"plate_2": {"stream": ExtResource("plate_2"), "db": -8.0},
+"plate_3": {"stream": ExtResource("plate_3"), "db": -8.0},
+"plate_4": {"stream": ExtResource("plate_4"), "db": -8.0},
+"lever": {"stream": ExtResource("lever"), "db": -8.0},
+"door_open": {"stream": ExtResource("door_open"), "db": -30.0},
+"door_close": {"stream": ExtResource("door_close"), "db": -30.0},
+"checkpoint": {"stream": ExtResource("checkpoint"), "db": -8.0},
+"echo_created": {"stream": ExtResource("echo_created"), "db": -8.0},
+"reset_room": {"stream": ExtResource("reset_room"), "db": -8.0},
+"complete": {"stream": ExtResource("complete"), "db": -8.0}
+}

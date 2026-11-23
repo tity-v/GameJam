@@ -4,9 +4,31 @@ extends "res://scripts/puzzle_door.gd"
 const PressurePlate = preload("res://scripts/pressure_plate.gd")
 const Config = preload("res://graybox/db/editor.tres")
 
+@export var initially_open := false:
+	set(value):
+		initially_open = value
+		if is_node_ready() and Engine.is_editor_hint():
+			_apply_open(value)
+
+func _ready() -> void:
+	super._ready()
+	_apply_open(initially_open)
+
+func reset_mechanism() -> void:
+	_apply_open(initially_open)
+
+func _apply_open(value: bool) -> void:
+	var changed := opened != value
+	opened = value
+	if changed and not Engine.is_editor_hint():
+		get_node("/root/GameSfx").play("door_open" if opened else "door_close")
+	$Collision.set_deferred("disabled", opened)
+	$Patch.texture = preload("res://assets/mechanisms/door_open.png") if opened else preload("res://assets/mechanisms/door_closed.png")
+
+
 func _get_configuration_warnings() -> PackedStringArray:
 	var warnings := PackedStringArray()
-	if not _has_valid_plates():
+	if not _has_valid_plates() and not (initially_open and plate_paths.is_empty()):
 		warnings.append(Config.plate_warning)
 	return warnings
 
@@ -29,12 +51,11 @@ func _physics_process(delta: float) -> void:
 		if not preload("res://graybox/glue/component_echo.gd").switch_on(get_node_or_null(path)):
 			satisfied = false
 			break
-	if opened != satisfied:
-		if not satisfied and _player_in_doorway():
+	var desired_open := not initially_open if satisfied else initially_open
+	if opened != desired_open:
+		if not desired_open and _player_in_doorway():
 			return
-		opened = satisfied
-		$Collision.set_deferred("disabled", opened)
-		$Patch.texture = preload("res://assets/mechanisms/door_open.png") if opened else preload("res://assets/mechanisms/door_closed.png")
+		_apply_open(desired_open)
 
 
 ## 关门前先看门口有没有活着的玩家：有就保持开门，等人走出去再关。

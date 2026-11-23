@@ -4,6 +4,7 @@ func _ready() -> void:
 	set_physics_process(false)
 
 func rewind_motion(start_velocity: Vector2, motion: PackedFloat32Array) -> void:
+	climbing = motion.size() > 9 and bool(motion[9])
 	velocity = start_velocity
 	_coyote = 0.0
 	_buffer = 0.0

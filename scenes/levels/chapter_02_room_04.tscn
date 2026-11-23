@@ -101,5 +101,3 @@ position = Vector2(384, 192)
 script = ExtResource("scenery")
 kind = 2
 span = 448
-
-[connection signal="body_entered" from="World/Checkpoint" to="World/Checkpoint" method="_on_body_entered"]
