@@ -1,5 +1,15 @@
 @tool
 extends StaticBody2D
+## 拉杆是一个**开关**，不是一道门：拨过去就一直躺着，碰撞体保持禁用，
+## 直到 `reset_mechanism()`（R 键复位）才重新立起来挡人。
+##
+## 为什么不能「没人碰就重新启用」：
+## 玩家拨完杆继续往前走，几帧后离开 reach（-20..20），`touching` 变 false，
+## 碰撞体就恢复了——玩家自己已经穿过去了，看不见；但**虚影是之后才重放这条轨迹的**，
+## 它到杆前面时杆已经重新立起来，于是被卡在杆右侧走不过去，表现为
+## 「主角能过拉杆、虚影过不了」。杆细（10×12），拨过去以后本来也不该再挡人。
+##
+## 回归：`_reference/tools/test_lever_pass.gd`（未拨时有实体 / 拨过不挡人 / 复位后恢复）。
 const CFG = preload("res://graybox/db/mechanisms.tres")
 const Motion = preload("res://graybox/glue/actor_motion.gd")
 const Bounds = preload("res://scripts/actor_bounds.gd")
@@ -41,8 +51,8 @@ func _physics_process(dt: float) -> void:
 			travel += absf(horizontal) * dt
 			pressing = true
 	if not touching:
+		# 只清 latched，**不**恢复碰撞体：见文件头注释
 		latched = false
-		$Collision.set_deferred("disabled",false)
 	if not pressing:
 		travel = 0
 	if travel >= CFG.lever_travel:
