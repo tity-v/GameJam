@@ -4,6 +4,7 @@
 
 [resource]
 script = ExtResource("1_cmda0")
+preview_unlock = true
 levels = Array[Dictionary]([{
 "id": "level_01",
 "scene": "res://scenes/levels/chapter_01_room_01.tscn",
@@ -47,8 +48,8 @@ levels = Array[Dictionary]([{
 "title": "第 2 章 · 错过 · 群星末班站"
 }, {
 "id": "level_11",
-"scene": "res://scenes/levels/chapter_03_room_01.tscn",
-"title": "第 3 章 · 卷帘门背后"
+"scene": "res://scenes/levels/chapter_03/room_31_proto.tscn",
+"title": "第 3 章 · 3-1 打火教学（原型）"
 }, {
 "id": "level_12",
 "scene": "res://scenes/levels/chapter_03_room_02.tscn",

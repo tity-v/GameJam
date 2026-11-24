@@ -82,6 +82,10 @@
 | **人物两帧待机动画**（眨眼），外观与判定解耦 | 完成 | `scripts/character_portrait.gd`；说明 `docs/人物动画与尺寸调整.md`，断言 `test_character_portrait.gd` |
 | 角色脚下/身体边缘判定 | 完成 | `scripts/actor_bounds.gd`（供压力板/出口/尖刺共用） |
 | 可通关房间搭建 | 完成 | `scenes/levels/complete_room.tscn`（说明见 `docs/完整房间使用说明.md`） |
+| **第三章黑幕照明**（全屏 shader 按光源挖椭圆洞，`falloff` 控制由内向外衰减） | 完成 | `scenes/levels/dark_building/blackout.gdshader`、`blackout.gd` |
+| **打火手电**（`Shift`：底光 40/90 ↔ 打火 96/150，亮 2.5s / 冷却 1.5s） | 完成 | `scenes/levels/chapter_03/torch.gd` |
+| **3-1 打火教学原型**（坑 / 96px 高台 / 虚影经过把铁栅抬起来） | 原型可玩 | `scenes/levels/chapter_03/room_31_proto.tscn`（已占目录 `level_11`，主界面 → 第 3 章 → 第 1 间即可进）；断言 `test_room31.gd` 23 条 |
+| **试玩解锁**（`catalog.preview_unlock`）：跳过顺序解锁，任意章任意已接入的房间可直接点 | 完成，当前为 `true` | `frontend/db/catalog.tres` 的 `preview_unlock`；正式版本需设回 `false`，否则顺序解锁失效 |
 | 关卡名 / 关卡提示文字（原版有） | 未做 | — |
 | 第 2–8 关 | 未做 | 原数据见 `_reference/source_from_game/scripts/platformer/levels.gd` |
 
@@ -550,6 +554,10 @@ if not satisfied and _player_in_doorway():
 | 换皮后虚影压板范围变了 | 判定被改回读 `Body` 贴图矩形了（贴图多留几像素透明边，`rect` 就变大） | 判定只准读 `body_size`（§4.7）；`test_echo_contract.gd` 会用 56×76 的图验一遍 |
 | 虚影还没出现就能挡人 / 压住板，或画面出现了板却不亮 | 显示、碰撞层、机关判定各判各的（`visible` / 层 bit / `is_gone`） | 全部统一走 `_active`：让虚影登场只调 `reset()`，**不要再手改 `visible`**（§4.7） |
 | 地图看着好好的，走上去墙是假的 / 地面只有第一格能踩 | `TileSet` 里碰撞多边形写成了**图集绝对坐标**（`16..48`、`48..80`…）。它要的是**瓦片局部坐标**（以瓦片中心为原点，每个格子都是同一份 `±16`） | 所有格子共用 `PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)`；判定看 `test_grid_room.gd` 的「左墙(8,300) 是实的」 |
+| 黑幕里怎么调曲线都不觉得「光变亮了」 | 黑幕是 `canvas_item` 遮罩，**只能盖黑、不能提亮**，上限就是场景原色 | `falloff` 只管暗得多快；真要「发光」得另叠一层 `blend_add`，别在遮罩上找 |
+| 编辑器里打开带黑幕的关卡整屏全黑，以为场景坏了 | shader 的 `sources` / `count` 由 `blackout.gd` 每帧喂，编辑器里这个脚本不跑，`count` 还是 0 → 整层不透明黑 | Scene 面板把 `Blackout` 的眼睛关掉再编辑地形 |
+| 玩家自杀留下的虚影不照亮 | 玩家自带光和虚影的光共用 `personal_radii`，第三章为了「只靠手电」把它压到 `(2,2)`，虚影被一起关掉 | 已拆成独立的 `echo_radii`；断言「虚影照亮半径独立于玩家」 |
+| 预录虚影掉出地图后出现在**玩家出生点** | 虚影 `extends player.gd`，`reset_to_spawn()` 用的是 `respawn_position`，而它在 `_ready` 里被设成全局唯一的 `respawn_point` | `specter.gd` 自己存 `_start` 并走 `_restart()`；断言「虚影掉出地图回自己起点」 |
 
 ---
 

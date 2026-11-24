@@ -48,6 +48,7 @@ func start(_entry: Node) -> void:
 	copy = preload("res://frontend/db/copy.tres").strings
 	if not flow.setup(catalog.levels):
 		notice = tr_copy("catalog_failed")
+	flow.unlock_all = catalog.preview_unlock
 	read_progress()
 	read_settings()
 	legacy_pause = get_node_or_null(catalog.legacy_pause)

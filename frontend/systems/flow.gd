@@ -11,6 +11,8 @@ var page := "home"
 var settings_parent := "home"
 ## 关卡选择页当前打开的是哪一章（0 起）。
 var chapter := 0
+## 试玩模式：跳过顺序解锁（由 catalog.preview_unlock 下发）。只影响能否进入，不改完成记录。
+var unlock_all := false
 
 func setup(entries: Array[Dictionary]) -> bool:
 	var ids := {}
@@ -31,6 +33,8 @@ func available(index: int) -> bool:
 func unlocked(index: int) -> bool:
 	if not exists_at(index):
 		return false
+	if unlock_all:
+		return true
 	return index == 0 or completed.has(str(levels[index].id)) or completed.has(str(levels[index - 1].id))
 
 func playable(index: int) -> bool:

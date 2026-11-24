@@ -46,6 +46,16 @@ func run() -> void:
 	expect(real.room_state(0) == "done" and real.room_state(1) == "ready", "打完解锁下一间")
 	expect(real.room_state(15) == "missing", "空路径显示待接入")
 
+	# 试玩开关：跳过顺序解锁，但不能把空房间变成可进入，也不动完成记录。
+	var preview := Flow.new()
+	expect(preview.setup(REAL_CATALOG.levels), "真实目录可加载")
+	expect(not preview.unlock_all, "试玩开关默认关闭")
+	preview.unlock_all = true
+	expect(preview.room_state(6) == "ready", "试玩开关让未完成的章直接可进")
+	expect(preview.chapter_card(1).entry == 5, "试玩开关打开章节入口")
+	expect(preview.chapter_card(3).entry == -1, "空章仍是待接入")
+	expect(preview.completed.is_empty(), "试玩开关不写完成记录")
+
 	var shell := Node.new()
 	root.add_child(shell)
 	current_scene = shell
@@ -55,6 +65,7 @@ func run() -> void:
 	for number in range(1, 21):
 		levels.append({"id": str(number), "title": "测试关 " + str(number), "scene": ROOM})
 	catalog.levels = levels
+	catalog.preview_unlock = false
 	session.catalog = catalog
 	store.directory = "res://build/frontend-test-%s" % Time.get_ticks_usec()
 	session.store = store
@@ -62,6 +73,7 @@ func run() -> void:
 	session.start(shell)
 
 	expect(session.flow.page == "home" and session.flow.continue_index() == -1, "首次启动不显示继续")
+	expect(not session.flow.unlock_all, "目录默认不跳过解锁")
 	await command("levels")
 	expect(session.page_model().cards.size() == 4, "选章显示四章")
 	expect(session.page_model().cards[1].disabled, "第二章初始锁定")
@@ -138,6 +150,21 @@ func run() -> void:
 	await frames()
 	expect(root.get_node("PauseMenu").process_mode == Node.PROCESS_MODE_ALWAYS, "退出前端恢复旧暂停处理模式")
 	expect(root.get_node("Hud").visible, "退出前端恢复旧 HUD")
+
+	# 试玩开关接到会话上：打开后所有已接入的房间都能直接点。
+	catalog.preview_unlock = true
+	session = Session.new()
+	session.catalog = catalog
+	session.store = store
+	root.add_child(session)
+	session.start(current_scene)
+	expect(session.flow.unlock_all, "目录开关下发到流程")
+	expect(session.flow.playable(19), "试玩下最后一关也能进")
+	expect(session.flow.completed.size() == 20, "试玩不抹掉已有进度")
+	session.queue_free()
+	await frames()
+	catalog.preview_unlock = false
+
 	session = Session.new()
 	catalog.levels[0].scene = "res://frontend/tests/missing_scene.tscn"
 	catalog.levels[1].scene = ""

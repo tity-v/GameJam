@@ -3,6 +3,8 @@ shader_type canvas_item;
 uniform vec4 sources[32];
 uniform int count = 0;
 uniform float drift = 0.0;
+// 由内向外衰减曲线。1.0 = 线性（原行为）；越大中心越保、外圈越早暗。
+uniform float falloff = 1.0;
 varying vec2 location;
 
 float hash(vec2 p) {
@@ -26,7 +28,8 @@ void fragment() {
 	float opening = 0.0;
 	for (int i = 0; i < count; i++) {
 		vec4 s = sources[i];
-		opening = max(opening, clamp((s.w - distance(location, s.xy)) / max(0.01, s.w - s.z), 0.0, 1.0));
+		float raw = clamp((s.w - distance(location, s.xy)) / max(0.01, s.w - s.z), 0.0, 1.0);
+		opening = max(opening, pow(raw, falloff));
 	}
 	vec3 paint = vec3(0.0);
 	float coverage = 1.0 - opening;

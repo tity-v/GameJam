@@ -10,6 +10,9 @@ extends Resource
 ##                         "v"   强制纵滑（楼层）
 ##                       不写就按出口相对视口中心的位置自动判断。
 @export var levels: Array[Dictionary] = []
+## 试玩开关：为 true 时不看进度，所有已接入的房间都可直接进。
+## 给「想直接跳到某一章某一关」用，会关掉顺序解锁这条主线，正式版本必须设回 false。
+@export var preview_unlock := false
 @export var completion_property: StringName = &"won"
 @export var legacy_result_panel: NodePath = ^"UI/Win"
 @export var legacy_pause: NodePath = ^"/root/PauseMenu"
