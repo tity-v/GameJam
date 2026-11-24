@@ -1,6 +1,9 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="PackedScene" path="res://frontend/view/page.tscn" id="1"]
 
+[ext_resource type="Script" path="res://frontend/view/painted_page.gd" id="paint"]
+
 [node name="settings" instance=ExtResource("1")]
-panel_width = 580.0
+script = ExtResource("paint")
+panel_width = 720.0
