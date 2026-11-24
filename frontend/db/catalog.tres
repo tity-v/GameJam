@@ -31,19 +31,20 @@ levels = Array[Dictionary]([{
 }, {
 "id": "level_07",
 "scene": "res://scenes/levels/chapter_02_room_02.tscn",
-"title": "第 2 章 · 错过 · 接你一程"
+"title": "第 2 章 · 错过 · 隔墙交货"
 }, {
 "id": "level_08",
 "scene": "res://scenes/levels/chapter_02_room_03.tscn",
-"title": "第 2 章 · 错过 · 货留下，人改道"
+"title": "第 2 章 · 错过 · 先到的留下"
 }, {
 "id": "level_09",
+"link": "cut",
 "scene": "res://scenes/levels/chapter_02_room_04.tscn",
 "title": "第 2 章 · 错过 · 借来的升程"
 }, {
 "id": "level_10",
 "scene": "res://scenes/levels/chapter_02_room_05.tscn",
-"title": "第 2 章 · 错过 · 错车大厅"
+"title": "第 2 章 · 错过 · 群星末班站"
 }, {
 "id": "level_11",
 "scene": "res://scenes/levels/chapter_03_room_01.tscn",

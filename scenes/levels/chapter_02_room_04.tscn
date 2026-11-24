@@ -44,7 +44,6 @@ block_size = Vector2(32, 128)
 [node name="Exit" parent="Mechanisms" index="5" unique_id=2056328699 instance=ExtResource("exit")]
 process_physics_priority = 30
 position = Vector2(188, 317)
-door_path = NodePath("../ExitGate")
 block_size = Vector2(36, 64)
 
 [node name="PArrival" type="Marker2D" parent="Mechanisms" index="6" unique_id=914804006]
