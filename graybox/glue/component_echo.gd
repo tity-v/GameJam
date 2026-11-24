@@ -1,4 +1,5 @@
 extends AnimatableBody2D
+## 箱子重做推力，平台按路线和速度运行，开关重放切换事件。
 var active := false
 var box_size := Vector2.ZERO
 const ReplayBox = preload("res://graybox/glue/replay_box.gd")

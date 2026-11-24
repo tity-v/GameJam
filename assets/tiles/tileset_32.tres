@@ -5,7 +5,9 @@
 [ext_resource type="PackedScene" path="res://graybox/echo_wall_cell.tscn" id="echo_wall"]
 [ext_resource type="PackedScene" path="res://graybox/tiles/lever.tscn" id="part_lever"]
 [ext_resource type="PackedScene" path="res://graybox/tiles/respawn_point.tscn" id="part_respawn_point"]
+[ext_resource type="PackedScene" path="res://graybox/tiles/reverse_one_way_platform.tscn" id="reverse_platform"]
 [ext_resource type="PackedScene" path="res://graybox/spike_cell.tscn" id="spike"]
+[ext_resource type="Texture2D" uid="uid://da2qrsj2arkh3" path="res://scenes/levels/building_tiles/concrete_tiles.png" id="structure"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_grid"]
 resource_name = "原始图集"
@@ -50,6 +52,7 @@ scenes/2/scene = ExtResource("checkpoint")
 scenes/3/scene = ExtResource("echo_wall")
 scenes/14/scene = ExtResource("part_lever")
 scenes/17/scene = ExtResource("part_respawn_point")
+scenes/18/scene = ExtResource("reverse_platform")
 
 [sub_resource type="TileSetAtlasSource" id="Background"]
 resource_name = "背景板"
@@ -59,11 +62,125 @@ texture_region_size = Vector2i(32, 32)
 1:1/0 = 0
 2:1/0 = 0
 
+[sub_resource type="TileSetAtlasSource" id="reverse_terrain"]
+resource_name = "反向单向平台"
+texture = ExtResource("structure")
+texture_region_size = Vector2i(32, 32)
+0:6/next_alternative_id = 5
+0:6/0 = 0
+0:6/1 = 1
+0:6/1/flip_v = true
+0:6/1/terrain_set = 0
+0:6/1/terrain = 0
+0:6/2 = 2
+0:6/2/flip_v = true
+0:6/2/terrain_set = 0
+0:6/2/terrain = 0
+0:6/2/terrains_peering_bit/top_side = 0
+0:6/3 = 3
+0:6/3/flip_v = true
+0:6/3/terrain_set = 0
+0:6/3/terrain = 0
+0:6/3/terrains_peering_bit/bottom_side = 0
+0:6/4 = 4
+0:6/4/flip_v = true
+0:6/4/terrain_set = 0
+0:6/4/terrain = 0
+0:6/4/terrains_peering_bit/bottom_side = 0
+0:6/4/terrains_peering_bit/top_side = 0
+1:6/next_alternative_id = 5
+1:6/0 = 0
+1:6/1 = 1
+1:6/1/flip_v = true
+1:6/1/terrain_set = 0
+1:6/1/terrain = 0
+1:6/1/terrains_peering_bit/left_side = 0
+1:6/2 = 2
+1:6/2/flip_v = true
+1:6/2/terrain_set = 0
+1:6/2/terrain = 0
+1:6/2/terrains_peering_bit/left_side = 0
+1:6/2/terrains_peering_bit/top_side = 0
+1:6/3 = 3
+1:6/3/flip_v = true
+1:6/3/terrain_set = 0
+1:6/3/terrain = 0
+1:6/3/terrains_peering_bit/bottom_side = 0
+1:6/3/terrains_peering_bit/left_side = 0
+1:6/4 = 4
+1:6/4/flip_v = true
+1:6/4/terrain_set = 0
+1:6/4/terrain = 0
+1:6/4/terrains_peering_bit/bottom_side = 0
+1:6/4/terrains_peering_bit/left_side = 0
+1:6/4/terrains_peering_bit/top_side = 0
+2:6/next_alternative_id = 5
+2:6/0 = 0
+2:6/1 = 1
+2:6/1/flip_v = true
+2:6/1/terrain_set = 0
+2:6/1/terrain = 0
+2:6/1/terrains_peering_bit/right_side = 0
+2:6/2 = 2
+2:6/2/flip_v = true
+2:6/2/terrain_set = 0
+2:6/2/terrain = 0
+2:6/2/terrains_peering_bit/right_side = 0
+2:6/2/terrains_peering_bit/top_side = 0
+2:6/3 = 3
+2:6/3/flip_v = true
+2:6/3/terrain_set = 0
+2:6/3/terrain = 0
+2:6/3/terrains_peering_bit/right_side = 0
+2:6/3/terrains_peering_bit/bottom_side = 0
+2:6/4 = 4
+2:6/4/flip_v = true
+2:6/4/terrain_set = 0
+2:6/4/terrain = 0
+2:6/4/terrains_peering_bit/right_side = 0
+2:6/4/terrains_peering_bit/bottom_side = 0
+2:6/4/terrains_peering_bit/top_side = 0
+3:6/next_alternative_id = 5
+3:6/0 = 0
+3:6/1 = 1
+3:6/1/flip_v = true
+3:6/1/terrain_set = 0
+3:6/1/terrain = 0
+3:6/1/terrains_peering_bit/right_side = 0
+3:6/1/terrains_peering_bit/left_side = 0
+3:6/2 = 2
+3:6/2/flip_v = true
+3:6/2/terrain_set = 0
+3:6/2/terrain = 0
+3:6/2/terrains_peering_bit/right_side = 0
+3:6/2/terrains_peering_bit/left_side = 0
+3:6/2/terrains_peering_bit/top_side = 0
+3:6/3 = 3
+3:6/3/flip_v = true
+3:6/3/terrain_set = 0
+3:6/3/terrain = 0
+3:6/3/terrains_peering_bit/right_side = 0
+3:6/3/terrains_peering_bit/bottom_side = 0
+3:6/3/terrains_peering_bit/left_side = 0
+3:6/4 = 4
+3:6/4/flip_v = true
+3:6/4/terrain_set = 0
+3:6/4/terrain = 0
+3:6/4/terrains_peering_bit/right_side = 0
+3:6/4/terrains_peering_bit/bottom_side = 0
+3:6/4/terrains_peering_bit/left_side = 0
+3:6/4/terrains_peering_bit/top_side = 0
+
 [resource]
 tile_size = Vector2i(32, 32)
 physics_layer_0/collision_layer = 1
+terrain_set_0/mode = 2
+terrain_set_0/terrain_0/name = "反向单向平台"
+terrain_set_0/terrain_0/color = Color(0.53, 0.63, 0.83, 1)
 sources/0 = SubResource("TileSetAtlasSource_grid")
 sources/1 = SubResource("Floor")
 sources/2 = SubResource("Wall")
 sources/3 = SubResource("Parts")
 sources/4 = SubResource("Background")
+sources/6 = SubResource("reverse_terrain")
+metadata/reverse_platform_source = 6

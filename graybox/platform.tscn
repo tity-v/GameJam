@@ -4,8 +4,11 @@
 [sub_resource type="RectangleShape2D" id="shape"]
 resource_local_to_scene = true
 size = Vector2(96,16)
+[sub_resource type="PhysicsMaterial" id="surface"]
+rough = true
 [node name="platform" type="AnimatableBody2D" groups=["graybox_recordable"]]
 script = ExtResource("script")
+physics_material_override = SubResource("surface")
 
 [node name="Collision" type="CollisionShape2D" parent="."]
 shape = SubResource("shape")

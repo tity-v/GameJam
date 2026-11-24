@@ -13,11 +13,19 @@ func _initialize() -> void:
 	if not data is Dictionary or not data.get("components") is Array:
 		push_error("地图 JSON 格式错误"); quit(1); return
 	var chapter := int(data.get("chapter",0))
-	var template: String = {1:"res://scenes/levels/old_building/base.tscn",2:"res://scenes/levels/night_station/base.tscn"}.get(chapter,"res://graybox/base_level.tscn")
+	var template: String = {1:"res://scenes/levels/old_building/base.tscn",2:"res://scenes/levels/night_station/base.tscn",3:"res://scenes/levels/dark_building/base.tscn"}.get(chapter,"res://graybox/base_level.tscn")
 	var room = load(template).instantiate()
 	room.set_meta("web_chapter",chapter)
 	room.set_meta("web_exit_direction",str(data.get("exitDirection","")))
 	room.set_meta("web_level_id",str(data.get("levelId","")))
+	var night_layers := {}
+	for entry in [["Blackout",20],["Torches",21],["Ladders",0]]:
+		var layer := TileMapLayer.new()
+		layer.name=entry[0];layer.z_index=entry[1]
+		layer.tile_set=load("res://scenes/levels/dark_building/night_parts.tres")
+		layer.collision_enabled=false
+		if layer.name=="Ladders":layer.add_to_group("night_ladders",true)
+		room.add_child(layer);layer.owner=room;night_layers[str(layer.name)]=layer
 	root.add_child(room)
 	var world = room.get_node("World")
 	world.clear()
@@ -38,13 +46,19 @@ func _initialize() -> void:
 			nodes[o.id]=room.get_node("RespawnPoint")
 			nodes[o.id].position=pos
 			continue
-		if kind in ["terrain","platform"]:
+		if kind in ["darkness","torch","ladder"]:
+			var layer: TileMapLayer=night_layers[{"darkness":"Blackout","torch":"Torches","ladder":"Ladders"}[kind]]
+			var atlas := {"darkness":0,"ladder":1,"torch":2}
+			for x in range(int(o.x),ceili(o.x+o.w)):
+				for y in range(int(o.y),ceili(o.y+o.h)):layer.set_cell(Vector2i(x,y),0,Vector2i(atlas[kind],0))
+			node=Node2D.new()
+		elif kind in ["terrain","platform"]:
 			var background: bool = o.get("layer","")=="背景"
 			if not background:
 				for x in range(int(o.x),ceili(o.x+o.w)):
 					for y in range(int(o.y),ceili(o.y+o.h)):
 						var one_way: bool = kind=="platform" or o.get("props",{}).get("collision_mode",0)==1 or o.get("collision",{}).get("mode","")=="单向平台"
-						if chapter in [1,2]:
+						if chapter in [1,2,3]:
 							if one_way: platform_cells.append(Vector2i(x,y))
 							else: solid_cells.append(Vector2i(x,y))
 						else: world.set_cell(Vector2i(x,y),0,Vector2i(3 if one_way else 0,0))
@@ -71,7 +85,7 @@ func _initialize() -> void:
 			if props.has(key):node.set(key,props[key])
 		if kind=="text":node.set("text",props.get("text",o.get("name","")))
 		if kind=="color_recorder":node.set("tint",Color(props.get("tint","#87ceeb")))
-		if o.get("asset") is String and not o.asset.is_empty():
+		if kind not in ["darkness","ladder","torch"] and o.get("asset") is String and not o.asset.is_empty():
 			var uri: String=data.get("assets",{}).get(o.asset,"")
 			var image:=Image.new()
 			if image.load_png_from_buffer(Marshalls.base64_to_raw(uri.get_slice(",",1)))!=OK:
@@ -107,18 +121,31 @@ func _initialize() -> void:
 		if kind=="color_recorder":
 			if not nodes.has(props.get("parent_id","")):push_error("记录器缺少挂载目标");room.free();quit(1);return
 			node.owner=null;node.reparent(nodes[props.parent_id]);node.position=Vector2.ZERO;node.owner=room
-	if chapter in [1,2]:
+	if chapter in [1,2,3]:
 		if not solid_cells.is_empty():world.set_cells_terrain_connect(solid_cells,0,0)
 		if not platform_cells.is_empty():world.set_cells_terrain_connect(platform_cells,1,0)
 	var background=room.get_node_or_null("Background")
 	if background:
 		background.polygon=PackedVector2Array([Vector2.ZERO,Vector2(data.map.columns*32,0),Vector2(data.map.columns*32,data.map.rows*32),Vector2(0,data.map.rows*32)])
-		if chapter not in [1,2]:background.color=Color(data.get("background",{}).get("color","#f7fafc"))
+		if chapter not in [1,2,3]:background.color=Color(data.get("background",{}).get("color","#f7fafc"))
 	var placeholder=room.get_node_or_null("Map_Placeholder")
 	if placeholder:
 		placeholder.clear()
 		for x in range(int(data.map.columns)):
 			for y in range(int(data.map.rows)):placeholder.set_cell(Vector2i(x,y),0,Vector2i(0,1))
+	var fog: TileMapLayer=night_layers["Blackout"]
+	if not fog.get_used_cells().is_empty():
+		var material:=ShaderMaterial.new()
+		material.shader=load("res://scenes/levels/dark_building/blackout.gdshader")
+		fog.material=material
+		fog.set_script(load("res://scenes/levels/dark_building/blackout.gd"))
+		for object in objects:
+			if object.get("mapping","")=="darkness":
+				for field in ["personal_radii","torch_radii"]:
+					var value=object.get("props",{}).get(field)
+					if value is Array and value.size()==2:fog.set(field,Vector2(value[0],value[1]))
+				break
+		fog.owner=null;room.remove_child(fog);fog.request_ready();room.add_child(fog);fog.owner=room
 	var scene:=PackedScene.new()
 	var error:=scene.pack(room)
 	if error==OK:

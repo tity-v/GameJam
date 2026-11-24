@@ -15,6 +15,7 @@ func _ready() -> void:
 	super._ready()
 	var markers := Node2D.new()
 	markers.set_script(preload("res://graybox/view/link_markers.gd"))
+	markers.add_to_group("pause_keep_color")
 	add_child(markers)
 
 

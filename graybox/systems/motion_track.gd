@@ -1,5 +1,5 @@
 extends RefCounted
-## 连续相同操作只存一次；滚动时裁掉旧操作。
+## 连续相同的操作只存一次。每半段留一个起点，滚动时同步裁掉旧操作。
 var keys: Array[Array] = []
 var count: int:
 	get: return keys.size()

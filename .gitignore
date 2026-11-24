@@ -31,6 +31,9 @@ _reference/preview_level01_original.png
 # AI 协作记录（不影响游戏运行，也不需要团队共享）
 .workbuddy/
 
+# 本地 AI 编辑器插件（Godot AI / Codex 截图用，仅本机开发）
+addons/godot_ai/
+
 # 音效试听台的音频本体（3MB 二进制，一次性挑选产物）
 # 生成方式：python _reference/tools/make_audio_preview.py --src <素材目录>
 _reference/audio_preview/
