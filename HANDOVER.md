@@ -84,7 +84,8 @@
 | 可通关房间搭建 | 完成 | `scenes/levels/complete_room.tscn`（说明见 `docs/完整房间使用说明.md`） |
 | **第三章黑幕照明**（全屏 shader 按光源挖椭圆洞，`falloff` 控制由内向外衰减） | 完成 | `scenes/levels/dark_building/blackout.gdshader`、`blackout.gd` |
 | **打火手电**（`Shift`：底光 40/90 ↔ 打火 96/150，亮 2.5s / 冷却 1.5s） | 完成 | `scenes/levels/chapter_03/torch.gd` |
-| **3-1 打火教学原型**（坑 / 96px 高台 / 虚影经过把铁栅抬起来） | 原型可玩 | `scenes/levels/chapter_03/room_31_proto.tscn`；断言 `test_room31.gd` 23 条 |
+| **3-1 打火教学原型**（坑 / 96px 高台 / 虚影经过把铁栅抬起来） | 原型可玩 | `scenes/levels/chapter_03/room_31_proto.tscn`（已占目录 `level_11`，主界面 → 第 3 章 → 第 1 间即可进）；断言 `test_room31.gd` 23 条 |
+| **试玩解锁**（`catalog.preview_unlock`）：跳过顺序解锁，任意章任意已接入的房间可直接点 | 完成，当前为 `true` | `frontend/db/catalog.tres` 的 `preview_unlock`；正式版本需设回 `false`，否则顺序解锁失效 |
 | 关卡名 / 关卡提示文字（原版有） | 未做 | — |
 | 第 2–8 关 | 未做 | 原数据见 `_reference/source_from_game/scripts/platformer/levels.gd` |
 
