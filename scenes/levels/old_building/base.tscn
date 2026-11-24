@@ -40,8 +40,3 @@ navigation_enabled = false
 [node name="Dressing" type="Node2D" parent="."]
 z_index = -3
 script = ExtResource("dressing")
-
-[node name="Foreground" type="Node2D" parent="."]
-z_index = 1
-script = ExtResource("dressing")
-part = 1
