@@ -1,5 +1,5 @@
 extends Node2D
-## 录玩家操作，死亡时留下虚影，复活时全部重放。
+## 虚影管理器：录玩家操作 → 死亡时留下一条虚影 → 复活时所有虚影同步从头重放。
 ##
 ## 站位：本节点在关卡里，process_physics_priority = -10，保证每一帧先推虚影、
 ## 再跑玩家，玩家才能拿到虚影本帧的位移（被带着走）。
@@ -70,15 +70,28 @@ func _record_input(axis: float, pressed: bool, released: bool) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	# 本节点是 PAUSABLE，暂停时这里不会被调用，所以暂停中按 R 不会偷偷清场
-	if not event.is_action_pressed("reset_echoes"):
+	var reset := event.is_action_pressed("reset_echoes")
+	var remove_latest := event.is_action_pressed("remove_latest_echo") and not event.is_echo()
+	if not reset and not remove_latest:
 		return
 	get_viewport().set_input_as_handled()
 	# 通关后按 R 不做事：整关重来是 Win 面板上 Replay 的职责（见 room_controller.reset_room）
 	var level := get_tree().current_scene
 	if level != null and level.get("won") == true:
 		return
+	if remove_latest:
+		clear_latest_echo()
+		return
 	get_node("/root/GameSfx").play("reset_room")
 	reset_all()
+
+func clear_latest_echo() -> void:
+	if _echoes.is_empty():
+		return
+	var latest: Node2D = _echoes.pop_back()
+	if is_instance_valid(latest):
+		latest.queue_free()
+	_flash_hud("已清除最新虚影")
 
 
 ## R：把这一关恢复到初始状态——清掉所有虚影、玩家回出生点、机关复位
