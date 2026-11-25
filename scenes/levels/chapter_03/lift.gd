@@ -29,8 +29,13 @@ extends AnimatableBody2D
 const IRON := Color("#3b4a46")
 const EDGE := Color("#6d8078")
 const CABLE := Color("#243130")
+const COLD := Color("#5f8f92")
+const WARM := Color("#f2c785")
 const HALF_WIDTH := 44.0
 const THICKNESS := 16.0
+## 井壁导轨相对台面中心的 x（世界 384 - 336 = 48）。
+## 必须和 light_sensor.gd 的 RAIL_X 对上，否则滑块会飘在导轨外面。
+@export var rail_x := 48.0
 
 ## 当前竖直速度，正 = 上升（往下落时为负）。探针直接读这个。
 var speed := 0.0
@@ -104,3 +109,12 @@ func _draw() -> void:
 	# 两端的吊耳
 	for side in [-1.0, 1.0]:
 		draw_rect(Rect2(side * 30.0 - 4.0, -4.0, 8.0, 5.0), EDGE)
+	# 右侧滑块：夹在井壁那条导轨上（导轨由 light_sensor.gd 画，世界 x=384）。
+	# 这是「板 → 电 → 台」视觉链的最后一环：玩家看到电流沿导轨往上跑，
+	# 再看到这个滑块带着台面走，就明白台子是被那块板供着电的。
+	var glow := WARM if lit else COLD
+	var slide := Rect2(rail_x - 6.0, 2.0, 10.0, 10.0)
+	draw_rect(slide, EDGE)
+	draw_rect(Rect2(slide.position + Vector2(2.0, 1.0), Vector2(6.0, 3.0)), Color(0.10, 0.14, 0.13))
+	draw_circle(Vector2(rail_x - 1.0, 8.0), 3.6, Color(glow.r, glow.g, glow.b, 0.16 if not lit else 0.30))
+	draw_circle(Vector2(rail_x - 1.0, 8.0), 1.8, Color(glow.r, glow.g, glow.b, 0.45 if not lit else 1.0))
