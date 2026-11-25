@@ -101,8 +101,12 @@ func _process(_delta: float) -> void:
 		if old_panel != null:
 			old_panel.hide()
 		pending.clear()
-		flow.mark_complete()
-		save_progress()
+		# 试玩模式（catalog.preview_unlock）下不写正式存档。
+		# 这些房间是原型，通关记录会污染正式流程的解锁顺序，也会在章内列表里
+		# 挂上「已完成」——那不是真的做完了，只是有人试玩了一遍。
+		if not flow.unlock_all:
+			flow.mark_complete()
+			save_progress()
 		var following := flow.current + 1
 		if flow.playable(following) and flow.chapter_of(following) == flow.chapter_of(flow.current):
 			if DisplayServer.get_name() != "headless" and transition_kind(flow.current, following) == "slide":

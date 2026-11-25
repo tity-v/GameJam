@@ -35,10 +35,17 @@ func _ready() -> void:
 	collision_mask = 1
 	add_to_group("torch_light")
 	add_to_group("specter")
+	add_to_group("mechanism")
 	radii = start_radii
 	_start = global_position
 	# World 是同级节点，缓存下来给 _floor_ahead 用，不要每帧查树
 	_world = get_parent().get_node_or_null("World") as TileMapLayer
+
+
+## R 键：回到起点重新走一遍，铁栅那边也会被 gate.reset_mechanism() 关回去。
+## 少了这一条，3-1 按 R 之后虚影还杵在出口旁，玩家跟着走过去就通关了。
+func reset_mechanism() -> void:
+	_restart()
 
 
 func _physics_process(delta: float) -> void:

@@ -37,6 +37,11 @@ var speed := 0.0
 var lit := false
 
 var _sensor: Node
+## R 键复位是「挂个待办」，真正搬位置留到本帧 _physics_process 里做。
+## 不能直接在 reset_mechanism() 里写 position：AnimatableBody2D 的 transform
+## 归物理服务器管，物理帧之外赋值下一帧就被回滚——实测 `lift.position.y = 300`
+## 之后再读还是 128，按 R 平台会永远停在半空。
+var _reset_pending := false
 
 
 func _ready() -> void:
@@ -48,10 +53,17 @@ func _ready() -> void:
 ## R / 重来时回到底部静止。台面高度也归位，否则复活后平台停在半空。
 func reset_mechanism() -> void:
 	speed = 0.0
-	position.y = bottom_y
+	_reset_pending = true
 
 
 func _physics_process(delta: float) -> void:
+	if _reset_pending:
+		_reset_pending = false
+		position.y = bottom_y
+		speed = 0.0
+		lit = false
+		queue_redraw()
+		return
 	lit = _sensor_lit()
 	if lit:
 		speed = minf(speed + rise_accel * delta, up_speed)
