@@ -161,6 +161,21 @@ func run() -> void:
 	expect(session.flow.unlock_all, "目录开关下发到流程")
 	expect(session.flow.playable(19), "试玩下最后一关也能进")
 	expect(session.flow.completed.size() == 20, "试玩不抹掉已有进度")
+
+	# 试玩模式通关不写存档：原型关不应该在正式进度里留下「已完成」。
+	session.flow.clear_progress()
+	await frames()
+	await command("choose", 0)
+	current_scene.complete()
+	await frames()
+	expect(session.flow.completed.is_empty(), "试玩模式通关不写完成记录")
+	# 把进度写回去给后面的「重启读取通关记录」用，否则那一条会读到空盘。
+	# recent 也要一起还原：中间的 choose 把它改成了第 1 关。
+	for index in range(20):
+		session.flow.completed.append(str(catalog.levels[index].id))
+	session.flow.recent = str(catalog.levels[19].id)
+	session.save_progress()
+
 	session.queue_free()
 	await frames()
 	catalog.preview_unlock = false

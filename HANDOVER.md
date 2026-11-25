@@ -85,7 +85,7 @@
 | **第三章黑幕照明**（全屏 shader 按光源挖椭圆洞，`falloff` 控制由内向外衰减） | 完成 | `scenes/levels/dark_building/blackout.gdshader`、`blackout.gd` |
 | **打火手电**（`Shift`：底光 40/90 ↔ 打火 96/150，亮 2.5s / 冷却 1.5s） | 完成 | `scenes/levels/chapter_03/torch.gd` |
 | **3-1 打火教学原型**（坑 / 96px 高台 / 虚影经过把铁栅抬起来） | 原型可玩 | `scenes/levels/chapter_03/room_31_proto.tscn`（已占目录 `level_11`，主界面 → 第 3 章 → 第 1 间即可进）；断言 `test_room31.gd` 23 条 |
-| **3-2 光控升降原型**（三层竖井 / 光敏板 / 无光先滑再落 / 虚影站板把平台推到底） | 原型可玩 | `scenes/levels/chapter_03/room_32_proto.tscn`（已占目录 `level_12`）；断言 `test_room32.gd` 33 条 + `test_room32_loop.gd` 8 条（真录制→重放闭环） |
+| **3-2 光控升降原型**（三层竖井 / 光敏板 / 无光先滑再落 / 虚影站板把平台推到底） | 原型可玩 | `scenes/levels/chapter_03/room_32_proto.tscn`（已占目录 `level_12`）；断言 `test_room32.gd` 33 条 + `test_room32_loop.gd` 8 条（真录制→重放闭环）；R 复位 / 砸人 / 自己打火 `test_chapter3_edge.gd` 34 条 |
 | **试玩解锁**（`catalog.preview_unlock`）：跳过顺序解锁，任意章任意已接入的房间可直接点 | 完成，当前为 `true` | `frontend/db/catalog.tres` 的 `preview_unlock`；正式版本需设回 `false`，否则顺序解锁失效 |
 | 关卡名 / 关卡提示文字（原版有） | 未做 | — |
 | 第 2–8 关 | 未做 | 原数据见 `_reference/source_from_game/scripts/platformer/levels.gd` |
@@ -534,6 +534,9 @@ if not satisfied and _player_in_doorway():
 | 虚影帧号卡在 0、帧数还在涨，「重放的是当前这轮」 | `PackedVector2Array` 传参是**共享缓冲**，虚影和录制中的 `_trail` 指向同一份数据 | `echo.setup(trail.duplicate())`，且复活时直接 `_trail = PackedVector2Array()` 换新数组 |
 | 第二条命开始虚影穿模，玩家踩空 | 虚影播完时 `set_collision_layer_value(3, false)`，`reset()` 里忘了开回来 | `reset()` 里显式打开层 3 |
 | 键盘映射写了但按键完全没反应 | `InputEventKey.new()` 不设 `device = -1`，序列化出来是 `device: 16` | `project.godot` 里所有事件都是 `device: -1`，**别手改这个值** |
+| 按 R 后升降台还停在半空（写完 `position.y = 576`，再读还是 128） | `AnimatableBody2D` 的 transform 归物理服务器管，**物理帧之外写 `position` 会被静默回滚**；`sync_to_physics` 下连 `lift.position.y = 300` 都读不回来 | 复位只置一个 `_reset_pending`，真正搬位置放到自己的 `_physics_process()` 开头执行 |
+| 按 R 后铁栅还开着、预告虚影还杵在出口旁，玩家直接走过去就通关 | 新机关忘了 `add_to_group("mechanism")` + `reset_mechanism()`，`room_controller.reset_mechanisms()` 根本扫不到它 | 任何需要「回到初始状态」的节点都进 `mechanism` 组；`gate.gd` / `specter.gd` 已补上 |
+| 队友试玩完原型关，正式进度里多出一个「已完成」，还自动跳进下一间 | `session.gd` 每帧检测 `won` → `mark_complete()` + `save_progress()`，试玩模式（`preview_unlock`）也照写 | 只在 `not flow.unlock_all` 时写；`test_frontend.gd` 有「试玩模式通关不写完成记录」断言 |
 | 物块全变成 64×64 小方块 | tscn 里 `block_size` 写在 `script = ExtResource(...)` **之前**，脚本还没挂上，自定义属性被丢弃，回落到默认值 | 节点属性顺序必须是 `script` 先、自定义属性后 |
 | 改一个地面的尺寸，所有地面都变了 | 场景里的 `RectangleShape2D` sub_resource 默认被所有实例共享 | `resource_local_to_scene = true` |
 | 玩家重生时镜头从死亡点一路滑回出生点 | `Camera2D` 开了平滑，瞬移会触发插值 | 重生后调 `camera_follow.gd` 的 `snap_to_target()` |
