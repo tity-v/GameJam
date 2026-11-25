@@ -23,11 +23,13 @@ func _run() -> void:
 	var lift := room.get_node("Lift") as AnimatableBody2D
 	var echoes := room.get_node("EchoManager")
 
-	# ---- 第一次活着：走到光敏板上站 3.6s，再一路走进右边的坑 ----
-	await _walk_to(p, 400.0, 600)
+	# ---- 第一次活着：走到光敏板附近站 3.6s，再一路走进右边的坑 ----
+	# 判定已改成「光斑覆盖板」（板中心 x=492），所以活着时要站到板附近 x=460，
+	# 让虚影重放时站在这里、光斑（半径 72）能覆盖到板。
+	await _walk_to(p, 460.0, 600)
 	await _frames(24)
-	print("A 站到光敏板上 x=%.1f y=%.1f" % [p.position.x, p.position.y])
-	expect(absf(p.position.x - 400.0) < 30.0, "活着能走到光敏板上")
+	print("A 站到光敏板附近 x=%.1f y=%.1f" % [p.position.x, p.position.y])
+	expect(absf(p.position.x - 460.0) < 30.0, "活着能走到光敏板附近")
 	await _frames(int(STAND * 60.0))
 	expect(is_equal_approx(lift.position.y, 576.0), "底光站在板上推不动平台")
 	await _walk_to(p, 1200.0, 900)
