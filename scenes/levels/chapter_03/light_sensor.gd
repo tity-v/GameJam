@@ -27,9 +27,13 @@ extends Node2D
 ## 这样即使玩家还没搞懂「要持续供光」，也先看懂「这块板是给那个台子供电的」。
 
 ## 感应区尺寸（宽, 高），以本节点为底边中点向上展开。
+## 现在只用于「玩家走进来触发引导提示」，判定改用「光斑覆盖到板」（见 is_lit）。
 @export var zone := Vector2(120, 82)
 ## 光源横向半径门槛。40（底光）以下一律推不动。
 @export var min_radius := 60.0
+## 光斑中心到板中心的最大距离（＝打火半径 96）。判定改成「光斑覆盖到板」，
+## 不再用「光心落在感应区」：后者会留出 x=340 的作弊缝，玩家站平台左缘打火
+## 就被平台带着上中层、不死一次就通关。
 ## 虚影的照明半径，跟 Blackout 的 echo_radii 保持一致。
 @export var echo_radii := Vector2(72, 100)
 ## 调试用：1 强制点亮，-1 强制熄灭，0 正常判定。
@@ -62,6 +66,8 @@ var _lit_at := -99.0
 ## 一次性提示发过没有。玩家第一次站进感应区时提示「要持续」，
 ## 因为这一关最容易踩的坑不是「找不到板」，而是「按一下打火就跑」。
 var _hinted := false
+## 靠近板但还没打火时提示「打火照亮它」；发过就置 true，避免反复刷屏。
+var _hinted_fire := false
 var _player: Node2D
 ## 玩家是否在「一眼能看清板」的距离内。用来决定画不画感应区角标、
 ## 以及待机呼吸要不要加速——远景全亮会变成噪点，也失去「走近才发现」的节奏。
@@ -72,13 +78,23 @@ func zone_rect() -> Rect2:
 	return Rect2(global_position + Vector2(-zone.x * 0.5, -zone.y), zone)
 
 
+## 板中心（世界坐标）。判定是「光源的光斑覆盖到这个点」，
+## 而不是「光心落在感应区」。两者的差别是：光斑判定按半径覆盖，
+## 玩家站平台左缘（x=340）打火时，光斑右缘 436 够不到板中心 492，推不动；
+## 只有站到板附近（x≥460）光斑才扫得到板，而那时平台已经在他左边升上去了，
+## 玩家上不去——正好守住「必须死一次」。
+func _plate_center() -> Vector2:
+	return global_position + PLATE_RECT.get_center()
+
+
 func is_lit() -> bool:
 	if force != 0:
 		return force > 0
-	var area := zone_rect()
+	var plate := _plate_center()
 	for light in get_tree().get_nodes_in_group("torch_light"):
 		var radii: Variant = light.get("radii")
-		if radii is Vector2 and radii.x >= min_radius and area.has_point(light.global_position):
+		if radii is Vector2 and radii.x >= min_radius \
+			and light.global_position.distance_to(plate) <= radii.x:
 			return true
 	for echo in get_tree().get_nodes_in_group("echo"):
 		if not echo.is_active():
@@ -86,7 +102,7 @@ func is_lit() -> bool:
 		var fade: float = maxf(0.01, 1.0 - float(echo._fade_time) / float(echo.fade_duration))
 		if echo_radii.x * fade < min_radius:
 			continue
-		if area.has_point(echo.body_rect().get_center()):
+		if echo.body_rect().get_center().distance_to(plate) <= echo_radii.x * fade:
 			return true
 	return false
 
@@ -100,6 +116,13 @@ func _ready() -> void:
 ## 否则玩家按了 R 反而拿不到这句唯一的说明。
 func reset_mechanism() -> void:
 	_hinted = false
+	_hinted_fire = false
+
+
+func _flash(text: String) -> void:
+	var hud := get_tree().get_first_node_in_group("hud")
+	if hud != null and hud.has_method("flash"):
+		hud.call("flash", text)
 
 
 func _physics_process(dt: float) -> void:
@@ -108,14 +131,21 @@ func _physics_process(dt: float) -> void:
 		_player = get_tree().get_first_node_in_group("player") as Node2D
 	_near = _player != null and is_instance_valid(_player) \
 		and _player.global_position.distance_to(global_position) < 260.0
-	# 一次性提示：玩家（不是光心）第一次踩进感应区
+	# ---- 引导：三段，由玩家状态驱动，各只发一次 ----
+	# 1. 靠近板但还没打火（_near 且板没亮）→ 提示「打火照亮它」。
+	#    这是回答「玩家怎么知道要打火」的关键：不能等他踩进感应区才说，
+	#    那时他已经绕一圈了；要在「靠近板」这个更早的时机就点破。
+	if _near and not _hinted_fire and not lit:
+		_hinted_fire = true
+		_flash("打火照亮它")
+	# 2. 第一次踩进感应区（还没打火成功）→ 补一句「光要一直照着」，
+	#    提醒他这不是按一下就完事，而是持续供光。
 	if not _hinted and _player != null and is_instance_valid(_player):
 		var body := Rect2(_player.global_position, Vector2(32, 44))
 		if zone_rect().intersects(body):
 			_hinted = true
-			var hud := get_tree().get_first_node_in_group("hud")
-			if hud != null and hud.has_method("flash"):
-				hud.call("flash", "光敏板 · 光要一直照着")
+			if not lit:
+				_flash("光敏板 · 光要一直照着")
 	# 每帧都重算并重绘：面板亮/灭是本关最重要的一条反馈，
 	# 玩家必须能在按下打火的同一帧看见它变暖。
 	var now := is_lit()

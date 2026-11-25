@@ -3,9 +3,11 @@ extends SceneTree
 ##
 ## 这一关的全部手感都压在一条曲线上：有光加速上升 / 无光先刹车再下落。
 ## 所以测试不只看「能不能升到顶」，还要量三件事：
-##   1. 玩家自己打火只能把平台推 60px 就断（离中层 140px，够不着）
+##   1. 判定是「光斑覆盖到板」不是「光心在感应区」——站平台左缘（x=336）打火
+##      光斑够不到板，推不动（堵死作弊缝）；站板附近（x=460）打火才推得动，
+##      但 2.5s 只够升约 170px 到 y≈406，够不着中层 352
 ##   2. 失光后平台还会往上滑一段才回头（惯性），不是立刻反向
-##   3. 虚影站在光敏板上一路推到底，玩家被平台带到顶层
+##   3. 虚影站在板附近持续照一路推到底，玩家被平台带到顶层
 
 const ROOM := "res://scenes/levels/chapter_03/room_32_proto.tscn"
 
@@ -56,15 +58,32 @@ func _run() -> void:
 	expect(is_equal_approx(lift.get("speed"), 0.0), "开局静止")
 	expect(not sensor.call("is_lit"), "底光 40 推不动光敏板")
 
-	# 感应区几何：站在台上的手电（352,554）要落在里面，升高 90px 后必须落在外面
+	# 感应区几何：只用于「走近触发引导」，判定不再用感应区（用光斑覆盖板）
 	var area: Rect2 = sensor.call("zone_rect")
 	expect(area.has_point(Vector2(352, 554)), "台上手电落在感应区")
 	expect(not area.has_point(Vector2(352, 464)), "升高后手电离开感应区")
 	expect(is_equal_approx(sensor.position.y, 576.0), "光敏板铺平地（虚影站得住、不进平台底板）")
 	expect(world.get_cell_source_id(Vector2i(12, 18)) != -1, "光敏板那一格是平地")
 
-	# ---- 玩家自己打火：只能推 60px 就断，够不着中层 ----
+	# ---- 判定：光斑覆盖板，不是光心在感应区 ----
+	# 站平台左缘（x=336）打火，光斑右缘 336+96=432 < 板中心 492，够不到 -> 推不动
 	p.position = Vector2(336, 532)
+	await _frames(6)
+	Input.action_press("fire")
+	await _frames(4)
+	Input.action_release("fire")
+	var peak_left := 9999.0
+	for i in 120:
+		await physics_frame
+		peak_left = minf(peak_left, lift.position.y)
+	expect(576.0 - peak_left < 10.0, "站平台左缘打火推不动（光斑够不到板，作弊缝已堵）")
+
+	# ---- 玩家站板附近打火：能推，但 2.5s 只够到 y≈406，够不着中层 352 ----
+	lift.call("reset_mechanism")
+	await _frames(4)
+	p.position = Vector2(460, 532)
+	var torch := p.get_node("Torch") as Node2D
+	torch.set("cooling", 0.0)      # 清掉上一段打火的冷却，否则这次打火被拦下
 	await _frames(6)
 	Input.action_press("fire")
 	await _frames(4)
@@ -74,8 +93,8 @@ func _run() -> void:
 		await physics_frame
 		peak = minf(peak, lift.position.y)
 	var rise := 576.0 - peak
-	expect(rise > 40.0, "打火把平台推动了（%.0fpx）" % rise)
-	expect(rise < 110.0, "打火自己够不着中层（只升 %.0fpx，离 352 还差 %.0fpx）" % [rise, 576.0 - rise - 352.0])
+	expect(rise > 60.0, "站板附近打火把平台推动了（%.0fpx）" % rise)
+	expect(peak > 352.0, "打火自己够不着中层（只到 y=%.0f，离中层 352 差 %.0fpx）" % [peak, peak - 352.0])
 
 	# ---- 惯性：失光后还要往上滑一段，才回头 ----
 	lift.call("reset_mechanism")
@@ -83,7 +102,7 @@ func _run() -> void:
 	sensor.set("force", 1)
 	await _frames(90)              # 升到巡航速度
 	var fast: float = lift.get("speed")
-	expect(fast > 130.0, "有光时到巡航速度 140")
+	expect(fast > 90.0, "有光时到巡航速度 100")
 	var y_at_cut: float = lift.position.y
 	sensor.set("force", -1)        # 掐光
 	var lowest := y_at_cut
@@ -97,10 +116,11 @@ func _run() -> void:
 		elif turned < 0 and lift.position.y > lowest + 0.5:
 			turned = i + 1
 	var coast := y_at_cut - lowest
-	expect(coast > 15.0, "失光后仍上滑 %.1fpx（不是立刻反向）" % coast)
-	expect(frames_up >= 12, "上滑持续 %.2fs" % (frames_up / 60.0))
+	# up_speed=100 时刹车距离 = 100²/(2×420) ≈ 11.9px，滑行 ≈ 14 帧（0.238s）
+	expect(coast > 8.0, "失光后仍上滑 %.1fpx（不是立刻反向）" % coast)
+	expect(frames_up >= 10, "上滑持续 %.2fs" % (frames_up / 60.0))
 	expect(turned > frames_up, "先滑到顶再下落")
-	expect(turned > 0 and turned < 40, "回头发生在 %d 帧内（不拖泥带水）" % turned)
+	expect(turned > 0 and turned < 35, "回头发生在 %d 帧内（不拖泥带水）" % turned)
 
 	await _frames(150)
 	expect(is_equal_approx(lift.position.y, 576.0), "无光最终回到底部")
@@ -110,14 +130,14 @@ func _run() -> void:
 	sensor.set("force", 0)
 	var ghost := FakeEcho.new()
 	ghost.add_to_group("echo")
-	ghost.global_position = Vector2(384, 532)
+	ghost.global_position = Vector2(460, 532)
 	room.add_child(ghost)
 	await _frames(4)
-	expect(sensor.call("is_lit"), "虚影站上光敏板即点亮")
+	expect(sensor.call("is_lit"), "虚影站板附近即点亮")
 
 	p.position = Vector2(336, 532)
 	await _frames(6)
-	await _frames(320)
+	await _frames(460)
 	expect(is_equal_approx(lift.position.y, 128.0), "虚影一路把平台推到顶层 128")
 	expect(is_equal_approx(lift.get("speed"), 0.0), "到顶停住不再上升")
 	await _frames(30)

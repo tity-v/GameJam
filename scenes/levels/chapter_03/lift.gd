@@ -19,9 +19,12 @@ extends AnimatableBody2D
 ## 行程：台面最低 / 最高（世界坐标 y）
 @export var bottom_y := 576.0
 @export var top_y := 128.0
-## 上升：加速度与巡航速度
+## 上升：加速度与巡航速度。
+## up_speed 定在 100：玩家打火 2.5s 内平台最多升约 239px（到 y≈337），
+## 够不着中层 352；虚影持续照约 4.6s 到顶 128。这样「打火只能推着动、
+## 持续照才到顶」的平衡成立，也保留「必须死一次」。70 太慢会显得像卡住。
 @export var rise_accel := 480.0
-@export var up_speed := 140.0
+@export var up_speed := 100.0
 ## 失光：先刹车再下落，下落更快（机器比人重）
 @export var fall_accel := 420.0
 @export var fall_speed := 280.0
