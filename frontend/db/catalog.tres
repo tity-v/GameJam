@@ -51,8 +51,8 @@ levels = Array[Dictionary]([{
 "title": "第 3 章 · 3-1 打火教学（原型）"
 }, {
 "id": "level_12",
-"scene": "res://scenes/levels/chapter_03_room_02.tscn",
-"title": "第 3 章 · 手轮井"
+"scene": "res://scenes/levels/chapter_03/room_32_proto.tscn",
+"title": "第 3 章 · 3-2 光控升降（原型）"
 }, {
 "id": "level_13",
 "scene": "res://scenes/levels/chapter_03_room_03.tscn",
