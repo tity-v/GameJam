@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="PackedScene" path="res://frontend/view/page.tscn" id="1"]
+[ext_resource type="Script" path="res://frontend/view/floor_directory.gd" id="2"]
 
 [node name="levels" instance=ExtResource("1")]
-panel_width = 950.0
+script = ExtResource("2")

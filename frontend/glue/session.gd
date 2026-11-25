@@ -433,6 +433,22 @@ func redraw() -> void:
 
 func page_model() -> Dictionary:
 	var model := {"title": tr_copy(flow.page), "notice": notice}
+	if flow.page in ["levels", "chapter"]:
+		var recent := flow.continue_index()
+		var selected := flow.chapter if flow.page == "chapter" else flow.chapter_of(maxi(recent, 0))
+		var floors: Array[Dictionary] = []
+		for chapter in flow.chapter_count():
+			var rooms: Array[Dictionary] = []
+			var indices := flow.chapter_rooms(chapter)
+			for index in indices:
+				if flow.playable(index):
+					rooms.append({"index": index, "name": flow.room_label(index),
+						"number": index - indices[0] + 1, "done": flow.room_state(index) == "done"})
+			floors.append({"name": tr_copy("chapter") % (chapter + 1), "rooms": rooms,
+				"progress": "%d/%d" % [flow.chapter_card(chapter).count, indices.size()]})
+		model.directory = floors
+		model.selected_floor = selected
+		model.recent_room = recent
 	var buttons: Array[Dictionary] = []
 	var footer: Array[Dictionary] = []
 	model.buttons = buttons

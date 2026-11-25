@@ -1,0 +1,8 @@
+[gd_resource type="FontVariation" format=3]
+
+[ext_resource type="FontFile" path="res://frontend/assets/fusion-pixel-12px-monospaced-zh_hans.otf" id="1"]
+[ext_resource type="FontFile" path="res://frontend/assets/NotoSansSC-Medium.otf" id="2"]
+
+[resource]
+base_font = ExtResource("1")
+fallbacks = Array[Font]([ExtResource("2")])

@@ -60,7 +60,7 @@ func present(model: Dictionary) -> void:
 	underline.color = Color(ACCENT, 0.35)
 	underline.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	menu.add_child(underline)
-	make_label("↑ ↓ 选择     Enter 确认", Vector2(77, 663), 13).modulate.a = 0.7
+	make_label("↑ ↓ 选择     Enter 确认", Vector2(77, 663), 12).modulate.a = 0.7
 	notice.reparent(canvas)
 	notice.position = Vector2(77, 625)
 	notice.size = Vector2(410, 48)
@@ -87,7 +87,6 @@ func make_label(text: String, at: Vector2, font_size: int) -> Label:
 	label.text = text
 	label.position = at
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.add_theme_font_override("font", FONT)
 	label.add_theme_font_size_override("font_size", font_size)
 	label.add_theme_color_override("font_color", INK)
 	canvas.add_child(label)
@@ -106,8 +105,7 @@ func make_row(item: Dictionary) -> void:
 	text.name = "Caption"
 	text.text = item.text
 	text.position = Vector2(19, 5)
-	text.add_theme_font_override("font", FONT)
-	text.add_theme_font_size_override("font_size", 22)
+	text.add_theme_font_size_override("font_size", 24)
 	text.add_theme_color_override("font_color", INK)
 	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	button.add_child(text)
@@ -149,9 +147,9 @@ func activate(item: Dictionary) -> void:
 	if entry_tween != null:
 		entry_tween.kill()
 	flash_image.modulate.a = 1.0
-	await get_tree().create_timer(0.09).timeout
+	await get_tree().create_timer(0.15).timeout
 	var flash_out := create_tween()
-	flash_out.tween_property(flash_image, "modulate:a", 0.0, 0.16)
+	flash_out.tween_property(flash_image, "modulate:a", 0.0, 0.19)
 	await flash_out.finished
 	requested.emit(item.command, item.get("value"))
 	# A new-game confirmation may keep this page alive beneath its dialog.

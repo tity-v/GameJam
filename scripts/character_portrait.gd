@@ -24,6 +24,23 @@ const WALK_FRAMES = [
 ]
 const WALK_CENTER_X = [220.0, 220.0, 210.0, 230.0, 230.0, 220.0]
 const WALK_VISIBLE_HEIGHT = [410.0, 400.0, 410.0, 400.0, 400.0, 410.0]
+const JUMP_FRAMES = [
+	preload("res://assets/actors/office_character/jump_01.png"),
+	preload("res://assets/actors/office_character/jump_02.png"),
+	preload("res://assets/actors/office_character/jump_03.png"),
+	preload("res://assets/actors/office_character/jump_04.png"),
+	preload("res://assets/actors/office_character/jump_05.png"),
+	preload("res://assets/actors/office_character/jump_06.png"),
+	preload("res://assets/actors/office_character/jump_07.png"),
+	preload("res://assets/actors/office_character/jump_08.png"),
+	preload("res://assets/actors/office_character/jump_09.png"),
+]
+# 原图自身也画了腾空位移；固定缩放，以躯干中心和靴底对齐物理角色。
+const JUMP_ANCHORS = [
+	Vector2(210, 480), Vector2(210, 470), Vector2(198, 420),
+	Vector2(209, 420), Vector2(220, 450), Vector2(224, 470),
+	Vector2(264, 480), Vector2(266, 480), Vector2(267, 480),
+]
 
 @export var blink_texture: Texture2D
 @export var echo_tint := false
@@ -37,6 +54,9 @@ var _open: Texture2D
 var _blink: Texture2D
 var elapsed := 0.0
 var _walk_time := 0.0
+var _airborne := false
+var _show_landing := false
+var _landing_time := 0.0
 var _body_size := Vector2(32, 44)
 
 func _ready() -> void:
@@ -61,6 +81,7 @@ func set_art(open_art: Texture2D, blink_art: Texture2D = null) -> void:
 	texture = _open
 	elapsed = 0.0
 	_walk_time = 0.0
+	_reset_jump_pose()
 
 
 ## 把外观缩放到碰撞体：高度 = body.y × visual_height_ratio，宽度按贴图自己的长宽比，脚底对齐。
@@ -90,17 +111,69 @@ func _show_default_frame(frame: Texture2D, center_x: float, visible_height: floa
 	position = Vector2(_body_size.x * 0.5 - center * ratio, _body_size.y - 480.0 * ratio)
 
 
+func _reset_jump_pose() -> void:
+	_airborne = false
+	_show_landing = false
+	_landing_time = 0.0
+
+
+func _jump_frame(motor: CharacterBody2D, delta: float) -> int:
+	if motor == null or motor.get("is_dead") or motor.get("climbing"):
+		_reset_jump_pose()
+		return -1
+	if not motor.is_on_floor():
+		var speed := motor.velocity.y / maxf(1.0, absf(float(motor.get("jump_velocity"))))
+		# 重生后的第一帧还没更新地面接触，静止时先保留待机。
+		if not _airborne and is_zero_approx(speed):
+			return -1
+		var taking_off := not _airborne and speed < -0.1
+		_airborne = true
+		_show_landing = _show_landing or absf(speed) > 0.18
+		_landing_time = 0.0
+		if taking_off: return 0
+		if speed < -0.6: return 1
+		if speed < -0.15: return 2
+		if speed < 0.13: return 3
+		if speed < 0.42: return 4
+		if speed < 0.7: return 5
+		return 6
+	if _airborne and _show_landing:
+		_landing_time = 0.10
+	_airborne = false
+	_show_landing = false
+	if _landing_time <= 0.0:
+		return -1
+	_landing_time -= delta
+	return 7 if _landing_time > 0.05 else 8
+
+
 func _physics_process(delta: float) -> void:
 	var moving := false
 	var direction := 0.0
 	var actor := get_parent()
+	var motor := actor as CharacterBody2D
 	if _open == DEFAULT_OPEN and actor is CharacterBody2D:
 		direction = actor.velocity.x
 		moving = not actor.get("is_dead") and actor.is_on_floor() and absf(direction) > 28.0
 	elif _open == DEFAULT_OPEN and actor.is_in_group("echo"):
+		motor = actor.animation_motor()
 		var step: Vector2 = actor.get("last_delta")
 		direction = step.x
 		moving = absf(direction) > 0.4 and absf(step.y) < 0.8
+	if _open == DEFAULT_OPEN:
+		var jump_index := _jump_frame(motor, delta)
+		if jump_index >= 0:
+			_walk_time = 0.0
+			if absf(direction) > 0.4:
+				flip_h = direction < 0.0
+			var frame: Texture2D = JUMP_FRAMES[jump_index]
+			var anchor: Vector2 = JUMP_ANCHORS[jump_index]
+			var ratio := _body_size.y * visual_height_ratio / 420.0
+			var center := frame.get_width() - anchor.x if flip_h else anchor.x
+			texture = frame
+			scale = Vector2.ONE * ratio
+			position = Vector2(_body_size.x * 0.5 - center * ratio, _body_size.y - anchor.y * ratio)
+			return
 	if moving:
 		_walk_time += delta
 		var index := int(_walk_time * walk_fps) % WALK_FRAMES.size()

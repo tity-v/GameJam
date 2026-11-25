@@ -1,6 +1,8 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="PackedScene" path="res://frontend/view/page.tscn" id="1"]
+[ext_resource type="Texture2D" path="res://frontend/assets/ui_pause_window.png" id="2"]
 
 [node name="pause" instance=ExtResource("1")]
 panel_width = 460.0
+illustration = ExtResource("2")

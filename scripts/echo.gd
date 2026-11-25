@@ -105,6 +105,9 @@ func horizontal_intent() -> float:
 func get_frame_delta() -> Vector2:
 	return last_delta if _active else Vector2.ZERO
 
+func animation_motor() -> CharacterBody2D:
+	return _motor if _active and not _fading else null
+
 func fit_visuals() -> void:
 	(_hit.shape as RectangleShape2D).size = body_size
 	_hit.position = body_size / 2
