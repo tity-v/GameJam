@@ -110,7 +110,7 @@ func _case_flashlight() -> void:
 	expect(_lamp.get("can_power") == false, "没手电时不能供能")
 
 	# 走到地上的那支手电上
-	_p.position = Vector2(1000, 532)
+	_p.position = Vector2(1050, 532)
 	await _frames(20)
 	expect(_lamp.get("has_flashlight") == true, "碰到就捡起来（不需要按键）")
 	expect(_lamp.get("radii") == Vector2(120, 180), "捡到后照明 120/180")
@@ -142,7 +142,7 @@ func _case_judge() -> void:
 	expect(not _sensor.call("is_lit"), "没手电站板旁 → 板 A 仍然是灭的（光只照明，不供能）")
 
 	# 重新捡起来，后面几段都要用
-	_p.position = Vector2(1000, 532)
+	_p.position = Vector2(1050, 532)
 	await _frames(20)
 	expect(_lamp.get("has_flashlight"), "重新捡回手电")
 
@@ -232,7 +232,7 @@ func _case_echo() -> void:
 	print("--- 6. 虚影带着死时的同一支手电")
 	# 让录制原点对齐当前位置，否则虚影会从出生点重演
 	_mgr.call("reset_all")
-	_p.position = Vector2(1000, 532)
+	_p.position = Vector2(1050, 532)
 	await _frames(16)
 	expect(_lamp.get("has_flashlight"), "先把地上那支捡回来")
 

@@ -27,17 +27,46 @@ const UP_RIGHT := 19
 ## 中层右段悬挑台（井 B 对面）：放火盆与光敏板 B
 const LEDGE_LEFT := 23
 const LEDGE_RIGHT := 28
-## 死亡坑
-const PIT_LEFT := 34
-const PIT_RIGHT := 37
+## 拿手电路上的两个断口：**无底**（row 18 起全空，掉下去摔出地图 = 死）。
+##
+## 这一段玩家**还没有手电**，只有 72px 的微光，而 x=1050 那支手电自带
+## 48/78 光晕，是全房间唯一亮着的东西——它会一直勾着玩家往前走。
+## 断口本身在 72px 之外完全不可见，要走到光圈里才照得出来（2 格宽），
+## 所以「看得到目标」和「看得到脚下」是两件不同的事。
+##
+## 掉下去由 `player.kill_y`(750) 判死 → 淡出 1.3s → 回 `respawn_point`。
+## 不需要任何新代码：这条规则第一关就写着，只是那时地板铺满、撞不到。
+##
+## 坑底曾经铺过一格（32px 深，跳一下能爬回来），当时的理由是「这里死一次会
+## 留下一条跑错路的虚影，污染第一段供光」。现在挖成无底，这条代价接受了：
+##   1. 虚影也吃同一条 `kill_y`（`echo.gd` 末段），掉进坑里会跟着死，
+##      不会变成挂在半空的鬼；
+##   2. FIFO 上限 5 条，垃圾虚影是最早生成的，第一次「故意死」留下的那条
+##      反而在队尾，不会被这些挤掉；
+##   3. 代价变成「重走一遍」而不是「爬出来」，掉坑从 2 秒的失误升级成一次死亡，
+##      这一段才真的算一个「关卡」而不是一段布景。
+##
+## 右侧死路尽头（列 34~37）因此**铺实心**，原来那个掉出地图的死亡坑已经填了：
+## 满速跨断口 2 的落点实测在 1029~1084，而原来的坑从 1088 起——
+## 在边沿起跳的人会「跳过了坑、落在坑沿上、再滑下去」，读起来像这一关不可通关。
+## 现在路尽头是一堵墙（列 39），看见墙自然回头，比一个看不见的坑公平。
+const GAP1_LEFT := 24
+const GAP1_RIGHT := 25
+const GAP2_LEFT := 30
+const GAP2_RIGHT := 31
 
 
 func _init() -> void:
 	var solid: Array[Vector2i] = []
-	# 底层地板（row 18，顶面 576）：坑与平台正下方留空
+	# 底层地板（row 18，顶面 576）：断口与平台正下方留空，其余全铺到右墙
 	for x in COLS:
-		if (x < PIT_LEFT or x > PIT_RIGHT) and (x < SHAFT_LEFT or x >= SHAFT_RIGHT):
+		if (x >= GAP1_LEFT and x <= GAP1_RIGHT) or (x >= GAP2_LEFT and x <= GAP2_RIGHT):
+			continue
+		if x < SHAFT_LEFT or x >= SHAFT_RIGHT:
 			solid.append(Vector2i(x, 18))
+	# 断口下面**什么都不铺**：row 19 起全空，人会一路掉到 y>750 摔死。
+	# 别在这里补坑底——补了就从「会死的深坑」退回「跳一下就出来的台阶」。
+	#
 	# 平台正下方挖深一格（row 19，顶面 608）：平台静止时台面 576 与地板齐平，
 	# 玩家是「走上平台」而不是「站在地板上、平台从身体里升上去」。
 	# 只挖三格——光敏板那一格（SHAFT_RIGHT）必须是平地面，虚影要站在那里，
@@ -68,9 +97,10 @@ func _init() -> void:
 	print("WORLD=", Marshalls.raw_to_base64(world.tile_map_data))
 	# 抽查：这些格必须是实心的，两口竖井与坑必须是空的
 	for probe in [Vector2i(20, 18), Vector2i(0, 5), Vector2i(18, 11), Vector2i(5, 4),
-			Vector2i(25, 11), Vector2i(15, 4)]:
+			Vector2i(25, 11), Vector2i(15, 4), Vector2i(35, 18)]:
 		print("SOLID ", probe, "=", world.get_cell_source_id(probe) != -1)
-	for probe in [Vector2i(35, 18), Vector2i(10, 11), Vector2i(21, 11), Vector2i(21, 4)]:
+	for probe in [Vector2i(10, 11), Vector2i(21, 11), Vector2i(21, 4),
+			Vector2i(24, 19), Vector2i(31, 19), Vector2i(24, 18), Vector2i(31, 18)]:
 		print("EMPTY ", probe, "=", world.get_cell_source_id(probe) == -1)
 
 	# 两盏固定火把：

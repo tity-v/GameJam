@@ -40,6 +40,7 @@ const COAL := Color("#5a2a1e")
 const SPARK := Color("#ffd9a0")
 const WARM := Color("#f2c785")
 const FLAME := Color("#ff9a3c")
+const LightReach := preload("res://scripts/light_reach.gd")
 
 ## blackout.gd 每帧读这个
 var radii := Vector2.ZERO
@@ -127,6 +128,9 @@ func _process(delta: float) -> void:
 ## 有没有「有资格供能的光」照到盆心。手电（can_power=true）照到就着；
 ## 玩家自带的小光、地上的手电本体都不算——这跟光敏板是同一条规矩。
 ## 必须排除自己：火盆点燃后自己也进了 torch_light 组，不排除会一直自触发。
+##
+## 覆盖判定走 LightReach（扁椭圆），不能用圆：底层跳过断口时光心升高 115px，
+## 圆判定会让玩家隔着楼板把中层这口火盆点着（坑 1 就在火盆正下方）。
 func _touched_by_flashlight() -> bool:
 	for light in get_tree().get_nodes_in_group("torch_light"):
 		if light == self:
@@ -134,8 +138,7 @@ func _touched_by_flashlight() -> bool:
 		if light.get("can_power") != true:
 			continue
 		var r: Variant = light.get("radii")
-		if r is Vector2 and r.x > 0.0 \
-			and light.global_position.distance_to(global_position) <= r.x:
+		if r is Vector2 and LightReach.covers(light.global_position, r, global_position):
 			return true
 	return false
 

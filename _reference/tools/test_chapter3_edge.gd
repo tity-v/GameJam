@@ -26,6 +26,7 @@ func _run() -> void:
 	await _case_crush_by_lift()
 	await _case_squeeze_in_pit()
 	await _case_fire_from_plate()
+	await _case_gear_gaps()
 	await _case_31_reset()
 	await _case_real_R_32()
 	await _case_real_R_31()
@@ -209,6 +210,86 @@ func _case_fire_from_plate() -> void:
 	# 这不构成捷径：平台到 352 时玩家还在底层 532，跳高 51px 够不着，只能看着电梯走掉。
 	# 它反而是这关最早的一次教学——「你打火，它就走」，跟后面「必须留个人照着」是同一句话。
 	print("   打火把平台 A 送到 y=%.0f（顶 352），玩家仍在底层，够不着 —— 教学，不是捷径" % peak)
+	await _unmount(room)
+
+
+# ---------------------------------------------------------------- 拿手电那段的两处断口
+
+func _case_gear_gaps() -> void:
+	print("--- 8. 拿手电那段：两处断口 + 远处那团光")
+	var room := await _mount(ROOM32)
+	var world := room.get_node("World") as TileMapLayer
+	var p := room.get_node("Player") as CharacterBody2D
+	var pickup := room.get_node("Pickup") as Area2D
+	var lamp := p.get_node("Flashlight")
+
+	# 断口：**无底**。row 18 起一路空到地图外，掉下去由 kill_y(750) 判死。
+	# 以前这里铺过一格坑底（32px 深、跳一下能爬回来），改无底之后要守住
+	# 「下面真的一格都没有」——哪天有人心疼玩家补回坑底，这几条会红。
+	for cell in [Vector2i(24, 18), Vector2i(25, 18), Vector2i(30, 18), Vector2i(31, 18)]:
+		expect(world.get_cell_source_id(cell) == -1, "断口 %s 是空的" % str(cell))
+	for cell in [Vector2i(24, 19), Vector2i(25, 19), Vector2i(30, 19), Vector2i(31, 19),
+			Vector2i(24, 21), Vector2i(31, 21)]:
+		expect(world.get_cell_source_id(cell) == -1, "断口 %s 下面也是空的（无底）" % str(cell))
+	# 两处断口之间、以及最后一个断口之后，必须有能站人的实地
+	for cell in [Vector2i(26, 18), Vector2i(29, 18), Vector2i(32, 18)]:
+		expect(world.get_cell_source_id(cell) != -1, "落脚点 %s 是实的" % str(cell))
+
+	# 开局那团光：手电躺在地上自带光晕，是玩家在黑暗里唯一看得见的东西。
+	# 少了它，这一段就只剩「摸黑乱走」，没有「那边有东西」这个诱饵。
+	expect(pickup.is_in_group("torch_light"), "手电开局就在 torch_light 组里（黑幕会画它的光圈）")
+	var gr: Variant = pickup.get("radii")
+	expect(gr is Vector2 and gr.x > 0.0, "手电自身光圈半径 %.0f > 0（远处看得见）" % (gr.x if gr is Vector2 else 0.0))
+	expect(pickup.get("can_power") == false, "躺在地上的手电不供能")
+
+	# 位置：必须在两处断口右侧——玩家得先跨过陷阱才拿得到
+	expect(pickup.global_position.x > 1024.0, "手电在断口右侧（x=%.0f）" % pickup.global_position.x)
+	var dist: float = pickup.global_position.x - p.global_position.x
+	expect(dist > 700.0, "离出生点够远（%.0f px，走过去才叫「找」）" % dist)
+	# 手电本身不能供能，所以它躺在那儿也不会把自己的板照亮
+	expect(lamp.get("has_flashlight") == false, "开局手里没有手电")
+
+	# 掉进断口 = 死，然后回到出生点。
+	# 这里必须真按键走过去、不能传送：传送不会产生录制的输入帧，
+	# `_trail` 只有 1 帧时 `EchoManager._add_echo` 会直接 return（见它的 size<2 判断），
+	# 于是「虚影会不会掉进坑里」这件事根本验不到。
+	var spawn_x: float = p.global_position.x
+	var y_at_death := 0.0
+	Input.action_press("move_right")
+	for i in 600:
+		await physics_frame
+		if p.is_dead:
+			y_at_death = p.global_position.y
+			break
+	Input.action_release("move_right")
+	expect(p.is_dead, "一直往右走会掉进第一处断口并摔死")
+	expect(y_at_death > 750.0, "死的时候已经掉到 kill_y 以下（y=%.0f）" % y_at_death)
+	# 死的那一刻留下一条虚影——这是无底坑的代价，也是必须盯住的副作用：
+	# 它不能变成「挂在坑里不散的鬼」，得和玩家一样吃 kill_y。
+	expect(room.get_node("EchoManager").call("echo_count") == 1, "摔死留下 1 条虚影")
+
+	# 死亡淡出 1.3s 后回出生点
+	for i in 200:
+		await physics_frame
+		if not p.is_dead:
+			break
+	expect(not p.is_dead, "淡出结束后复活")
+	# `_place_at_spawn()` 只改位置和速度，is_on_floor() 要等下一次 move_and_slide 才刷新
+	await _frames(6)
+	expect(absf(p.global_position.x - spawn_x) < 40.0,
+		"回到出生点（%.0f → %.0f）" % [spawn_x, p.global_position.x])
+	expect(p.is_on_floor(), "复活后站在实地上")
+
+	# 虚影重放这段「一路往右」的录像，会掉进同一处断口。
+	# 它也必须死——否则会有一个幽灵永远挂在坑底，黑幕还会给它画光圈。
+	# 600 帧足够走完 656px + 坠落 + 淡出。
+	await _frames(600)
+	var stuck := 0
+	for e in get_nodes_in_group("echo"):
+		if e.is_active() and e.global_position.y > 740.0:
+			stuck += 1
+	expect(stuck == 0, "没有虚影挂在坑底（%d 条）" % stuck)
+
 	await _unmount(room)
 
 

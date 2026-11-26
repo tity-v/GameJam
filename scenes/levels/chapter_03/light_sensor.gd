@@ -56,6 +56,7 @@ const WARM := Color("#f2c785")
 const CABLE := Color("#2a3733")
 const SPARK := Color("#ffd9a0")
 const HAZARD := Color("#c9a227")
+const LightReach := preload("res://scripts/light_reach.gd")
 
 ## 板体画在感应区**右侧**（局部 +60 起），不放在感应区中心。
 ##
@@ -104,7 +105,7 @@ func is_lit() -> bool:
 			continue
 		var radii: Variant = light.get("radii")
 		if radii is Vector2 and radii.x >= min_radius \
-			and light.global_position.distance_to(plate) <= radii.x:
+			and LightReach.covers(light.global_position, radii, plate):
 			return true
 	return false
 
