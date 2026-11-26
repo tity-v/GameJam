@@ -38,6 +38,18 @@ extends Node2D
 @export var echo_radii := Vector2(72, 100)
 ## 调试用：1 强制点亮，-1 强制熄灭，0 正常判定。
 @export_range(-1, 1) var force := 0
+## 要不要画井壁导轨。
+## 板 A 嵌在井 A 右壁上，导轨是「板 → 电 → 台」视觉链的一半，必须有。
+## 板 B 立在井 B 对面的悬挑台上，它要指的那条导轨在井 B 左壁，
+## 不是自己脚边——靠 rail_local_x 挪过去，不用关导轨（关了平台 B 的滑块就悬空）。
+@export var show_rail := true
+## 导轨在本地的 x。板 A 用 -16（世界 384，正好是井 A 右壁）。
+## 板 B 节点在 788，要指的井 B 左壁在世界 640，所以本地 -148。
+@export var rail_local_x := -16.0
+## 引导文案。板 B 的供光源是火盆不是玩家自己的火把（玩家够不到板 B），
+## 直接沿用「打火照亮它」会把玩家往错误方向指。
+@export var hint_fire := "打火照亮它"
+@export var hint_lit := "光敏板 · 光要一直照着"
 
 const PLATE := Color("#232f2c")
 const PLATE_EDGE := Color("#465955")
@@ -55,8 +67,6 @@ const HAZARD := Color("#c9a227")
 ## 32×44 的角色会把整块板盖住——"看不见"的一半原因在这里，光把板画大没用。
 ## 放到区外右侧，玩家站在 340~460 之间时板始终露在视野里。
 const PLATE_RECT := Rect2(60.0, -22.0, 64.0, 22.0)
-## 井壁导轨在本地的 x（世界 384），从地面一直拉到天花板。
-const RAIL_X := -16.0
 
 var lit := false
 
@@ -137,7 +147,7 @@ func _physics_process(dt: float) -> void:
 	#    那时他已经绕一圈了；要在「靠近板」这个更早的时机就点破。
 	if _near and not _hinted_fire and not lit:
 		_hinted_fire = true
-		_flash("打火照亮它")
+		_flash(hint_fire)
 	# 2. 第一次踩进感应区（还没打火成功）→ 补一句「光要一直照着」，
 	#    提醒他这不是按一下就完事，而是持续供光。
 	if not _hinted and _player != null and is_instance_valid(_player):
@@ -145,7 +155,7 @@ func _physics_process(dt: float) -> void:
 		if zone_rect().intersects(body):
 			_hinted = true
 			if not lit:
-				_flash("光敏板 · 光要一直照着")
+				_flash(hint_lit)
 	# 每帧都重算并重绘：面板亮/灭是本关最重要的一条反馈，
 	# 玩家必须能在按下打火的同一帧看见它变暖。
 	var now := is_lit()
@@ -162,7 +172,8 @@ func _draw() -> void:
 	var pulse := 0.5 + 0.5 * sin(_t * rate)
 	var glow := WARM if lit else COLD
 
-	_draw_rail(glow)
+	if show_rail:
+		_draw_rail(glow)
 	_draw_plate(glow, pulse)
 	if lit:
 		_draw_beam()
@@ -178,13 +189,13 @@ func _draw_rail(glow: Color) -> void:
 	# 导轨本体要比暗色电缆亮一档，否则在 1x 分辨率下就是一条看不见的噪点
 	var rail_col := Color("#5c7169") if not lit else Color("#8aa294")
 	# 电缆：板左缘贴地走到井壁，再沿井壁竖直拉到天花板
-	draw_line(Vector2(bx, -4.0), Vector2(RAIL_X, -4.0), CABLE, 3.0)
-	draw_line(Vector2(RAIL_X, -4.0), Vector2(RAIL_X, top), Color(0.06, 0.09, 0.08, 0.9), 5.0)
-	draw_line(Vector2(RAIL_X, -4.0), Vector2(RAIL_X, top), rail_col, 2.0)
+	draw_line(Vector2(bx, -4.0), Vector2(rail_local_x, -4.0), CABLE, 3.0)
+	draw_line(Vector2(rail_local_x, -4.0), Vector2(rail_local_x, top), Color(0.06, 0.09, 0.08, 0.9), 5.0)
+	draw_line(Vector2(rail_local_x, -4.0), Vector2(rail_local_x, top), rail_col, 2.0)
 	# 每隔 32px 一个固定卡扣，让竖线读起来是「一条固定在墙上的导轨」而不是噪点
 	var y := 0.0
 	while y > top:
-		draw_rect(Rect2(RAIL_X - 4.0, y, 10.0, 3.0), rail_col)
+		draw_rect(Rect2(rail_local_x - 4.0, y, 10.0, 3.0), rail_col)
 		y -= 32.0
 
 	if not lit:
@@ -194,9 +205,9 @@ func _draw_rail(glow: Color) -> void:
 		var phase := fmod(_t * 0.55 + i / 3.0, 1.0)
 		var pos: Vector2
 		if phase < 0.2:
-			pos = Vector2(lerpf(bx, RAIL_X, phase / 0.2), -4.0)
+			pos = Vector2(lerpf(bx, rail_local_x, phase / 0.2), -4.0)
 		else:
-			pos = Vector2(RAIL_X, lerpf(-4.0, top * 0.75, (phase - 0.2) / 0.8))
+			pos = Vector2(rail_local_x, lerpf(-4.0, top * 0.75, (phase - 0.2) / 0.8))
 		var a := sin(phase * PI)  # 两端淡出，中间最亮
 		# 拖尾：沿来路补三个更小更淡的点，在 1x 下才看得出是「在跑」
 		for k in 4:

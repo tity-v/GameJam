@@ -54,24 +54,57 @@ func _run() -> void:
 	var top_reached := -1
 	for i in 480:
 		await physics_frame
-		if lift.position.y <= 129.0:
+		if lift.position.y <= 353.0:
 			top_reached = i
 			break
-	print("D 到顶用了 %d 帧（%.1fs）lift=%.1f p.y=%.1f" % [top_reached, top_reached / 60.0, lift.position.y, p.position.y])
-	expect(top_reached > 0, "虚影把平台推到了顶层")
-	expect(absf(p.position.y - 84.0) < 12.0, "玩家被带到顶层（y=%.1f）" % p.position.y)
+	print("D 到中层用了 %d 帧（%.1fs）lift=%.1f p.y=%.1f" % [top_reached, top_reached / 60.0, lift.position.y, p.position.y])
+	expect(top_reached > 0, "虚影把平台 A 推到中层")
+	expect(absf(p.position.y - 308.0) < 12.0, "玩家被带到中层（y=%.1f）" % p.position.y)
 
-	# ---- 走到顶层楼板：往左跳一下 ----
-	_key(KEY_A, true)
-	await _frames(10)
+	# ---- 第一段到站：从中层平台跳到楼板（平台右缘 380，楼板左缘 416，差 36px） ----
+	_key(KEY_D, true)
+	await _frames(8)
 	_key(KEY_SPACE, true)
 	await _frames(6)
 	_key(KEY_SPACE, false)
-	await _frames(30)
-	_key(KEY_A, false)
-	await _frames(40)
-	print("E 离开平台后 x=%.1f y=%.1f on_floor=%s" % [p.position.x, p.position.y, p.is_on_floor()])
-	expect(p.position.x < 300.0, "能跳到顶层楼板那一侧（x<300）")
+	await _frames(34)
+	_key(KEY_D, false)
+	await _frames(20)
+	print("E 跳上中层楼板 x=%.1f y=%.1f on_floor=%s" % [p.position.x, p.position.y, p.is_on_floor()])
+	expect(p.position.x > 400.0, "能跳到中层楼板（x>400）")
+
+	# ---- 第二段：走到中层右端 → 走上平台 B → 打火点火盆 ----
+	await _walk_to(p, 620.0, 400)
+	expect(p.position.x > 560.0, "能走到中层右端")
+	var lift_b := room.get_node("LiftB") as AnimatableBody2D
+	expect(is_equal_approx(lift_b.position.y, 352.0), "平台 B 在中层等着")
+	await _walk_to(p, 690.0, 200)
+	await _frames(20)
+	print("F 走上平台 B x=%.1f y=%.1f on_floor=%s" % [p.position.x, p.position.y, p.is_on_floor()])
+	expect(absf(p.position.x - 688.0) < 40.0, "能走上平台 B")
+
+	# 火把在 (704,330)，火盆在 (760,352)，差 60px —— 站台上就点得着。
+	# 板 B 在 (880,341)，差 176px，自己打火永远点不着，只能靠火盆。
+	_key(KEY_SHIFT, true)
+	await _frames(4)
+	_key(KEY_SHIFT, false)
+	await _frames(130)
+	expect(lift_b.position.y < 340.0, "火盆点着后平台 B 开始升（y=%.1f）" % lift_b.position.y)
+
+	var b_top := -1
+	for i in 300:
+		await physics_frame
+		if lift_b.position.y <= 129.0:
+			b_top = i
+			break
+	print("G 到顶用了 %d 帧（%.1fs）liftB=%.1f p.y=%.1f" % [b_top, b_top / 60.0, lift_b.position.y, p.position.y])
+	expect(b_top > 0, "火盆把平台 B 送到顶层")
+	expect(absf(p.position.y - 84.0) < 12.0, "玩家被带到顶层（y=%.1f）" % p.position.y)
+
+	# ---- 走到出口：全程往左，平台 B 与顶层楼板齐平，直接走下去 ----
+	await _walk_to(p, 150.0, 600)
+	print("H 到出口 x=%.1f y=%.1f on_floor=%s" % [p.position.x, p.position.y, p.is_on_floor()])
+	expect(p.position.x < 300.0, "走到顶层楼板左侧（x<300）")
 	# 碰到出口后 room_controller.complete() 会关掉玩家的物理，人悬在半空是正常的，
 	# 所以这里判的是「通关」，不是「落地」。
 	expect(room.get("won"), "碰到出口即通关")

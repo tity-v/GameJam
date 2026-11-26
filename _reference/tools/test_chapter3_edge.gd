@@ -24,6 +24,7 @@ func _initialize() -> void:
 func _run() -> void:
 	await _case_32_reset()
 	await _case_crush_by_lift()
+	await _case_squeeze_in_pit()
 	await _case_fire_from_plate()
 	await _case_31_reset()
 	await _case_real_R_32()
@@ -70,7 +71,7 @@ func _case_32_reset() -> void:
 # ------------------------------------------------- 平台落回时砸站在井底的人
 
 func _case_crush_by_lift() -> void:
-	print("--- 2. 平台从顶层落回，砸到站在竖井里的玩家")
+	print("--- 2. 平台从中层落回，砸到站在竖井里的玩家")
 	var room := await _mount(ROOM32)
 	var p := room.get_node("Player") as CharacterBody2D
 	var lift := room.get_node("Lift") as AnimatableBody2D
@@ -85,13 +86,13 @@ func _case_crush_by_lift() -> void:
 	var top_frame := -1
 	for i in 480:
 		await physics_frame
-		if lift.position.y <= 129.0:
+		if lift.position.y <= 353.0:
 			top_frame = i
 			break
-	expect(top_frame > 0, "平台升到顶层（用了 %d 帧）" % top_frame)
+	expect(top_frame > 0, "平台升到中层（用了 %d 帧）" % top_frame)
 	expect(is_equal_approx(p.position.y, y0), "玩家站在井底没被平台带走（y=%.0f）" % p.position.y)
 
-	# 断光 → 平台落回来，正好路过玩家的身体（玩家 532~576，平台板 128~144 起）
+	# 断光 → 平台落回来，正好路过玩家的身体（玩家 532~576，平台板从中层 352~368 起）
 	sensor.set("force", -1)
 	var worst_y := p.position.y
 	var worst_dx := 0.0
@@ -121,6 +122,65 @@ func _case_crush_by_lift() -> void:
 	await _unmount(room)
 
 
+# ------------------------------------- 人掉进井底凹槽、平台落回来把人夹住
+
+## 上一版的死锁就在这里：井底凹槽（288~384，地面 608）只有 96×32，
+## 玩家掉进去后，平台落回 576，板体 576~592 和地面之间只剩 16px，
+## 而玩家判定高 44 —— 物理引擎只能把人按进地面 20px，然后跳跃/横移全部失效，
+## 玩家只能自杀。改成单向板（从下方无碰撞）后，平台直接穿过人，人能跳上去。
+
+func _case_squeeze_in_pit() -> void:
+	print("--- 2b. 人掉进井底凹槽，平台落回来（曾经是死锁）")
+	var room := await _mount(ROOM32)
+	var p := room.get_node("Player") as CharacterBody2D
+	var lift := room.get_node("Lift") as AnimatableBody2D
+	var sensor := room.get_node("Sensor") as Node2D
+
+	# 平台先升到中层，把井底凹槽露出来
+	sensor.set("force", 1)
+	for i in 480:
+		await physics_frame
+		if lift.position.y <= 353.0:
+			break
+	expect(lift.position.y <= 353.0, "平台先升到中层，露出井底凹槽（y=%.0f）" % lift.position.y)
+
+	# 人掉进凹槽
+	p.position = Vector2(336, 590)
+	p.velocity = Vector2.ZERO
+	await _frames(20)
+	var y_floor: float = p.position.y
+	expect(absf(y_floor - 564.0) < 6.0, "玩家站进凹槽底（y=%.0f）" % y_floor)
+
+	# 断光，平台从头上压下来
+	sensor.set("force", -1)
+	await _frames(200)
+	print("   平台落回 %.0f，玩家 y=%.1f（改之前是 584.6，嵌进地面）" % [lift.position.y, p.position.y])
+	expect(lift.position.y >= 575.0, "平台落回底部（y=%.0f）" % lift.position.y)
+	expect(p.position.y < 572.0, "玩家没有被压进地面（y=%.1f）" % p.position.y)
+	expect(not p.is_dead, "玩家没有被压死")
+
+	# 单向板的意义：站在台子正下方原地起跳，应该穿上去落到台面上
+	var x0: float = p.position.x
+	_key(KEY_SPACE, true)
+	await _frames(4)
+	_key(KEY_SPACE, false)
+	await _frames(50)
+	print("   原地跳之后 x=%.0f y=%.0f（台面 576 → 人 y=532）" % [p.position.x, p.position.y])
+	expect(p.position.y < 560.0, "从台子下面跳得上去（y=%.0f）" % p.position.y)
+	expect(p.is_on_floor(), "跳上去之后站在台面上")
+	expect(absf(p.position.x - x0) < 12.0, "原地起跳没有把人横着弹开（%.0fpx）" % absf(p.position.x - x0))
+
+	# 再横着走出来（台面与地面齐平）
+	_key(KEY_D, true)
+	await _frames(44)
+	_key(KEY_D, false)
+	await _frames(20)
+	print("   走出后 x=%.0f y=%.0f" % [p.position.x, p.position.y])
+	expect(absf(p.position.x - x0) > 24.0, "能横着走出凹槽（%.0fpx）" % absf(p.position.x - x0))
+	expect(not p.is_dead, "全程没有被压死")
+	await _unmount(room)
+
+
 # --------------------------------------------- 玩家不去死，站在板上打火
 
 func _case_fire_from_plate() -> void:
@@ -142,16 +202,12 @@ func _case_fire_from_plate() -> void:
 	var rise := 576.0 - peak
 	print("   打火把平台推了 %.0fpx（顶到 y=%.0f，中层 352）" % [rise, peak])
 
-	# 已知漏洞（待拍板，不算测试失败）：
+	# 已知现象（不算测试失败）：
 	# 光敏板在 x=400，平台在 x=336，两者错开是为了「虚影站在板上不动、光照着平台升」。
-	# 代价是玩家也能站在 x≈420（板上、但不在平台上）一直打火，光心永远留在感应区里，
-	# 平台就被一路推上去（实测 355px / 2.5s，火把烧完才停）。
-	# 靠几何修不掉：虚影和玩家体型、站位完全相同，凡是虚影站得住又照得到的位置，
-	# 玩家也站得住。要堵只能从「光源类型」上区分（打火不算），这是设计决定。
-	if peak < 352.0:
-		print("   （打火推不到中层，设计成立）")
-	else:
-		print("   ⚠ 打火把平台推过了中层——玩家会觉得「电梯自己跑了」，需要拍板怎么处理")
+	# 代价是玩家也能站在 x≈420（板上、但不在平台上）打火，把平台 A 一路送到顶。
+	# 这不构成捷径：平台到 352 时玩家还在底层 532，跳高 51px 够不着，只能看着电梯走掉。
+	# 它反而是这关最早的一次教学——「你打火，它就走」，跟后面「必须留个人照着」是同一句话。
+	print("   打火把平台 A 送到 y=%.0f（顶 352），玩家仍在底层，够不着 —— 教学，不是捷径" % peak)
 	await _unmount(room)
 
 

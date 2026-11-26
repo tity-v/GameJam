@@ -35,13 +35,19 @@ func _run() -> void:
 	await _frames(8)
 
 	var world := room.get_node("World") as TileMapLayer
-	expect(world.get_used_cells().size() == 89, "地形 89 格")
+	expect(world.get_used_cells().size() == 104, "地形 104 格")
 	expect(world.get_cell_source_id(Vector2i(10, 18)) == -1, "竖井底是凹槽（平台不跟地板同高）")
 	expect(world.get_cell_source_id(Vector2i(10, 19)) != -1, "凹槽有一格深的地面")
-	expect(world.get_cell_source_id(Vector2i(18, 11)) != -1, "中层楼板在竖井右侧")
-	expect(world.get_cell_source_id(Vector2i(10, 11)) == -1, "竖井让开中层楼板")
+	expect(world.get_cell_source_id(Vector2i(18, 11)) != -1, "中层楼板在竖井 A 右侧")
+	expect(world.get_cell_source_id(Vector2i(10, 11)) == -1, "竖井 A 让开中层楼板")
 	expect(world.get_cell_source_id(Vector2i(5, 4)) != -1, "顶层楼板存在")
-	expect(world.get_cell_source_id(Vector2i(10, 4)) == -1, "竖井顶上没有楼板")
+	# 双井之后顶层楼板一路铺到竖井 B 左壁（列 19 = 640），平台 B 升到 128 才踏得出去
+	expect(world.get_cell_source_id(Vector2i(19, 4)) != -1, "顶层楼板铺到竖井 B 左壁")
+	expect(world.get_cell_source_id(Vector2i(21, 4)) == -1, "竖井 B 顶上开口")
+	# 竖井 B：列 20~22（640~736），从中层 352 直通顶层 128
+	expect(world.get_cell_source_id(Vector2i(21, 11)) == -1, "竖井 B 贯通中层")
+	expect(world.get_cell_source_id(Vector2i(21, 8)) == -1, "竖井 B 中段是空的")
+	expect(world.get_cell_source_id(Vector2i(25, 11)) != -1, "井 B 对面有悬挑台（火盆与板 B 站得住）")
 	expect(world.get_cell_source_id(Vector2i(35, 18)) == -1, "右侧有死亡坑")
 
 	var black := room.get_node("Blackout") as TileMapLayer
@@ -138,16 +144,63 @@ func _run() -> void:
 	p.position = Vector2(336, 532)
 	await _frames(6)
 	await _frames(460)
-	expect(is_equal_approx(lift.position.y, 128.0), "虚影一路把平台推到顶层 128")
-	expect(is_equal_approx(lift.get("speed"), 0.0), "到顶停住不再上升")
+	# 双井之后平台 A 只跑底层→中层：576 → 352，把玩家送到中层就交班
+	expect(is_equal_approx(lift.position.y, 352.0), "虚影把平台 A 推到中层 352")
+	expect(is_equal_approx(lift.get("speed"), 0.0), "到中层停住不再上升")
 	await _frames(30)
-	expect(absf(p.position.y - 84.0) < 8.0, "玩家被平台带到顶层（y≈84）")
+	expect(absf(p.position.y - 308.0) < 8.0, "玩家被平台 A 带到中层（y≈308）")
 
 	# 撤掉虚影：平台应带着人一起落回底部
 	ghost.queue_free()
 	await _frames(240)
 	expect(is_equal_approx(lift.position.y, 576.0), "虚影消失后平台回落")
 	expect(absf(p.position.y - 532.0) < 8.0, "玩家跟着平台回到地面")
+
+	# ---- 第二段：井 B（中层 → 顶层），供光源是火盆不是玩家 ----
+	var lift_b := room.get_node("LiftB") as AnimatableBody2D
+	var sensor_b := room.get_node("SensorB") as Node2D
+	var brazier := room.get_node("Brazier") as Node2D
+	expect(is_equal_approx(lift_b.position.y, 352.0), "平台 B 停在中层 352")
+	expect(not sensor_b.call("is_lit"), "板 B 开局是灭的")
+
+	# 先把火盆屏蔽，单验一件事：玩家自己站上平台 B 打火，点不着板 B。
+	# 火把在 (704,330)，板 B 板心 (880,341)，差 176px > 打火半径 96。
+	brazier.set("force", -1)
+	p.position = Vector2(688, 308)
+	torch.set("cooling", 0.0)
+	await _frames(10)
+	Input.action_press("fire")
+	await _frames(3)
+	Input.action_release("fire")
+	await _frames(40)
+	expect(not sensor_b.call("is_lit"), "站平台 B 打火点不着板 B（光斑差 56px）")
+	expect(is_equal_approx(lift_b.position.y, 352.0), "板 B 没亮，平台 B 不动")
+
+	# 放开火盆：再打一次火，火盆点着，1.2s 引燃后板 B 亮，平台 B 开始升
+	brazier.set("force", 0)
+	torch.set("cooling", 0.0)
+	await _frames(2)
+	Input.action_press("fire")
+	await _frames(3)
+	Input.action_release("fire")
+	await _frames(20)
+	expect(brazier.get("lit"), "火盆被点着了")
+	await _frames(70)
+	expect(sensor_b.call("is_lit"), "火盆的光点亮了板 B（板 B 距火盆 120）")
+
+	# 平台 B 跑 224px（352→128），巡航 100 约 2.3s，给足 240 帧
+	await _frames(240)
+	expect(is_equal_approx(lift_b.position.y, 128.0), "火盆把平台 B 送到顶层 128")
+	expect(absf(p.position.y - 84.0) < 8.0, "玩家被平台 B 带到顶层（y≈84）")
+
+	# R 键：火盆得灭、板 B 跟着灭，平台 B 回落——否则重来一次会被"卡在上面"
+	brazier.call("reset_mechanism")
+	await _frames(6)
+	expect(not brazier.get("lit"), "R 之后火盆灭了")
+	expect(not sensor_b.call("is_lit"), "R 之后板 B 跟着灭")
+	lift_b.call("reset_mechanism")
+	await _frames(200)
+	expect(is_equal_approx(lift_b.position.y, 352.0), "平台 B 回落到中层 352")
 
 	print("ROOM32 %d/%d" % [_pass, _pass + _fail])
 	if _fail > 0:
