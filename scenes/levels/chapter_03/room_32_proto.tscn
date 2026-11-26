@@ -1,7 +1,7 @@
-[gd_scene load_steps=13 format=4]
+[gd_scene load_steps=15 format=4]
 
 [ext_resource type="PackedScene" path="res://scenes/levels/dark_building/base.tscn" id="base"]
-[ext_resource type="Script" path="res://scenes/levels/chapter_03/torch.gd" id="torch"]
+[ext_resource type="Script" path="res://scenes/levels/chapter_03/flashlight.gd" id="torch"]
 [ext_resource type="Script" path="res://scenes/levels/chapter_03/lift.gd" id="lift"]
 [ext_resource type="Script" path="res://scenes/levels/chapter_03/light_sensor.gd" id="sensor"]
 [ext_resource type="Script" path="res://scenes/levels/dark_building/factory.gd" id="art"]
@@ -10,6 +10,7 @@
 [ext_resource type="Script" path="res://scenes/levels/dark_building/blackout.gd" id="view"]
 [ext_resource type="PackedScene" path="res://graybox/exit.tscn" id="exit"]
 [ext_resource type="Script" path="res://scenes/levels/chapter_03/brazier.gd" id="brazier"]
+[ext_resource type="Script" path="res://scenes/levels/chapter_03/flashlight_pickup.gd" id="pickup"]
 
 [sub_resource type="ShaderMaterial" id="mist"]
 resource_local_to_scene = true
@@ -17,6 +18,9 @@ shader = ExtResource("fog")
 
 [sub_resource type="RectangleShape2D" id="lift_shape"]
 size = Vector2(88, 16)
+
+[sub_resource type="RectangleShape2D" id="pickup_shape"]
+size = Vector2(48, 56)
 
 [node name="Chapter03Proto32" instance=ExtResource("base")]
 
@@ -29,9 +33,22 @@ position = Vector2(112, 532)
 [node name="Player" parent="." index="6"]
 position = Vector2(112, 532)
 
-[node name="Torch" type="Node2D" parent="Player"]
+[node name="Flashlight" type="Node2D" parent="Player"]
 position = Vector2(16, 22)
 script = ExtResource("torch")
+
+[node name="EchoManager" parent="." index="7"]
+echo_hold_duration = 7.0
+
+[node name="Pickup" type="Area2D" parent="."]
+position = Vector2(1000, 576)
+collision_layer = 0
+collision_mask = 2
+script = ExtResource("pickup")
+
+[node name="Shape" type="CollisionShape2D" parent="Pickup"]
+position = Vector2(0, -24)
+shape = SubResource("pickup_shape")
 
 [node name="Exit" parent="Mechanisms" instance=ExtResource("exit")]
 position = Vector2(140, 63)

@@ -1,19 +1,20 @@
 extends Node2D
-## 光敏面板：嵌在竖井右缘的地面仪表，只被「够亮 + 光心落在感应区」的光驱动。
+## 光敏面板：嵌在竖井右缘的地面仪表，被「有资格供能的光」覆盖到板心就亮。
 ##
-## 为什么用矩形感应区而不是「圆形光斑覆盖到面板」：
-##   圆形光斑的判定长度就是光的半径（打火 150px），而打火半径足以照到
-##   平台升到 100px 以上时的脚下——那会让玩家不打火也能爬到中层，
-##   「你必须先死一次」这条设计就废了。感应区高度是独立参数，可以卡在
-##   平台只升 60px 的位置，跟光的视觉半径解耦。
+## 判定只有一条：光斑（半径圆）覆盖到板心，且这束光**持有手电**。
+## 每个人的随身光都只有 72/100，谁都点不亮它；只有手电（120/180）才算数。
+## 这一条把三件事一次讲清了：
+##   - 主角自己照着板没用（他不是在「供能」，他只是在照明）
+##   - 虚影的光和主角一样大，但它要是死时拿着手电，就算数
+##   - 火盆被手电点着之后也算数，因为那团火就是「被手电点亮的」
 ##
-## 驱动条件三条同时成立：
-##   1. 光源横向半径 ≥ min_radius（底光 40 不够，打火 96 / 虚影 72 够）
-##   2. 光心落在感应区内
-##   3. 光源在亮（虚影淡出到不足 min_radius 时不算）
+## 资格用 `can_power` 表达，不看组名、不看半径大小：
+##   光敏板只遍历 torch_light 组里 can_power == true 的光源。
+## 于是「光照大小相同但都不能激活机关」不需要任何特判——光是一样的光，
+## 差别只在手里有没有那支手电。
 ##
-## 固定火把不算光源：它们是 TileMapLayer 上的格子，本组件只认 torch_light
-## 与 echo 两个组，避免「门口的火把把电梯顶上去」这种事故。
+## 固定火把不算光源：它们是 TileMapLayer 上的格子，本组件只认 torch_light 组，
+## 避免「门口的火把把电梯顶上去」这种事故。
 ##
 ## ---- 可读性（11-26 重做）----
 ## 旧版是 32×8 的一条橙色地缝，玩家看不出它是「装置」，也看不出它和井里的
@@ -29,13 +30,8 @@ extends Node2D
 ## 感应区尺寸（宽, 高），以本节点为底边中点向上展开。
 ## 现在只用于「玩家走进来触发引导提示」，判定改用「光斑覆盖到板」（见 is_lit）。
 @export var zone := Vector2(120, 82)
-## 光源横向半径门槛。40（底光）以下一律推不动。
+## 光源横向半径门槛。低于它的光一律不算——主要防「虚影正在淡出」的残影供能。
 @export var min_radius := 60.0
-## 光斑中心到板中心的最大距离（＝打火半径 96）。判定改成「光斑覆盖到板」，
-## 不再用「光心落在感应区」：后者会留出 x=340 的作弊缝，玩家站平台左缘打火
-## 就被平台带着上中层、不死一次就通关。
-## 虚影的照明半径，跟 Blackout 的 echo_radii 保持一致。
-@export var echo_radii := Vector2(72, 100)
 ## 调试用：1 强制点亮，-1 强制熄灭，0 正常判定。
 @export_range(-1, 1) var force := 0
 ## 要不要画井壁导轨。
@@ -46,9 +42,9 @@ extends Node2D
 ## 导轨在本地的 x。板 A 用 -16（世界 384，正好是井 A 右壁）。
 ## 板 B 节点在 788，要指的井 B 左壁在世界 640，所以本地 -148。
 @export var rail_local_x := -16.0
-## 引导文案。板 B 的供光源是火盆不是玩家自己的火把（玩家够不到板 B），
-## 直接沿用「打火照亮它」会把玩家往错误方向指。
-@export var hint_fire := "打火照亮它"
+## 引导文案。板 B 的供光源是火盆不是玩家自己（玩家够不到板 B），
+## 直接沿用「照亮它」会把玩家往错误方向指。
+@export var hint_fire := "手电照它才有效"
 @export var hint_lit := "光敏板 · 光要一直照着"
 
 const PLATE := Color("#232f2c")
@@ -102,17 +98,13 @@ func is_lit() -> bool:
 		return force > 0
 	var plate := _plate_center()
 	for light in get_tree().get_nodes_in_group("torch_light"):
+		# 只有「拿着手电 / 被手电点着的火 / 带手电的虚影」有资格供能。
+		# 人物自带的小光、地上的手电本体、正在淡出的虚影都不算。
+		if light.get("can_power") != true:
+			continue
 		var radii: Variant = light.get("radii")
 		if radii is Vector2 and radii.x >= min_radius \
 			and light.global_position.distance_to(plate) <= radii.x:
-			return true
-	for echo in get_tree().get_nodes_in_group("echo"):
-		if not echo.is_active():
-			continue
-		var fade: float = maxf(0.01, 1.0 - float(echo._fade_time) / float(echo.fade_duration))
-		if echo_radii.x * fade < min_radius:
-			continue
-		if echo.body_rect().get_center().distance_to(plate) <= echo_radii.x * fade:
 			return true
 	return false
 
@@ -142,14 +134,14 @@ func _physics_process(dt: float) -> void:
 	_near = _player != null and is_instance_valid(_player) \
 		and _player.global_position.distance_to(global_position) < 260.0
 	# ---- 引导：三段，由玩家状态驱动，各只发一次 ----
-	# 1. 靠近板但还没打火（_near 且板没亮）→ 提示「打火照亮它」。
-	#    这是回答「玩家怎么知道要打火」的关键：不能等他踩进感应区才说，
+	# 1. 靠近板但没点亮（_near 且板没亮）→ 提示「手电照它才有效」。
+	#    这是回答「玩家怎么知道要拿手电」的关键：不能等他踩进感应区才说，
 	#    那时他已经绕一圈了；要在「靠近板」这个更早的时机就点破。
 	if _near and not _hinted_fire and not lit:
 		_hinted_fire = true
 		_flash(hint_fire)
-	# 2. 第一次踩进感应区（还没打火成功）→ 补一句「光要一直照着」，
-	#    提醒他这不是按一下就完事，而是持续供光。
+	# 2. 第一次踩进感应区（还没点亮）→ 补一句「光要一直照着」，
+	#    提醒他这不是照一下就完事，而是持续供光。
 	if not _hinted and _player != null and is_instance_valid(_player):
 		var body := Rect2(_player.global_position, Vector2(32, 44))
 		if zone_rect().intersects(body):
@@ -157,7 +149,7 @@ func _physics_process(dt: float) -> void:
 			if not lit:
 				_flash(hint_lit)
 	# 每帧都重算并重绘：面板亮/灭是本关最重要的一条反馈，
-	# 玩家必须能在按下打火的同一帧看见它变暖。
+	# 玩家必须能在光源接上的同一帧看见它变暖。
 	var now := is_lit()
 	if now != lit:
 		lit = now

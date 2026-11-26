@@ -218,6 +218,13 @@ func move_with_input(delta: float, axis: float, jump_pressed: bool, jump_release
 		if drop > 1.0:
 			get_node("/root/GameSfx").play("land_high" if drop >= 256.0 else "land")
 	_refresh_support()
+	_after_move(axis)
+
+
+## 给子类（`echo_motor.gd`）留的钩子。玩家自己不做任何额外处理：
+## 玩家有手有脚，想上台阶自己跳；虚影只有录像里的按键，需要特殊照顾。
+func _after_move(_axis: float) -> void:
+	pass
 
 
 ## 录制起点的短时运动状态。

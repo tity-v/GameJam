@@ -50,13 +50,14 @@ func _case_32_reset() -> void:
 	var raised: float = lift.position.y
 	expect(raised < 400.0, "强制点亮后平台升上去了（y=%.0f）" % raised)
 
+	# 先撤光再复位：循环版平台只要还有光就会重新起跑，
+	# 带着 force=1 复位会当场又被推起来（读到 y=571 那种）
+	sensor.set("force", 0)
 	room.call("reset_mechanisms")
 	await physics_frame
 	expect(is_equal_approx(lift.position.y, 576.0), "R 之后平台回到底部（y=%.0f）" % lift.position.y)
 	expect(is_equal_approx(lift.get("speed"), 0.0), "R 之后平台速度清零（%.0f）" % lift.get("speed"))
-
-	# 关键：复位后不能自己又升起来（force 已经归零，底光推不动）
-	sensor.set("force", 0)
+	expect(lift.get("phase") == 0, "R 之后平台进入 PARKED")
 	await _frames(30)
 	expect(is_equal_approx(lift.position.y, 576.0), "复位后 30 帧内保持静止")
 
@@ -265,11 +266,12 @@ func _case_real_R_32() -> void:
 	expect(absf(p.position.y + 44.0 - lift.position.y) < 8.0, "玩家站在平台上（脚 %.0f / 台面 %.0f）" % [p.position.y + 44.0, lift.position.y])
 
 	_key(KEY_R, true)
+	# 撤光必须在按 R 之前：循环版平台只要还有光，复位完立刻重新起跑，
+	# 读到的就不是「停在哪」而是「已经升了 5px」。
+	sensor.set("force", 0)
+	await _frames(2)
 	await _frames(3)
 	_key(KEY_R, false)
-	# 真实场景里 R 之后虚影已经被清掉、板上没光；这里把强制光也撤掉，
-	# 否则平台复位完会立刻被这束人造光重新推起来，读到的就不是「停在哪」。
-	sensor.set("force", 0)
 	await _frames(8)
 
 	expect(p.position.distance_to(spawn) < 2.0, "R 把玩家送回出生点（%.0f,%.0f）" % [p.position.x, p.position.y])
@@ -323,13 +325,27 @@ func _case_real_R_31() -> void:
 # ------------------------------------------------------- 两份 echo_radii
 
 func _case_radii_sync() -> void:
-	print("--- 5. 光敏板与黑幕的虚影半径是否同步")
+	print("--- 5. 虚影的光和主角的光是不是一样大")
 	var room := (load(ROOM32) as PackedScene).instantiate()
-	var black := room.get_node("Blackout")
-	var sensor := room.get_node("Sensor")
-	var a: Vector2 = black.get("echo_radii")
-	var b: Vector2 = sensor.get("echo_radii")
-	expect(a.is_equal_approx(b), "两处 echo_radii 一致（黑幕 %s / 光敏板 %s）" % [a, b])
+	root.add_child(room)
+	current_scene = room
+	await _frames(8)
+	var p := room.get_node("Player") as CharacterBody2D
+	var lamp := p.get_node("Flashlight")
+	var echo := (load("res://scenes/echo/echo.tscn") as PackedScene).instantiate()
+	room.add_child(echo)
+	await _frames(2)
+
+	var dim: Vector2 = echo.get("dim_radii")
+	var lit: Vector2 = echo.get("lit_radii")
+	expect(dim.is_equal_approx(lamp.get("radii")), "没拿手电时：虚影 %s = 主角 %s" % [dim, lamp.get("radii")])
+	lamp.call("pick_up")
+	expect(lit.is_equal_approx(lamp.get("radii")), "拿了手电后：虚影 %s = 主角 %s" % [lit, lamp.get("radii")])
+	expect(lit.x > dim.x, "带手电比不带手电大一圈（%.0f > %.0f）" % [lit.x, dim.x])
+
+	# 光一样大，但只有带手电的虚影能供能
+	expect(echo.get("can_power") == false, "未登场/没手电的虚影不供能")
+	root.remove_child(room)
 	room.free()
 
 

@@ -25,7 +25,7 @@ func _run() -> void:
 	await process_frame
 	bo = room.get_node("Blackout")
 	player = room.get_node("Player")
-	torch = room.get_node("Player/Torch")
+	torch = room.get_node("Player/Flashlight")
 	torch.set_process(false)
 	# 火把会盖掉对比，清空
 	room.get_node("Torches").clear()

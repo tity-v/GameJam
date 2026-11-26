@@ -13,6 +13,12 @@ const MAX_ECHOES := 5
 ## 特殊关卡也可以按需调大。
 @export var max_frames: int = 6000
 
+## 虚影放完录像后在原地站多久再消散，默认 0（放完就散，第一到第三章通例）。
+## 3-2 靠虚影「站在板旁边替你供光」，需要一个固定窗口，所以在那个场景里调成 7 秒。
+## 放在管理器而不是 echo.tscn 上：虚影是运行时 instantiate 的，
+## echo.tscn 里的导出值改不到，只能建的时候写进去。
+@export var echo_hold_duration := 0.0
+
 @export var player_path: NodePath
 
 var _player: Node2D
@@ -142,6 +148,18 @@ func _on_player_respawned() -> void:
 			e.reset()
 
 
+## 死的那一刻手里有没有手电。虚影带着同一支手电重放，
+## 「让虚影站在板旁边替你供光」才成立——第三章 3-2 整段都压在这上面。
+## 遍历子节点而不是写死 `Flashlight`：3-1 的节点名不同，而且以后可能换。
+func _player_has_flashlight() -> bool:
+	if _player == null or not is_instance_valid(_player):
+		return false
+	for child in _player.get_children():
+		if child.get("has_flashlight") == true:
+			return true
+	return false
+
+
 func _add_echo(trail: PackedVector2Array) -> void:
 	get_node("/root/GameSfx").play("echo_created")
 	# 一出生就死（轨迹太短）不留虚影，没有意义
@@ -160,9 +178,12 @@ func _add_echo(trail: PackedVector2Array) -> void:
 
 	var echo := ECHO_SCENE.instantiate()
 	add_child(echo)
+	# 先写待机时长再 setup：setup() 会 reset()，把 _hold_time 归零，
+	# 但不会动 hold_duration 本身，所以两个顺序都行——写前面更不容易以后改乱。
+	echo.set("hold_duration", echo_hold_duration)
 	# 必须 duplicate：PackedVector2Array 会跟 _trail 共用一个缓冲，
 	# 不复制的话虚影播放的是"当前这轮正在录"的轨迹
-	echo.setup_actions(trail.duplicate(), _origin, _velocity, _player, _motion)
+	echo.setup_actions(trail.duplicate(), _origin, _velocity, _player, _motion, _player_has_flashlight())
 	# setup() 自带"未激活"状态：不显示、无碰撞、不推进、机关不认。
 	# 等玩家复活时 _on_player_respawned() 里的 reset() 才让它登场——
 	# 显示、碰撞、机关判定三件事共用同一个 _active，不会再出现

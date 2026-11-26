@@ -23,7 +23,7 @@ func _run() -> void:
 	await process_frame
 	lift = room.get_node("Lift")
 	player = room.get_node("Player")
-	torch = room.get_node("Player/Torch")
+	torch = room.get_node("Player/Flashlight")
 	sensor = room.get_node("Sensor")
 
 	# 冻结平台与火把，只为了构图；玩法逻辑一概不动

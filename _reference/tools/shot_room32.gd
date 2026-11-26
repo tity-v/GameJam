@@ -25,7 +25,7 @@ func _run() -> void:
 	lift = room.get_node("Lift")
 	lift_b = room.get_node("LiftB")
 	player = room.get_node("Player")
-	torch = room.get_node("Player/Torch")
+	torch = room.get_node("Player/Flashlight")
 	bo = room.get_node("Blackout")
 	lift.set_physics_process(false)
 	lift_b.set_physics_process(false)

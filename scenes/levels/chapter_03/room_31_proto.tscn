@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" path="res://scenes/levels/dark_building/base.tscn" id="base"]
 [ext_resource type="PackedScene" path="res://scenes/levels/chapter_03/specter.tscn" id="specter"]
-[ext_resource type="Script" path="res://scenes/levels/chapter_03/torch.gd" id="torch"]
+[ext_resource type="Script" path="res://scenes/levels/chapter_03/flashlight.gd" id="torch"]
 [ext_resource type="Script" path="res://scenes/levels/chapter_03/gate.gd" id="gate"]
 [ext_resource type="Script" path="res://scenes/levels/dark_building/factory.gd" id="art"]
 [ext_resource type="TileSet" path="res://scenes/levels/dark_building/night_parts.tres" id="kit"]
@@ -28,7 +28,7 @@ position = Vector2(112, 532)
 [node name="Player" parent="." index="6"]
 position = Vector2(112, 532)
 
-[node name="Torch" type="Node2D" parent="Player"]
+[node name="Flashlight" type="Node2D" parent="Player"]
 position = Vector2(16, 22)
 script = ExtResource("torch")
 

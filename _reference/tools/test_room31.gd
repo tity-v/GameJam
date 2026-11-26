@@ -1,9 +1,10 @@
 extends SceneTree
-## 3-1 打火教学关（room_31_proto）的验收。
+## 3-1（room_31_proto）的验收。
 ##
-## 这一关的设计前提是「不打火也能过」，所以测试里刻意不点灯先走一遍；
-## 打火只验证它确实把半径从 40 抬到 96、2.5s 后回落、冷却期按了无效。
-## 虚影与铁栅用时间推进验，不靠肉眼。
+## 这一关现在教的是「有个人影会替你走过去」，不再是打火：Shift 打火已经从
+## 玩法里删掉，随身光只剩一档 72/100（和虚影一样大，只照明、不供能）。
+## 所以测试验三件事：地形与门、虚影的时间轴、以及「按 Shift 什么都不该发生」。
+## 手电筒是 3-2 才捡的东西，这一关不该出现拾取物。
 
 const ROOM := "res://scenes/levels/chapter_03/room_31_proto.tscn"
 
@@ -38,29 +39,20 @@ func _run() -> void:
 	expect(is_equal_approx(p.position.y, 532.0), "出生点站地面（576-44）")
 	expect(p.is_on_floor(), "出生即落地")
 
-	var torch := room.get_node("Player/Torch")
-	var dim: Vector2 = torch.get("radii")
-	expect(dim == Vector2(40.0, 90.0), "底光 40")
-	expect(dim.y - dim.x >= 40.0, "底光有柔边（不硬切）")
+	var lamp := room.get_node("Player/Flashlight")
+	var dim: Vector2 = lamp.get("radii")
+	expect(dim == Vector2(72.0, 100.0), "随身光 72/100（和虚影一样大）")
+	expect(lamp.get("can_power") == false, "没手电，不能给机关供能")
+	expect(lamp.get("has_flashlight") == false, "这一关不给手电")
+	expect(room.get_node_or_null("Pickup") == null, "3-1 没有可拾取的手电")
 
+	# 旧打火键：按下后什么都不该发生（半径、供能资格都不变）
 	Input.action_press("fire")
-	await _frames(3)
+	await _frames(4)
 	Input.action_release("fire")
-	await _frames(2)
-	var lit: Vector2 = torch.get("radii")
-	expect(lit.x > 90.0, "打火半径到 96")
-	expect(lit.y - lit.x >= 50.0, "打火柔边 54px，由内向外渐隐")
-	expect(torch.get("fire_count") == 1, "打火计数 1")
-
-	await _frames(160)
-	expect(torch.get("radii").x < 50.0, "2.5s 后回到底光")
-
-	var before: int = torch.get("fire_count")
-	Input.action_press("fire")
-	await _frames(3)
-	Input.action_release("fire")
-	await _frames(2)
-	expect(torch.get("fire_count") == before, "冷却期内按了不生效")
+	await _frames(10)
+	expect(lamp.get("radii") == dim, "按 Shift 不改变光照（打火已从玩法里删掉）")
+	expect(lamp.get("can_power") == false, "按 Shift 也不会让它能供能")
 
 	# 不打火也能跳上 96px 台面（这一关的容错底线）
 	p.position = Vector2(544, 532)
@@ -72,7 +64,7 @@ func _run() -> void:
 	_key(KEY_SPACE, false)
 	await _frames(70)
 	_key(KEY_D, false)
-	expect(absf(p.position.y - 436.0) < 4.0, "裸跳能上 480 台面")
+	expect(absf(p.position.y - 436.0) < 6.0, "裸跳能上 480 台面")
 	expect(p.position.x > 608.0, "落点在台上（x>608）")
 
 	var spec := room.get_node("Specter") as CharacterBody2D

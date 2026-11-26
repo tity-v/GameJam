@@ -1,25 +1,27 @@
 extends Node2D
-## 中层火盆：玩家打火点着它，火盆当固定光源去供光敏板 B，平台 B 才会升。
+## 中层火盆：玩家的手电照到它，它就着。着火之后它是一盏**固定光源**，
+## 供光敏板 B，平台 B 才会升。
 ##
 ## 为什么非要有这个东西：
-##   站上平台 B 的玩家，火把在 (704,374)，到板 B 板心 176px，而打火半径只有 96
-##   ——点不着。板 B 又必须在平台之外（否则它跟着台面一起升，等于没开关）。
+##   站上平台 B 的玩家，手上的手电到板 B 板心 176px，而手电只有 120
+##   ——够不着。板 B 又必须在平台之外（否则它跟着台面一起升，等于没开关）。
 ##   一根绳子两头都够不着，中间必须插一个「替身光源」：
-##     火盆距玩家火把 56（点得着），距板 B 板心 120（照得到）。
+##     火盆距玩家 51（手电 120 照得到），距板 B 板心 120（火盆满亮 140 照得到）。
 ##   于是「人不离开平台、也能把台子叫上来」成立。
 ##
-## 这跟底层那套路数是同一条机制的两次变奏：底层用死后的虚影当替身，
-## 这里用火盆当替身。玩家在两段里学的是同一件事——「光可以来自别人」。
+## 这跟底层那套路数是同一条机制的两次变奏：底层用死后的虚影当替身
+## （虚影手里拿着同一支手电），这里用火盆当替身。
+## 差别是虚影有录像长度、火盆有燃料——两种替身都是限时的。
 ##
 ## 点燃不是瞬时的：引燃 1.2s 里 radii 从 0 涨到满值，火焰从小烧到旺。
-## 这不是特效，是缓冲：真实玩家按下打火后要看清"火起来了"才反应得过来。
-## 燃料 10s，烧完 1.5s 渐灭，平台失光回落——所以它是可重试的，不是一次性开关。
+## 这不是特效，是缓冲：玩家要看清"火起来了"才反应得过来。
+## 燃料 6s，烧完 1.5s 渐灭，平台失光回落——所以它是可重试的，不是一次性开关。
 
 ## 未点燃 / 引燃中 / 燃烧 / 熄灭中
 enum Phase { IDLE, IGNITE, BURN, DYING }
 
 @export var ignite_time := 1.2
-## 燃料 6s：平台 B 跑完 224px 只要 2.3s，剩下的时间是给「点早了」的容错。
+## 燃料 6s：平台 B 跑完 224px 只要 2.34s，剩下的时间是给「点早了」的容错。
 ## 为什么不能更长：玩家其实走得到悬挑台（平台 B 与台面只差 4px），
 ## 在那里点火盆会让平台先升走、人留在台上。这时唯一的恢复路径是
 ## 「等火盆烧完 → 板 B 灭 → 平台落回 352 → 走回去」，6s 是可以忍的惩罚；
@@ -27,10 +29,8 @@ enum Phase { IDLE, IGNITE, BURN, DYING }
 @export var burn_time := 6.0
 @export var dying_time := 1.5
 ## 满亮半径。必须同时满足两件事：比「火盆到板 B 的 120」大（板才亮），
-## 又比「火把打火半径 96」明显大（看得出火盆比手电强一个量级）。
+## 又比「手电 120」明显大（看得出火盆是比手电强一档的光源）。
 @export var full_radii := Vector2(140, 190)
-## 玩家火把到盆心的最大点燃距离
-@export var reach := 96.0
 ## 调试用：1 强制点燃，-1 强制熄灭，0 正常。
 @export_range(-1, 1) var force := 0
 
@@ -43,6 +43,8 @@ const FLAME := Color("#ff9a3c")
 
 ## blackout.gd 每帧读这个
 var radii := Vector2.ZERO
+## 光敏板只认 can_power = true 的光源。火盆烧起来才算数。
+var can_power := false
 ## 是否已经点着（引燃中算点着，熄灭中不算）
 var lit := false
 var phase := Phase.IDLE
@@ -67,6 +69,7 @@ func reset_mechanism() -> void:
 	_fade = 0.0
 	radii = Vector2.ZERO
 	lit = false
+	can_power = false
 	queue_redraw()
 
 
@@ -79,6 +82,7 @@ func _process(delta: float) -> void:
 		_fade = 1.0 if force > 0 else 0.0
 		lit = force > 0
 		radii = full_radii * _fade
+		can_power = lit and radii.x >= 60.0
 		queue_redraw()
 		return
 
@@ -87,7 +91,7 @@ func _process(delta: float) -> void:
 		Phase.IDLE:
 			_fade = 0.0
 			lit = false
-			if _trying_to_fire():
+			if _touched_by_flashlight():
 				phase = Phase.IGNITE
 				_phase_t = 0.0
 				_flash("火盆被点着了")
@@ -114,18 +118,26 @@ func _process(delta: float) -> void:
 				_phase_t = 0.0
 
 	radii = full_radii * _fade
+	# 引燃到一半就够亮了，所以用半径判断而不是 lit：lit 在引燃一开始就是 true，
+	# 但那时火苗只有几像素，拿它供能会出现「板亮了、盆还没火」的怪画面。
+	can_power = lit and radii.x >= 60.0
 	queue_redraw()
 
 
-## 玩家在盆边按了打火。判定只看距离：火把在玩家身上 (16,22) 处，
-## 不依赖 torch.gd 的 radii（那个是渲染用的，判定读它会在同帧里抢先后）。
-func _trying_to_fire() -> bool:
-	if not Input.is_action_just_pressed("fire"):
-		return false
-	if _player == null or not is_instance_valid(_player):
-		return false
-	var torch := _player.global_position + Vector2(16.0, 22.0)
-	return torch.distance_to(global_position) <= reach
+## 有没有「有资格供能的光」照到盆心。手电（can_power=true）照到就着；
+## 玩家自带的小光、地上的手电本体都不算——这跟光敏板是同一条规矩。
+## 必须排除自己：火盆点燃后自己也进了 torch_light 组，不排除会一直自触发。
+func _touched_by_flashlight() -> bool:
+	for light in get_tree().get_nodes_in_group("torch_light"):
+		if light == self:
+			continue
+		if light.get("can_power") != true:
+			continue
+		var r: Variant = light.get("radii")
+		if r is Vector2 and r.x > 0.0 \
+			and light.global_position.distance_to(global_position) <= r.x:
+			return true
+	return false
 
 
 func _flash(text: String) -> void:

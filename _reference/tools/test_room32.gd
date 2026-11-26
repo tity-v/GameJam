@@ -1,27 +1,40 @@
 extends SceneTree
-## 3-2 光控升降台的验收。
+## 3-2 的验收（手电 / 光判定 / 平台循环 / 火盆 / 虚影带手电）。
 ##
-## 这一关的全部手感都压在一条曲线上：有光加速上升 / 无光先刹车再下落。
-## 所以测试不只看「能不能升到顶」，还要量三件事：
-##   1. 判定是「光斑覆盖到板」不是「光心在感应区」——站平台左缘（x=336）打火
-##      光斑够不到板，推不动（堵死作弊缝）；站板附近（x=460）打火才推得动，
-##      但 2.5s 只够升约 170px 到 y≈406，够不着中层 352
-##   2. 失光后平台还会往上滑一段才回头（惯性），不是立刻反向
-##   3. 虚影站在板附近持续照一路推到底，玩家被平台带到顶层
+## 这一版的设计骨架换过一次，测试重点也跟着换了三件事：
+##   1. 光分两种：**照明** 和 **供能**。每个人自带的光都是 72/100，只照明；
+##      只有手电（120/180）和它点着的火盆才 `can_power`，才推得动光敏板。
+##      所以「站到板旁边」不再等于「板会亮」——手里得有手电。
+##   2. 平台从「跟光走」改成「有光就循环」：升 → 顶停 1.8s → **自动**降 → 底停 1.2s
+##      → 还亮着就再升。「循环」只省掉操作，**上升过程必须持续有光**：
+##      光一断当帧转下落。这一条是第一段谜题的支点，缺了就能自己点灯自己上车。
+##   3. 虚影会带着死时的**同一支手电**重放，而且录到尾巴后原地站 7s。
+##      第一段的解法就是「让它替我站在板旁边」。
+##   4. 手电不在出生点旁边：在井 A 右侧 480px 的死路尽头，必须先去找。
+##
+##   godot --headless --path . --fixed-fps 60 -s _reference/tools/test_room32.gd
 
 const ROOM := "res://scenes/levels/chapter_03/room_32_proto.tscn"
 
+## lift.gd 里的 Phase 顺序
+const PARKED := 0
+const RISING := 1
+const TOP_WAIT := 2
+const FALLING := 3
+const BOTTOM_WAIT := 4
+
 var _pass := 0
 var _fail := 0
-
-
-## 假虚影：只实现光敏板会问到的四个成员，用来单独验「虚影通道」，
-## 不必把整条录制/重放链路拉进来。
-class FakeEcho extends Node2D:
-	var fade_duration := 1.3
-	var _fade_time := 0.0
-	func is_active() -> bool: return true
-	func body_rect() -> Rect2: return Rect2(global_position, Vector2(32, 44))
+var _room: Node
+var _p: CharacterBody2D
+var _lamp: Node
+var _lift: AnimatableBody2D
+var _lift_b: AnimatableBody2D
+var _sensor: Node
+var _sensor_b: Node
+var _brazier: Node
+var _pickup: Area2D
+var _mgr: Node
 
 
 func _initialize() -> void:
@@ -29,183 +42,265 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	var room := (load(ROOM) as PackedScene).instantiate()
-	root.add_child(room)
-	current_scene = room
-	await _frames(8)
-
-	var world := room.get_node("World") as TileMapLayer
-	expect(world.get_used_cells().size() == 104, "地形 104 格")
-	expect(world.get_cell_source_id(Vector2i(10, 18)) == -1, "竖井底是凹槽（平台不跟地板同高）")
-	expect(world.get_cell_source_id(Vector2i(10, 19)) != -1, "凹槽有一格深的地面")
-	expect(world.get_cell_source_id(Vector2i(18, 11)) != -1, "中层楼板在竖井 A 右侧")
-	expect(world.get_cell_source_id(Vector2i(10, 11)) == -1, "竖井 A 让开中层楼板")
-	expect(world.get_cell_source_id(Vector2i(5, 4)) != -1, "顶层楼板存在")
-	# 双井之后顶层楼板一路铺到竖井 B 左壁（列 19 = 640），平台 B 升到 128 才踏得出去
-	expect(world.get_cell_source_id(Vector2i(19, 4)) != -1, "顶层楼板铺到竖井 B 左壁")
-	expect(world.get_cell_source_id(Vector2i(21, 4)) == -1, "竖井 B 顶上开口")
-	# 竖井 B：列 20~22（640~736），从中层 352 直通顶层 128
-	expect(world.get_cell_source_id(Vector2i(21, 11)) == -1, "竖井 B 贯通中层")
-	expect(world.get_cell_source_id(Vector2i(21, 8)) == -1, "竖井 B 中段是空的")
-	expect(world.get_cell_source_id(Vector2i(25, 11)) != -1, "井 B 对面有悬挑台（火盆与板 B 站得住）")
-	expect(world.get_cell_source_id(Vector2i(35, 18)) == -1, "右侧有死亡坑")
-
-	var black := room.get_node("Blackout") as TileMapLayer
-	expect(black.get_used_cells().size() == 880, "黑幕铺满 40×22")
-
-	var p := room.get_node("Player") as CharacterBody2D
-	await _frames(4)
-	expect(is_equal_approx(p.position.y, 532.0), "出生点站地面")
-	expect(p.is_on_floor(), "出生即落地")
-
-	var lift := room.get_node("Lift") as AnimatableBody2D
-	var sensor := room.get_node("Sensor") as Node2D
-	expect(is_equal_approx(lift.position.y, 576.0), "平台停在底部 576")
-	expect(is_equal_approx(lift.get("speed"), 0.0), "开局静止")
-	expect(not sensor.call("is_lit"), "底光 40 推不动光敏板")
-
-	# 感应区几何：只用于「走近触发引导」，判定不再用感应区（用光斑覆盖板）
-	var area: Rect2 = sensor.call("zone_rect")
-	expect(area.has_point(Vector2(352, 554)), "台上手电落在感应区")
-	expect(not area.has_point(Vector2(352, 464)), "升高后手电离开感应区")
-	expect(is_equal_approx(sensor.position.y, 576.0), "光敏板铺平地（虚影站得住、不进平台底板）")
-	expect(world.get_cell_source_id(Vector2i(12, 18)) != -1, "光敏板那一格是平地")
-
-	# ---- 判定：光斑覆盖板，不是光心在感应区 ----
-	# 站平台左缘（x=336）打火，光斑右缘 336+96=432 < 板中心 492，够不到 -> 推不动
-	p.position = Vector2(336, 532)
-	await _frames(6)
-	Input.action_press("fire")
-	await _frames(4)
-	Input.action_release("fire")
-	var peak_left := 9999.0
-	for i in 120:
-		await physics_frame
-		peak_left = minf(peak_left, lift.position.y)
-	expect(576.0 - peak_left < 10.0, "站平台左缘打火推不动（光斑够不到板，作弊缝已堵）")
-
-	# ---- 玩家站板附近打火：能推，但 2.5s 只够到 y≈406，够不着中层 352 ----
-	lift.call("reset_mechanism")
-	await _frames(4)
-	p.position = Vector2(460, 532)
-	var torch := p.get_node("Torch") as Node2D
-	torch.set("cooling", 0.0)      # 清掉上一段打火的冷却，否则这次打火被拦下
-	await _frames(6)
-	Input.action_press("fire")
-	await _frames(4)
-	Input.action_release("fire")
-	var peak := 9999.0
-	for i in 120:
-		await physics_frame
-		peak = minf(peak, lift.position.y)
-	var rise := 576.0 - peak
-	expect(rise > 60.0, "站板附近打火把平台推动了（%.0fpx）" % rise)
-	expect(peak > 352.0, "打火自己够不着中层（只到 y=%.0f，离中层 352 差 %.0fpx）" % [peak, peak - 352.0])
-
-	# ---- 惯性：失光后还要往上滑一段，才回头 ----
-	lift.call("reset_mechanism")
-	await _frames(4)
-	sensor.set("force", 1)
-	await _frames(90)              # 升到巡航速度
-	var fast: float = lift.get("speed")
-	expect(fast > 90.0, "有光时到巡航速度 100")
-	var y_at_cut: float = lift.position.y
-	sensor.set("force", -1)        # 掐光
-	var lowest := y_at_cut
-	var frames_up := 0
-	var turned := -1
-	for i in 120:
-		await physics_frame
-		if lift.position.y < lowest:
-			lowest = lift.position.y
-			frames_up = i + 1
-		elif turned < 0 and lift.position.y > lowest + 0.5:
-			turned = i + 1
-	var coast := y_at_cut - lowest
-	# up_speed=100 时刹车距离 = 100²/(2×420) ≈ 11.9px，滑行 ≈ 14 帧（0.238s）
-	expect(coast > 8.0, "失光后仍上滑 %.1fpx（不是立刻反向）" % coast)
-	expect(frames_up >= 10, "上滑持续 %.2fs" % (frames_up / 60.0))
-	expect(turned > frames_up, "先滑到顶再下落")
-	expect(turned > 0 and turned < 35, "回头发生在 %d 帧内（不拖泥带水）" % turned)
-
-	await _frames(150)
-	expect(is_equal_approx(lift.position.y, 576.0), "无光最终回到底部")
-	expect(is_equal_approx(lift.get("speed"), 0.0), "落到底后停住")
-
-	# ---- 虚影通道：站住不动就能一路推到顶 ----
-	sensor.set("force", 0)
-	var ghost := FakeEcho.new()
-	ghost.add_to_group("echo")
-	ghost.global_position = Vector2(460, 532)
-	room.add_child(ghost)
-	await _frames(4)
-	expect(sensor.call("is_lit"), "虚影站板附近即点亮")
-
-	p.position = Vector2(336, 532)
-	await _frames(6)
-	await _frames(460)
-	# 双井之后平台 A 只跑底层→中层：576 → 352，把玩家送到中层就交班
-	expect(is_equal_approx(lift.position.y, 352.0), "虚影把平台 A 推到中层 352")
-	expect(is_equal_approx(lift.get("speed"), 0.0), "到中层停住不再上升")
-	await _frames(30)
-	expect(absf(p.position.y - 308.0) < 8.0, "玩家被平台 A 带到中层（y≈308）")
-
-	# 撤掉虚影：平台应带着人一起落回底部
-	ghost.queue_free()
-	await _frames(240)
-	expect(is_equal_approx(lift.position.y, 576.0), "虚影消失后平台回落")
-	expect(absf(p.position.y - 532.0) < 8.0, "玩家跟着平台回到地面")
-
-	# ---- 第二段：井 B（中层 → 顶层），供光源是火盆不是玩家 ----
-	var lift_b := room.get_node("LiftB") as AnimatableBody2D
-	var sensor_b := room.get_node("SensorB") as Node2D
-	var brazier := room.get_node("Brazier") as Node2D
-	expect(is_equal_approx(lift_b.position.y, 352.0), "平台 B 停在中层 352")
-	expect(not sensor_b.call("is_lit"), "板 B 开局是灭的")
-
-	# 先把火盆屏蔽，单验一件事：玩家自己站上平台 B 打火，点不着板 B。
-	# 火把在 (704,330)，板 B 板心 (880,341)，差 176px > 打火半径 96。
-	brazier.set("force", -1)
-	p.position = Vector2(688, 308)
-	torch.set("cooling", 0.0)
+	_room = (load(ROOM) as PackedScene).instantiate()
+	root.add_child(_room)
+	current_scene = _room
 	await _frames(10)
-	Input.action_press("fire")
-	await _frames(3)
-	Input.action_release("fire")
-	await _frames(40)
-	expect(not sensor_b.call("is_lit"), "站平台 B 打火点不着板 B（光斑差 56px）")
-	expect(is_equal_approx(lift_b.position.y, 352.0), "板 B 没亮，平台 B 不动")
 
-	# 放开火盆：再打一次火，火盆点着，1.2s 引燃后板 B 亮，平台 B 开始升
-	brazier.set("force", 0)
-	torch.set("cooling", 0.0)
-	await _frames(2)
-	Input.action_press("fire")
-	await _frames(3)
-	Input.action_release("fire")
-	await _frames(20)
-	expect(brazier.get("lit"), "火盆被点着了")
-	await _frames(70)
-	expect(sensor_b.call("is_lit"), "火盆的光点亮了板 B（板 B 距火盆 120）")
+	_p = _room.get_node("Player") as CharacterBody2D
+	_lamp = _p.get_node("Flashlight")
+	_lift = _room.get_node("Lift") as AnimatableBody2D
+	_lift_b = _room.get_node("LiftB") as AnimatableBody2D
+	_sensor = _room.get_node("Sensor")
+	_sensor_b = _room.get_node("SensorB")
+	_brazier = _room.get_node("Brazier")
+	_pickup = _room.get_node("Pickup") as Area2D
+	_mgr = _room.get_node("EchoManager")
 
-	# 平台 B 跑 224px（352→128），巡航 100 约 2.3s，给足 240 帧
-	await _frames(240)
-	expect(is_equal_approx(lift_b.position.y, 128.0), "火盆把平台 B 送到顶层 128")
-	expect(absf(p.position.y - 84.0) < 8.0, "玩家被平台 B 带到顶层（y≈84）")
-
-	# R 键：火盆得灭、板 B 跟着灭，平台 B 回落——否则重来一次会被"卡在上面"
-	brazier.call("reset_mechanism")
-	await _frames(6)
-	expect(not brazier.get("lit"), "R 之后火盆灭了")
-	expect(not sensor_b.call("is_lit"), "R 之后板 B 跟着灭")
-	lift_b.call("reset_mechanism")
-	await _frames(200)
-	expect(is_equal_approx(lift_b.position.y, 352.0), "平台 B 回落到中层 352")
+	await _case_layout()
+	await _case_flashlight()
+	await _case_judge()
+	await _case_cycle()
+	await _case_brazier()
+	await _case_echo()
+	await _case_reset()
 
 	print("ROOM32 %d/%d" % [_pass, _pass + _fail])
 	if _fail > 0:
 		print("ROOM32_FAIL %d" % _fail)
 	quit()
+
+
+# ------------------------------------------------------------------ 地形
+
+func _case_layout() -> void:
+	print("--- 1. 地形与初始状态")
+	var world := _room.get_node("World") as TileMapLayer
+	expect(world.get_used_cells().size() == 104, "地形 104 格")
+	expect(world.get_cell_source_id(Vector2i(10, 18)) == -1, "竖井 A 底是凹槽")
+	expect(world.get_cell_source_id(Vector2i(10, 19)) != -1, "凹槽有一格深的地面")
+	expect(world.get_cell_source_id(Vector2i(18, 11)) != -1, "中层楼板左段")
+	expect(world.get_cell_source_id(Vector2i(25, 11)) != -1, "中层悬挑台")
+	expect(world.get_cell_source_id(Vector2i(21, 11)) == -1, "中层让出井 B")
+	expect(world.get_cell_source_id(Vector2i(19, 4)) != -1, "顶层楼板铺到井 B 左壁")
+
+	expect(is_equal_approx(_p.position.y, 532.0), "出生点站地面")
+	expect(is_equal_approx(_lift.position.y, 576.0), "平台 A 停在底部")
+	expect(is_equal_approx(_lift_b.position.y, 352.0), "平台 B 停在中层")
+	expect(_lift.get("phase") == PARKED, "平台 A 开局是停着的")
+	expect(not _sensor.call("is_lit"), "开局板 A 灭")
+	expect(not _sensor_b.call("is_lit"), "开局板 B 灭")
+
+	# 手电必须「要自己去找」：放在出生点一步之外的唯一路径上，
+	# 玩家往右走一个动作就顺手捡了，等于开局发手电（旧版就是 x=200，距出生 88）。
+	# 现在在板 A 之后 480px 的死路尽头，必须先碰壁再回头。
+	var spawn := Vector2(112, 532)
+	var away := _pickup.global_position.distance_to(spawn)
+	expect(away > 700.0, "手电不在出生点旁边（距出生点 %.0f）" % away)
+	expect(_pickup.global_position.x > _sensor.global_position.x + 400.0,
+		"手电在板 A 之后更远的死路尽头（x=%.0f）" % _pickup.global_position.x)
+
+
+# ------------------------------------------------------------------ 手电
+
+func _case_flashlight() -> void:
+	print("--- 2. 手电：拾取前后是两种光")
+	expect(_lamp.get("has_flashlight") == false, "开局没有手电")
+	expect(_lamp.get("radii") == Vector2(72, 100), "没手电时照明 72/100（和虚影一样大）")
+	expect(_lamp.get("can_power") == false, "没手电时不能供能")
+
+	# 走到地上的那支手电上
+	_p.position = Vector2(1000, 532)
+	await _frames(20)
+	expect(_lamp.get("has_flashlight") == true, "碰到就捡起来（不需要按键）")
+	expect(_lamp.get("radii") == Vector2(120, 180), "捡到后照明 120/180")
+	expect(_lamp.get("can_power") == true, "捡到后才能供能")
+	expect(_pickup.visible == false, "地上那支不见了")
+	expect(_pickup.get("taken") == true, "拾取物记下了状态")
+
+
+# ------------------------------------------------------------------ 光判定
+
+func _case_judge() -> void:
+	print("--- 3. 判定：站在板旁边不等于板会亮，手里得有手电")
+	# 拿手电站板旁：亮
+	_p.position = Vector2(460, 532)
+	await _frames(10)
+	expect(_sensor.call("is_lit"), "拿手电站板旁 → 板 A 亮")
+
+	# 拿手电站平台上：灭（手电 120 够不到板心 492，堵死自己送自己上去）
+	_p.position = Vector2(336, 532)
+	await _frames(10)
+	expect(not _sensor.call("is_lit"), "拿手电站平台上 → 板 A 灭（差 21px，自己送不上去）")
+
+	# R 回初始、这时没手电，站同一个位置必须还是灭
+	_mgr.call("reset_all")
+	await _frames(10)
+	expect(_lamp.get("has_flashlight") == false, "R 之后手电回到地上")
+	_p.position = Vector2(460, 532)
+	await _frames(10)
+	expect(not _sensor.call("is_lit"), "没手电站板旁 → 板 A 仍然是灭的（光只照明，不供能）")
+
+	# 重新捡起来，后面几段都要用
+	_p.position = Vector2(1000, 532)
+	await _frames(20)
+	expect(_lamp.get("has_flashlight"), "重新捡回手电")
+
+
+# ------------------------------------------------------------------ 循环
+
+func _case_cycle() -> void:
+	print("--- 4. 有光就循环：升 → 顶停 → 降 → 底停 → 再升")
+	# 站到板旁持续供光，平台开始跑
+	_p.position = Vector2(460, 532)
+	await _frames(150)
+	expect(_lift.position.y <= 353.0, "有光 → 升到中层 352（y=%.0f）" % _lift.position.y)
+	expect(_lift.get("phase") == TOP_WAIT, "到顶转顶部停留")
+	expect(is_equal_approx(_lift.get("speed"), 0.0), "顶部停住")
+
+	await _frames(120)
+	expect(_lift.get("phase") == FALLING or _lift.position.y > 353.0,
+		"顶停约 1.8s 后开始自动下降（y=%.0f）" % _lift.position.y)
+
+	await _frames(90)
+	expect(_lift.position.y >= 575.0, "降回底部（y=%.0f）" % _lift.position.y)
+	expect(_lift.get("phase") == BOTTOM_WAIT or _lift.get("phase") == PARKED, "到底转底部停留")
+
+	# 底停之后光还在 → 自己再升一圈（这是「循环」与「跟光走」的分界线）
+	var rose_again := false
+	for i in 200:
+		await physics_frame
+		if _lift.position.y < 520.0:
+			rose_again = true
+			break
+	expect(rose_again, "光还在，底部停完自己又升上去（不需要重新照）")
+
+	# 失光：**当帧**转下落，不再继续往上爬。
+	# 这是「自己点灯 → 跑回井口追台子」这条白嫖路的唯一阀门；
+	# 换回「失光也跑完这一圈」立刻能白嫖到中层（probe_selfsolo.gd 复现过）。
+	_sensor.set("force", -1)
+	await _frames(4)
+	expect(_lift.get("phase") == FALLING, "上升中失光 → 当帧转下落")
+	var y_cut: float = _lift.position.y
+	await _frames(24)
+	expect(_lift.position.y > y_cut + 2.0,
+		"失光后不再继续上升（%.0f → %.0f）" % [y_cut, _lift.position.y])
+
+	# 落回底部，绝不停在半空
+	await _frames(400)
+	expect(_lift.get("phase") == PARKED, "失光后停在底部并进入 PARKED")
+	expect(is_equal_approx(_lift.position.y, 576.0), "最终 y=576，没有停在半空")
+	_sensor.set("force", 0)
+
+
+# ------------------------------------------------------------------ 火盆
+
+func _case_brazier() -> void:
+	print("--- 5. 火盆：手电照到就着，烧完就灭")
+	expect(_brazier.get("lit") == false, "火盆开局是灭的")
+	expect(_brazier.get("can_power") == false, "灭着的火盆不供能")
+	expect(not _sensor_b.call("is_lit"), "板 B 跟着灭")
+
+	# 站到平台 B 上（手电到火盆 64px）
+	_p.position = Vector2(688, 308)
+	await _frames(20)
+	expect(_brazier.get("phase") == 1 or _brazier.get("lit"), "手电照到火盆 → 引燃")
+	await _frames(70)
+	expect(_brazier.get("can_power") == true, "引燃 1.2s 后满亮（can_power）")
+	expect(_brazier.get("radii").x > 120.0, "满亮半径 %.0f > 火盆到板 B 的 120" % _brazier.get("radii").x)
+	expect(_sensor_b.call("is_lit"), "火盆点亮板 B")
+
+	# 平台 B 开始升（循环）
+	await _frames(150)
+	expect(_lift_b.position.y <= 129.0, "平台 B 升到顶层 128（y=%.0f）" % _lift_b.position.y)
+
+	# 玩家被带到顶层
+	await _frames(30)
+	expect(absf(_p.position.y - 84.0) < 10.0, "玩家被平台 B 带到顶层（y=%.0f）" % _p.position.y)
+
+	# 挪到顶层楼板中段（注意别放到 x=140：那是出口，碰到会直接通关、
+	# 玩家物理被关掉，后面整段录制都不再增长）。
+	_p.position = Vector2(320, 84)
+	await _frames(430)
+	expect(_brazier.get("lit") == false, "人离开后燃料烧完，火盆灭了")
+	expect(not _sensor_b.call("is_lit"), "板 B 跟着灭")
+
+
+# ------------------------------------------------------------------ 虚影
+
+func _case_echo() -> void:
+	print("--- 6. 虚影带着死时的同一支手电")
+	# 让录制原点对齐当前位置，否则虚影会从出生点重演
+	_mgr.call("reset_all")
+	_p.position = Vector2(1000, 532)
+	await _frames(16)
+	expect(_lamp.get("has_flashlight"), "先把地上那支捡回来")
+
+	# ---- 6a 没手电就死 ----
+	_p.position = Vector2(460, 532)
+	_mgr.call("clear_all")
+	_lamp.call("reset_mechanism")          # 卸下手电，模拟「先死再捡」
+	await _frames(20)
+	_p.call("die")
+	await _frames(6)
+	var e1 := _last_echo()
+	expect(e1 != null, "死亡留下虚影")
+	expect(e1.get("has_flashlight") == false, "没手电死的虚影不带光")
+	expect(e1.get("can_power") == false, "它不能供能")
+	_p.call("respawn")
+	await _frames(90)
+	expect(not _sensor.call("is_lit"), "虚影手里没光，板 A 不亮")
+
+	# ---- 6b 带手电死 ----
+	_lamp.call("pick_up")
+	_p.position = Vector2(460, 532)
+	_mgr.call("clear_all")
+	await _frames(20)
+	_p.call("die")
+	await _frames(6)
+	var e2 := _last_echo()
+	expect(e2.get("has_flashlight") == true, "带手电死的虚影也拿着手电")
+	expect(e2.get("radii") == Vector2(120, 180), "虚影的光和持手电的玩家一样大")
+	_p.call("respawn")
+	await _frames(60)
+	# can_power 要等它登场（_active）之后才成立：未登场、正在淡出的虚影都不供能
+	expect(e2.get("can_power") == true, "虚影登场后能供能")
+	expect(_sensor.call("is_lit"), "虚影替玩家站在板旁 → 板 A 亮")
+
+	# ---- 6c 录到尾巴后原地待机 7s ----
+	var held := 0
+	for i in 600:
+		await physics_frame
+		if _sensor.call("is_lit"):
+			held += 1
+	print("   虚影供光持续 %.1fs（待机 7s，要求 ≥ 5s）" % (held / 60.0))
+	expect(held > 300, "虚影站定供光 ≥ 5s，够玩家复活跑一趟")
+	expect(not _sensor.call("is_lit"), "虚影消散后板 A 灭")
+
+
+# ------------------------------------------------------------------ R 复位
+
+func _case_reset() -> void:
+	print("--- 7. R 把一切打回初始")
+	_mgr.call("reset_all")
+	await _frames(10)
+	expect(_lamp.get("has_flashlight") == false, "手电回地上")
+	expect(_pickup.visible == true, "地上那支又出现了")
+	expect(_lift.get("phase") == PARKED, "平台 A 停机")
+	expect(_lift.get("phase") == PARKED and is_equal_approx(_lift.position.y, 576.0), "平台 A 回底部")
+	expect(_brazier.get("lit") == false, "火盆灭了")
+	expect(not _sensor.call("is_lit"), "板 A 灭")
+	expect(not _sensor_b.call("is_lit"), "板 B 灭")
+
+
+# ------------------------------------------------------------------ 工具
+
+func _last_echo() -> Node:
+	var found: Node = null
+	for c in _mgr.get_children():
+		if c.is_in_group("echo"):
+			found = c
+	return found
 
 
 func expect(ok: bool, label: String) -> void:
