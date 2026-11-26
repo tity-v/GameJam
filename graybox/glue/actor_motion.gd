@@ -1,5 +1,5 @@
 extends RefCounted
-## 贴墙后仍可推箱或拨杆。
+## 读取操作意图，贴墙后仍然能够推箱或拨杆。
 static func horizontal(actor: Node2D, _dt: float) -> float:
 	if actor.is_in_group("echo"):
 		return actor.horizontal_intent()

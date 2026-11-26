@@ -116,7 +116,7 @@ func run() -> void:
 	echo.position.x = plate_b.position.x
 	await frames(3)
 	check(door.opened, "再次同时踩住两块板可开门")
-	# 保持两个压板都由 Echo 踩住，验证虚影不触发出口。
+	# 保持两个压板都由 Echo 踩住，验证虚影可以触发出口。
 	plate_a.accepts_echo = true
 	var echo_a = ECHO.instantiate()
 	room.add_child(echo_a)
@@ -127,7 +127,7 @@ func run() -> void:
 	exit_echo.setup_actions(PackedVector2Array([Vector2.ZERO]), Vector2(exit_piece.position.x, 532), Vector2.ZERO, player)
 	exit_echo.reset()
 	await frames(3)
-	check(door.opened and not room.won, "虚影进入出口不触发通关")
+	check(door.opened and room.won, "虚影进入出口也可通关")
 	player.position.x = exit_piece.position.x
 	await frames(3)
 	check(room.won, "当前玩家进入出口触发通关")

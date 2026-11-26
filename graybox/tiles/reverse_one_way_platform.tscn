@@ -1,0 +1,25 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://scenes/levels/building_tiles/concrete_tiles.png" id="1"]
+
+[sub_resource type="AtlasTexture" id="strip"]
+atlas = ExtResource("1")
+region = Rect2(96, 192, 32, 8)
+
+[sub_resource type="RectangleShape2D" id="underside"]
+size = Vector2(32, 8)
+
+[node name="反向单向平台" type="StaticBody2D"]
+use_parent_material = true
+
+[node name="Surface" type="Sprite2D" parent="."]
+use_parent_material = true
+position = Vector2(0, 12)
+texture = SubResource("strip")
+flip_v = true
+
+[node name="Collision" type="CollisionShape2D" parent="."]
+position = Vector2(0, 12)
+rotation = 3.141592653589793
+shape = SubResource("underside")
+one_way_collision = true

@@ -28,43 +28,44 @@ levels = Array[Dictionary]([{
 }, {
 "id": "level_06",
 "scene": "res://scenes/levels/chapter_02_room_01.tscn",
-"title": "第 2 章 · 错过 · 过站"
+"title": "第 2 章 · 关卡一"
 }, {
 "id": "level_07",
 "scene": "res://scenes/levels/chapter_02_room_02.tscn",
-"title": "第 2 章 · 错过 · 接你一程"
+"title": "第 2 章 · 关卡二"
 }, {
 "id": "level_08",
 "scene": "res://scenes/levels/chapter_02_room_03.tscn",
-"title": "第 2 章 · 错过 · 货留下，人改道"
+"title": "第 2 章 · 关卡三"
 }, {
 "id": "level_09",
+"link": "cut",
 "scene": "res://scenes/levels/chapter_02_room_04.tscn",
-"title": "第 2 章 · 错过 · 借来的升程"
+"title": "第 2 章 · 关卡四"
 }, {
 "id": "level_10",
 "scene": "res://scenes/levels/chapter_02_room_05.tscn",
-"title": "第 2 章 · 错过 · 错车大厅"
+"title": "第 2 章 · 关卡五"
 }, {
 "id": "level_11",
 "scene": "res://scenes/levels/chapter_03/room_31_proto.tscn",
-"title": "第 3 章 · 3-1 打火教学（原型）"
+"title": "第 3 章 · 关卡一"
 }, {
 "id": "level_12",
 "scene": "res://scenes/levels/chapter_03/room_32_proto.tscn",
-"title": "第 3 章 · 3-2 光控升降（原型）"
+"title": "第 3 章 · 关卡二"
 }, {
 "id": "level_13",
 "scene": "res://scenes/levels/chapter_03_room_03.tscn",
-"title": "第 3 章 · 双卷扬"
+"title": "第 3 章 · 关卡三"
 }, {
 "id": "level_14",
 "scene": "res://scenes/levels/chapter_03_room_04.tscn",
-"title": "第 3 章 · 配电柜夹层"
+"title": "第 3 章 · 关卡四"
 }, {
 "id": "level_15",
 "scene": "res://scenes/levels/chapter_03_room_05.tscn",
-"title": "第 3 章 · 桥吊最后一班"
+"title": "第 3 章 · 关卡五"
 }, {
 "id": "level_16",
 "scene": "",

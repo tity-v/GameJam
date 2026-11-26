@@ -4,7 +4,10 @@
 [ext_resource type="Script" path="res://graybox/glue/door.gd" id="2_graybox"]
 
 [ext_resource type="Script" path="res://graybox/view/bindings.gd" id="links"]
+[ext_resource type="Script" path="res://graybox/view/sliding_door.gd" id="panels"]
 [node name="Door" groups=["graybox_recordable"] instance=ExtResource("1_base")]
 script = ExtResource("2_graybox")
+[node name="SlidingPanels" type="Node2D" parent="."]
+script = ExtResource("panels")
 [node name="Bindings" type="Node2D" parent="."]
 script = ExtResource("links")

@@ -166,6 +166,13 @@ func _physics_process(delta: float) -> void:
 var fall_apex := INF
 
 func move_with_input(delta: float, axis: float, jump_pressed: bool, jump_released: bool, climb_flags := 0) -> void:
+	if climbing and jump_pressed:
+		climbing = false
+		jump_pressed = false
+		_buffer = 0.0
+		_coyote = 0.0
+		velocity.y = 0.0
+		climb_flags = 0
 	if climb_step(delta,axis,climb_flags): return
 	# 先补上脚下虚影本帧的位移，否则站在移动的虚影头上会被"抽走"地面
 	_carry()
@@ -227,7 +234,7 @@ func _after_move(_axis: float) -> void:
 	pass
 
 
-## 录制起点的短时运动状态。
+## 录制起点可能在空中或加速途中，保留当时的短时运动状态。
 var ladder_flags := 0
 var climbing := false
 @export var climb_speed := 112.0
@@ -242,11 +249,18 @@ func climb_step(dt: float, axis: float, flags: int) -> bool:
 	var cell := map.local_to_map(map.to_local(feet-Vector2(0,2)))
 	var down := bool(flags & 8)
 	if map.get_cell_source_id(cell)<0 and (down or climbing): cell.y += 1
+	if map.get_cell_source_id(cell)<0 and not climbing:
+		for offset in [Vector2i.LEFT, Vector2i.RIGHT, Vector2i.UP, Vector2i.DOWN]:
+			var nearby: Vector2i = cell + offset
+			var near_center := map.to_global(map.map_to_local(nearby))
+			if map.get_cell_source_id(nearby)>=0 and absf(near_center.x-feet.x)<=20.0 and absf(near_center.y-feet.y)<=22.0:
+				cell = nearby
+				break
 	if map.get_cell_source_id(cell)<0:
 		climbing = false
 		return false
 	var center := map.to_global(map.map_to_local(cell))
-	if absf(center.x-feet.x)>16:
+	if absf(center.x-feet.x)>20.0:
 		climbing = false
 		return false
 	var dir := int(down)-int(bool(flags & 4))
@@ -255,15 +269,18 @@ func climb_step(dt: float, axis: float, flags: int) -> bool:
 		var world := map.get_parent().get_node("World") as TileMapLayer
 		var edge := world.to_global(world.map_to_local(side)).y-16
 		if world.get_cell_source_id(side)>=0 and absf(feet.y-edge)<10:
-			move_and_collide(Vector2(0,edge-feet.y))
-			move_and_collide(Vector2(signf(axis)*32,0))
-			climbing = false
+			var rise := move_toward(feet.y,edge,climb_speed*dt)-feet.y
+			move_and_collide(Vector2(0,rise))
+			if absf(feet.y + rise - edge)<1.0:
+				climbing = false
+				velocity = Vector2(axis*max_speed,0)
+				move_and_slide()
 			return true
 	climbing = true
 	_buffer = 0
 	_coyote = 0
 	_support = null
-	move_and_collide(Vector2(center.x-feet.x,0))
+	move_and_collide(Vector2(clampf(center.x-feet.x,-climb_speed*dt,climb_speed*dt),0))
 	velocity = Vector2(0,dir*climb_speed)
 	if dir<0 and map.get_cell_source_id(cell+Vector2i.UP)<0:
 		velocity.y = maxf(velocity.y,(center.y-16-feet.y)/dt)

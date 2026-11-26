@@ -12,4 +12,4 @@ outline_width = 2.0
 spawn_warning = "请在 Spawn Point 里选择属于 respawn_point 组的出生点。"
 player_warning = "请在 Player 中选择当前房间的玩家。"
 plate_warning = "请在 Plate Paths 中选择至少一块压力板，并修正空项或无效关联。"
-exit_warning = "请在 Door Path 中选择一扇门。"
+exit_warning = "Door Path 已填写，但没有找到有效的门。"

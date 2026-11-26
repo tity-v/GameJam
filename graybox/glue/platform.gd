@@ -10,6 +10,8 @@ const CFG = preload("res://graybox/db/mechanisms.tres")
 @export var end_offset := Vector2(160, 0)
 ## 0 使用数据库默认速度。
 @export var speed_override := 0.0
+## 将相位对齐到玩家的每轮录制起点。
+@export var restart_on_respawn := false
 var distance := 0.0
 var placed_position := Vector2.ZERO
 
@@ -18,6 +20,10 @@ func _ready() -> void:
 	if not Engine.is_editor_hint():
 		add_to_group("mechanism")
 		reset_mechanism()
+		if restart_on_respawn:
+			var player := get_tree().get_first_node_in_group("player")
+			if player != null:
+				player.respawned.connect(reset_mechanism)
 
 func route_start() -> Vector2:
 	if start_point:

@@ -1,11 +1,15 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="PackedScene" path="res://scenes/blocks/exit.tscn" id="1_base"]
 [ext_resource type="Script" path="res://graybox/glue/open_exit.gd" id="2_graybox"]
 [ext_resource type="Script" path="res://graybox/view/trigger_outline.gd" id="3_outline"]
+[ext_resource type="Texture2D" path="res://assets/mechanisms/exit_active.png" id="4_active"]
 
 [node name="Exit" instance=ExtResource("1_base")]
 script = ExtResource("2_graybox")
+
+[node name="Patch" parent="." index="0"]
+texture = ExtResource("4_active")
 
 [node name="TriggerOutline" type="Node2D" parent="." node_paths=PackedStringArray("patch")]
 script = ExtResource("3_outline")

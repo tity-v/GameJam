@@ -8,22 +8,35 @@ const Config = preload("res://graybox/db/editor.tres")
 	set(value):
 		initially_open = value
 		if is_node_ready() and Engine.is_editor_hint():
-			_apply_open(value)
+			_apply_open(value, true)
+@export var slide_seconds := 0.28
 
 func _ready() -> void:
 	super._ready()
-	_apply_open(initially_open)
+	_apply_open(initially_open, true)
 
 func reset_mechanism() -> void:
-	_apply_open(initially_open)
+	_apply_open(initially_open, true)
 
-func _apply_open(value: bool) -> void:
+func _process(delta: float) -> void:
+	if Engine.is_editor_hint():
+		return
+	$SlidingPanels.openness = move_toward($SlidingPanels.openness, 1.0 if opened else 0.0, delta / maxf(slide_seconds, 0.01))
+	if not opened and is_zero_approx($SlidingPanels.openness):
+		set("collision_layer", 1)
+		$Collision.set_deferred("disabled", false)
+
+func _apply_open(value: bool, instant := false) -> void:
 	var changed := opened != value
 	opened = value
 	if changed and not Engine.is_editor_hint():
 		get_node("/root/GameSfx").play("door_open" if opened else "door_close")
-	$Collision.set_deferred("disabled", opened)
-	$Patch.texture = preload("res://assets/mechanisms/door_open.png") if opened else preload("res://assets/mechanisms/door_closed.png")
+	if opened or instant:
+		set("collision_layer", 0 if opened else 1)
+		$Collision.set_deferred("disabled", opened)
+	if instant:
+		$SlidingPanels.openness = 1.0 if opened else 0.0
+	$Patch.texture = preload("res://assets/mechanisms/door_open.png")
 
 
 func _get_configuration_warnings() -> PackedStringArray:
@@ -66,5 +79,8 @@ func _player_in_doorway() -> bool:
 	var area := global_transform * Rect2(Vector2.ZERO, block_size)
 	for actor in get_tree().get_nodes_in_group("player"):
 		if Bounds.available(actor) and area.intersects(Bounds.rect(actor)):
+			return true
+	for box in get_tree().get_nodes_in_group("graybox_box"):
+		if area.intersects(box.global_transform * Rect2(-box.box_size / 2, box.box_size)):
 			return true
 	return false

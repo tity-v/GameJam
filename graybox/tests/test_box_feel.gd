@@ -117,6 +117,9 @@ func run() -> void:
 	platform.end_offset = Vector2(160, 0)
 	room.add_child(platform)
 	await physics_frame
+	var cargo_material := PhysicsMaterial.new()
+	cargo_material.friction = 0.05
+	crate.physics_material_override = cargo_material
 	crate.global_position = Vector2(400, 122)
 	crate.linear_velocity = Vector2.ZERO
 	await settle(10)
@@ -127,7 +130,7 @@ func run() -> void:
 	var platform_moved := platform.global_position.x - px0
 	var box_moved := crate.global_position.x - bx0
 	check(platform_moved > 50.0, "平台自身移动 %.1f px" % platform_moved)
-	check(box_moved > 2.0, "箱子在平台上未被阻尼钉死（位移 %.1f px）" % box_moved)
+	check(absf(box_moved - platform_moved) < 5.0, "低摩擦箱子跟随平台（平台 %.1f px，箱子 %.1f px）" % [platform_moved, box_moved])
 
 	# ---- ⑥ 真实关卡：把箱子推上 K 压板 ----
 	change_scene_to_file("res://scenes/levels/chapter_02_room_05.tscn")
