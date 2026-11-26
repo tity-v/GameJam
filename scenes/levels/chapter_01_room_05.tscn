@@ -26,6 +26,7 @@ block_size = Vector2(64, 8)
 process_physics_priority = 20
 position = Vector2(672, 544)
 initially_open = false
+slide_seconds = 0.28
 plate_paths = Array[NodePath]([NodePath("../plate_1")])
 block_size = Vector2(64, 96)
 
@@ -33,6 +34,7 @@ block_size = Vector2(64, 96)
 process_physics_priority = 20
 position = Vector2(672, 384)
 initially_open = false
+slide_seconds = 0.28
 plate_paths = Array[NodePath]([NodePath("../lever_329")])
 block_size = Vector2(64, 128)
 
@@ -49,6 +51,7 @@ position = Vector2(568, 541)
 process_physics_priority = 20
 position = Vector2(352, 544)
 initially_open = false
+slide_seconds = 0.28
 plate_paths = Array[NodePath]([NodePath("../lever_96")])
 block_size = Vector2(160, 32)
 
@@ -56,6 +59,7 @@ block_size = Vector2(160, 32)
 process_physics_priority = 20
 position = Vector2(384, 192)
 initially_open = false
+slide_seconds = 0.28
 plate_paths = Array[NodePath]([NodePath("../lever_96")])
 block_size = Vector2(64, 128)
 
@@ -91,6 +95,7 @@ block_size = Vector2(96, 16)
 process_physics_priority = 20
 position = Vector2(192, 544)
 initially_open = false
+slide_seconds = 0.28
 plate_paths = Array[NodePath]([NodePath("../plate_1")])
 block_size = Vector2(64, 96)
 
@@ -98,6 +103,7 @@ block_size = Vector2(64, 96)
 process_physics_priority = 20
 position = Vector2(64, 512)
 initially_open = false
+slide_seconds = 0.28
 plate_paths = Array[NodePath]([NodePath("../plate_4")])
 block_size = Vector2(64, 32)
 
@@ -105,20 +111,25 @@ block_size = Vector2(64, 32)
 process_physics_priority = 20
 position = Vector2(992, 544)
 initially_open = false
+slide_seconds = 0.28
 plate_paths = Array[NodePath]([NodePath("../lever_329")])
 block_size = Vector2(64, 96)
 
 [node name="door_325" parent="Mechanisms" index="17" unique_id=1484670145 instance=ExtResource("door")]
 process_physics_priority = 20
 position = Vector2(664, 256)
+collision_layer = 0
 initially_open = true
+slide_seconds = 0.28
 plate_paths = Array[NodePath]([NodePath("../plate_330")])
 block_size = Vector2(128, 24)
 
 [node name="door_326" parent="Mechanisms" index="18" unique_id=1380242906 instance=ExtResource("door")]
 process_physics_priority = 20
 position = Vector2(872, 256)
+collision_layer = 0
 initially_open = true
+slide_seconds = 0.28
 plate_paths = Array[NodePath]([NodePath("../plate_333")])
 block_size = Vector2(128, 24)
 
@@ -136,13 +147,13 @@ position = Vector2(224, 317)
 
 [node name="plate_330" parent="Mechanisms" index="22" unique_id=1644449753 instance=ExtResource("plate")]
 process_physics_priority = 10
-position = Vector2(1200, 560)
+position = Vector2(1201, 535)
 accepts_boxes = true
 block_size = Vector2(64, 8)
 
 [node name="plate_333" parent="Mechanisms" index="23" unique_id=682069477 instance=ExtResource("plate")]
 process_physics_priority = 10
-position = Vector2(1072, 496)
+position = Vector2(1073, 470)
 accepts_boxes = true
 block_size = Vector2(64, 8)
 

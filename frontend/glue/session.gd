@@ -24,7 +24,7 @@ var flow := Flow.new()
 var store := Store.new()
 var catalog = DEFAULT_CATALOG
 var copy: Dictionary = {}
-var settings := {"volume": 100.0, "sfx_volume": 100.0, "muted": false, "fullscreen": false, "start_paused": false}
+var settings := {"volume": 100.0, "sfx_volume": 100.0, "muted": false, "fullscreen": false, "start_paused": false, "reduced_motion": false, "vsync": true}
 var notice := ""
 var view: Control
 var dialog: ConfirmationDialog
@@ -182,7 +182,7 @@ func handle(command: String, value: Variant) -> void:
 					leave("home")
 			else:
 				show_notice("save_failed")
-		"volume", "sfx_volume", "mute", "fullscreen", "start_paused":
+		"volume", "sfx_volume", "mute", "fullscreen", "start_paused", "reduced_motion", "vsync":
 			var key := "muted" if command == "mute" else command
 			settings[key] = value
 			apply_settings()
@@ -425,6 +425,8 @@ func redraw() -> void:
 	if legacy_hud != null:
 		legacy_hud.visible = legacy_hud_visible and flow.current >= 0
 	if is_instance_valid(view):
+		if view.has_method("leave_echo") and not settings.reduced_motion:
+			view.leave_echo(self)
 		view.hide()
 		view.queue_free()
 		view = null
@@ -436,7 +438,7 @@ func redraw() -> void:
 	view.present(page_model())
 
 func page_model() -> Dictionary:
-	var model := {"title": tr_copy(flow.page), "notice": notice}
+	var model := {"reduced_motion": settings.reduced_motion, "title": tr_copy(flow.page), "notice": notice}
 	if flow.page in ["levels", "chapter"]:
 		var recent := flow.continue_index()
 		var selected := flow.chapter if flow.page == "chapter" else flow.chapter_of(maxi(recent, 0))
@@ -540,7 +542,7 @@ func read_settings() -> void:
 	var fullscreen: Variant = data.get("fullscreen", false)
 	var start_paused: Variant = data.get("start_paused", false)
 	if record.ok and (sfx_volume is float or sfx_volume is int) and is_finite(float(sfx_volume)) and (volume is float or volume is int) and is_finite(float(volume)) and muted is bool and fullscreen is bool and start_paused is bool:
-		settings = {"sfx_volume": clampf(sfx_volume,0,100), "volume": clampf(volume, 0, 100), "muted": muted, "fullscreen": fullscreen, "start_paused": start_paused}
+		settings = {"sfx_volume": clampf(sfx_volume,0,100), "volume": clampf(volume, 0, 100), "muted": muted, "fullscreen": fullscreen, "start_paused": start_paused, "reduced_motion": data.get("reduced_motion") == true, "vsync": data.get("vsync", true) == true}
 	else:
 		store.preserve_invalid("settings")
 		notice = tr_copy("read_failed")
@@ -553,6 +555,9 @@ func apply_settings() -> void:
 		AudioServer.set_bus_volume_linear(master, float(settings.volume) / 100.0)
 		AudioServer.set_bus_mute(master, settings.muted)
 	if DisplayServer.get_name() != "headless":
+		var sync := DisplayServer.VSYNC_ENABLED if settings.vsync else DisplayServer.VSYNC_DISABLED
+		if DisplayServer.window_get_vsync_mode() != sync:
+			DisplayServer.window_set_vsync_mode(sync)
 		var mode := DisplayServer.WINDOW_MODE_FULLSCREEN if settings.fullscreen else DisplayServer.WINDOW_MODE_WINDOWED
 		if DisplayServer.window_get_mode() != mode:
 			DisplayServer.window_set_mode(mode)

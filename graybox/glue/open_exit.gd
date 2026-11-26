@@ -3,6 +3,8 @@ extends "res://scripts/level_exit.gd"
 
 func _ready() -> void:
 	super._ready()
+	active = door_path.is_empty()
+	$Patch.texture = preload("res://assets/mechanisms/exit_active.png") if active else preload("res://assets/mechanisms/exit_inactive.png")
 
 func _physics_process(_delta: float) -> void:
 	if Engine.is_editor_hint():

@@ -20,7 +20,7 @@ func activate_checkpoint(point: Area2D, actor: Node2D) -> bool:
 	# 使用接触旗帜时的实际站位，保留这段轨迹与后续机关的空间对齐。
 	_player.respawn_position = actor.global_position
 	pin_start = true
-	# 虚影触旗不截断本体录像，否则回放瞬移。
+	# 虚影到旗帜时，本体可能在别处；不能截断本体当前录像，否则回放会瞬移。
 	if is_player:
 		_trail.clear()
 	return true

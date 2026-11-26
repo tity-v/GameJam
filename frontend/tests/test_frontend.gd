@@ -39,7 +39,7 @@ func run() -> void:
 	expect(real.chapter_count() == 4 and real.chapter_rooms(1).size() == 5, "每章五间")
 	expect(real.chapter_rooms(1)[0] == 5, "第二章从下标 5 开始")
 	expect(real.room_label(0) == "房间 1", "占位标题收敛成房间号")
-	expect(real.room_label(5) == "错过 · 过站", "保留第二章的场名")
+	expect(real.room_label(5) == "关卡一", "第二章显示统一关卡名")
 	expect(real.room_state(0) == "ready" and real.room_state(1) == "locked", "章内只解锁第一间")
 	expect(real.room_state(6) == "locked", "跨章也要前一章打完才解锁")
 	real.completed.append(str(real.levels[0].id))

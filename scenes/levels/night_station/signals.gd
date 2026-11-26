@@ -2,6 +2,8 @@ extends Node2D
 ## 同一入口与落点共用图形。出口上方逐灯显示各个联锁输入。
 const PORTAL_COLORS := [Color("#83edf5"), Color("#f4a4e4"), Color("#e7c781")]
 
+@export var shared_portal_symbols := false
+
 var portals: Array[Node] = []
 var gates: Array[Node] = []
 var plates: Array[Node] = []
@@ -42,9 +44,17 @@ func glyph(pos: Vector2, index: int, tint: Color) -> void:
 func _draw() -> void:
 	for i in portals.size():
 		var part = portals[i]
-		var tint: Color = PORTAL_COLORS[i % PORTAL_COLORS.size()]
-		glyph(to_local(part.global_position)+Vector2(0,-42),i,tint if part.recorded_open else tint.darkened(0.43))
-		glyph(to_local(part.destination.global_position)+Vector2(0,-8),i,tint)
+		var destination: Node2D = part.destination
+		var symbol := i
+		var reciprocal: bool = shared_portal_symbols and destination in portals and destination.destination == part
+		if reciprocal:
+			symbol = mini(i, portals.find(destination))
+		if shared_portal_symbols:
+			symbol %= PORTAL_COLORS.size()
+		var tint: Color = PORTAL_COLORS[symbol % PORTAL_COLORS.size()]
+		glyph(to_local(part.global_position)+Vector2(0,-42),symbol,tint if part.recorded_open else tint.darkened(0.43))
+		if destination and not reciprocal:
+			glyph(to_local(destination.global_position)+Vector2(0,-8),symbol,tint)
 	for gate in gates:
 		var pos := to_local(gate.global_position)+Vector2(0,-9)
 		for path in gate.plate_paths:

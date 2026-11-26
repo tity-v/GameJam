@@ -20,6 +20,13 @@ const STEP_UP := 32.0
 func _after_move(axis: float) -> void:
 	if absf(axis) < 0.01 or not is_on_floor() or not is_on_wall():
 		return
+	var static_wall := false
+	for i in get_slide_collision_count():
+		var hit := get_slide_collision(i)
+		if absf(hit.get_normal().x) > 0.5 and hit.get_collider() is StaticBody2D:
+			static_wall = true
+	if not static_wall:
+		return
 	var dir := signf(axis)
 	# 头顶得是空的，否则这是面高墙/低天花板，不许穿
 	if test_move(global_transform, Vector2(0.0, -STEP_UP)):

@@ -153,8 +153,8 @@ func _physics_process(delta: float) -> void:
 	var actor := get_parent()
 	var motor := actor as CharacterBody2D
 	if _open == DEFAULT_OPEN and actor is CharacterBody2D:
-		direction = actor.velocity.x
-		moving = not actor.get("is_dead") and actor.is_on_floor() and absf(direction) > 28.0
+		direction = Input.get_axis("move_left", "move_right")
+		moving = not actor.get("is_dead") and not actor.get("input_locked") and not actor.get("climbing") and absf(direction) > 0.01
 	elif _open == DEFAULT_OPEN and actor.is_in_group("echo"):
 		motor = actor.animation_motor()
 		var step: Vector2 = actor.get("last_delta")

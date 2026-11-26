@@ -32,6 +32,8 @@ func restore() -> void:
     amount = 0.0
 
 func visit(node: Node) -> void:
+    if node.is_in_group("pause_keep_color"):
+        return
     if node.is_in_group("player") or node.is_in_group("echo") or node.is_in_group("replay_ghost"):
         return
     if node.name in [&"Mechanisms", &"StationSignals"] or node is CanvasLayer or node is Control:
@@ -45,7 +47,7 @@ func visit(node: Node) -> void:
         if original is ShaderMaterial and original.shader != null:
             effect = original.duplicate()
             code = original.shader.code
-        # 在原 shader 内插入去色，保留原有绘制。
+        # 包装原 fragment 而非覆盖它，保留程序生成的星空、山景及混凝土细节。
         code = code.replace("shader_type canvas_item;", "shader_type canvas_item;\nuniform float pause_desaturation = 0.0;")
         var opening := code.find("{", code.find("void fragment()"))
         var closing := opening + 1

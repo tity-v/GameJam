@@ -1,10 +1,10 @@
 [gd_resource type="Theme" format=3 uid="uid://dsn71lofl2dd8"]
 
 [ext_resource type="FontVariation" path="res://frontend/db/ui_font.tres" id="1"]
-[ext_resource type="FontFile" path="res://frontend/assets/NotoSansSC-Medium.otf" id="2"]
-[ext_resource type="Texture2D" path="res://frontend/assets/floor_directory_background.png" id="3"]
-[ext_resource type="Texture2D" path="res://frontend/assets/ui_enamel.png" id="4"]
-[ext_resource type="Texture2D" path="res://frontend/assets/ui_fader_cap.png" id="5"]
+[ext_resource type="FontFile" uid="uid://dtxkkkp0wye3s" path="res://frontend/assets/NotoSansSC-Medium.otf" id="2"]
+[ext_resource type="Texture2D" uid="uid://daic3kayymxdx" path="res://frontend/assets/floor_directory_background.png" id="3"]
+[ext_resource type="Texture2D" uid="uid://cpwo7qaa73wd1" path="res://frontend/assets/ui_enamel.png" id="4"]
+[ext_resource type="Texture2D" uid="uid://utohhx7s7gcm" path="res://frontend/assets/ui_fader_cap.png" id="5"]
 
 [sub_resource type="StyleBoxTexture" id="Disabled"]
 content_margin_left = 16.0
@@ -32,7 +32,7 @@ content_margin_right = 16.0
 content_margin_bottom = 6.0
 texture = ExtResource("4")
 region_rect = Rect2(0, 663, 1480, 218)
-modulate_color = Color(1.24, 1.38, 1.40, 0.94)
+modulate_color = Color(1.24, 1.38, 1.4, 0.94)
 
 [sub_resource type="StyleBoxTexture" id="Normal"]
 content_margin_left = 16.0
@@ -52,10 +52,10 @@ texture = ExtResource("4")
 region_rect = Rect2(0, 663, 1480, 218)
 modulate_color = Color(1.48, 1.64, 1.62, 1)
 
-[sub_resource type="StyleBoxTexture" id="Panel"]
-texture = ExtResource("3")
-region_rect = Rect2(0, 74, 480, 700)
-modulate_color = Color(0.79, 0.84, 0.88, 0.97)
+[sub_resource type="StyleBoxTexture" id="SliderFill"]
+texture = ExtResource("4")
+region_rect = Rect2(20, 828, 1460, 18)
+modulate_color = Color(2.05, 2.58, 2.42, 1)
 
 [sub_resource type="StyleBoxTexture" id="SliderTrack"]
 content_margin_top = 4.0
@@ -64,10 +64,10 @@ texture = ExtResource("4")
 region_rect = Rect2(22, 754, 1458, 18)
 modulate_color = Color(0.48, 0.59, 0.61, 1)
 
-[sub_resource type="StyleBoxTexture" id="SliderFill"]
-texture = ExtResource("4")
-region_rect = Rect2(20, 828, 1460, 18)
-modulate_color = Color(2.05, 2.58, 2.42, 1)
+[sub_resource type="StyleBoxTexture" id="Panel"]
+texture = ExtResource("3")
+region_rect = Rect2(0, 74, 480, 700)
+modulate_color = Color(0.79, 0.84, 0.88, 0.97)
 
 [resource]
 default_font = ExtResource("1")
@@ -86,15 +86,15 @@ Detail/fonts/font = ExtResource("2")
 GridContainer/constants/h_separation = 10
 GridContainer/constants/v_separation = 10
 HBoxContainer/constants/separation = 12
-Header/base_type = &"Label"
-Header/colors/font_color = Color(0.78, 0.98, 0.93, 1)
-Header/font_sizes/font_size = 36
 HSlider/icons/grabber = ExtResource("5")
-HSlider/icons/grabber_highlight = ExtResource("5")
 HSlider/icons/grabber_disabled = ExtResource("5")
+HSlider/icons/grabber_highlight = ExtResource("5")
 HSlider/styles/grabber_area = SubResource("SliderFill")
 HSlider/styles/grabber_area_highlight = SubResource("SliderFill")
 HSlider/styles/slider = SubResource("SliderTrack")
+Header/base_type = &"Label"
+Header/colors/font_color = Color(0.78, 0.98, 0.93, 1)
+Header/font_sizes/font_size = 36
 Label/colors/font_color = Color(0.89, 0.94, 0.97, 1)
 PanelContainer/styles/panel = SubResource("Panel")
 PopupPanel/styles/panel = SubResource("Panel")
